@@ -1,0 +1,83 @@
+			@font-face { font-family: Dimitri; src: url('../fonts/DIMITRI_.TTF'); } 
+			@font-face { font-family: Signika; src: url('../fonts/Signika/Signika-Regular.ttf'); } 
+			body {
+				position: relative;
+				line-height: 35px;
+				/*font: 15px/20px "Palatino Linotype", "Book Antiqua", Palatino, serif;*/
+				font: 15px/20px "Signika";
+				letter-spacing: 0.05em;
+			}
+			.afffix {
+				top: 20px;
+			}
+			.navbar-main {
+				/*background-color: #242424;*/
+				font-family: Signika;
+			}
+
+			.jumbotron {
+				margin-top: 20px;
+				background-color: #242424;
+			}
+			.article {
+				margin:20px 0;
+				background-color: #eaeaea;
+				box-shadow: 5px 5px 12px rgba(0,0,0,.3);
+			}
+			body {
+				background-color: #242424;
+			}
+			#ScrollSpy {
+				margin-top: 200px;
+			}
+			.nav-mid {
+				/*padding:0;*/
+				/*margin:0 auto;*/
+				/*border:1px solid black;*/
+			}
+			.main {
+				max-width: 1200px;
+			}
+			div.jumbotron {
+				margin: 0 auto;
+				padding-top: 100px;
+				max-width: 600px;
+				color:#eaeaea;
+				text-align: center;
+			}
+			h1.jumbotron {
+				font-family: Dimitri;
+			}
+			.jumbotron-img {
+				position:absolute;
+				z-index:-1;
+				width:100%;
+			}
+			h1 {
+				color:#242424;
+			}
+			.section1-2 {
+				column-count:2;
+				column-gap:40px;
+				column-rule-style:1px solid lightblue;
+			}
+			.article-img-l {
+				position:relative;
+			}
+			.article-img-r {
+				position:relative;
+			}
+			.article-content {
+				padding:40px;
+			}
+			.img-mid {
+				display: block;
+				margin: 0 auto;
+				margin-bottom: 20px;
+			}
+			.panel-body {
+				text-align: center;
+				font-style: italic;
+				color: rgba(0,0,0,.6);
+				font-size: 2em;
+			}

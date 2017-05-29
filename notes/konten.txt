@@ -1,0 +1,43 @@
+==PEMBUKA
+
+--Citra digital
+
+Bentuk nyata dari suatu citra digital adalah sebagai suatu susunan matriks. Gambar terususun atas pixel-pixel yang tertata dalam barisan dan kolom. Kerapatan antar pixel dapat merupakan resolusi dari gambar. Adapun jenis gambar berwarna dengan komponen RGB (Red, Green, Blue), nilai warna pixel berkisar dari 0 sampai 255 (angka non-desimal). Nilai 255 akan menghasilkan warna putih dan 0 sebaliknya, yaitu hitam.
+
+Adapun beberapa operasi pengolahan gambar digital adalah sebagai berikut:
+- Image-Enchantment
+- Image-Restoration
+- Image-Segmentation
+- Image-Analysis
+- Image-Reconstruction
+
+- Image-Enhacnement: Memperbaiki kualitas gambar, contohnya dengan penajaman gambar, perbaikan kontras, perbaikan RGB curve.
+- Image-Restoration: Memperbaiki gambar dari cacat, contohnya dengan menghilangkan noise.
+- Image-Segmentation: Memeecah gambar menjadi beberapa bagian
+- Image-Analysis: Mengekstraksi informasi yang ada pada suatu gambar, dan merepresentasikannya dalam bentuk yang terukur, contohnya mencari bentuk geomteri atau pola dari suatu gambar.
+- Image-Reconstruction: Membentuk ulang suatu objek dari proyeksi objek yang lain, misalnya saja rontgen.
+
+--Analisa citra
+
+Image analysis atau analisa citra adalah upaya mengekstraksi informasi penting dari citra atau gambar; utamanya digunakan pada gambar digital dalam pengolahan citra digital. Bentuk digital dari suatu gambar dapat berupa file dengan ekstensi *.gif, *.jpg dan sebagainya.
+
+Analisa citra bisa sesimpel membaca suatu bar code, atau sekompleks mengidentifikasi wajah seseorang dengan pengenalan pola.
+
+Pada dasarnya, berbagai alat analisa citra dibuat mengikuti berbagai bentuk dan cara kerja alat persepsi visual yang dimiliki manusia. Disisi lain komputer memiliki kemampuan untuk mengolah dan menganalisa data dengan jumlah yang besar, mengekstrak informasi kuantitatif dan melakukan komputasi yang kompleks. Maka alat analisa citra menjadi alat bantu bagi manusia dalam mengolah informasi dengan level tinggi.
+
+==DIGITAL IMAGE ANALYSIS (DIA)
+
+Digital Image Analysis atau analisa citra digital dilakukan ketika suatu perangkat elektronik atau kmputer mampu mengambil informasi penting dari suatu gambar. Perangkat yang dimaksud bisa sesederhana suatu sirkuit elektronik atau berupa kamera digital, atau mobile phone.
+
+==CONTOH DIA
+
+astronomi, menghitung ukurang suatu planet
+mellagrafi, menentukan kadar mineral dari suatu batuan
+mikroskopi, menghitung jumlah bakteria dalam suatu cawan petri
+remote sensing, mendeteksi jika ada penyusup masuk ke rumah
+robotika, mendeteksi adanya suatu penghalang dan mengatur ulang laju robot
+security, mendeteksi warna mata seseorang, memastikan sidik jari seorang pengguna
+
+REFERENCES:
+http://dendieisme.blogspot.co.id/2011/03/konsep-digital-image-processing.html
+https://en.wikipedia.org/wiki/Image_analysis#Computer_Image_Analysis
