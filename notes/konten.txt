@@ -38,6 +38,16 @@ remote sensing, mendeteksi jika ada penyusup masuk ke rumah
 robotika, mendeteksi adanya suatu penghalang dan mengatur ulang laju robot
 security, mendeteksi warna mata seseorang, memastikan sidik jari seorang pengguna
 
+==GIS
+
+Geograpihc Information System atau Sistem Informasi Geografis adalah suatu teknologi yang telah merubah bagaimana geografer melakukan penelitian dan pekerjaannya. GIS memiliki peran penting dalam menggabungkan berbagai teknologi penting yang memungkinkan untuk membantu dalam melakukan analisa geografis dan pemodelan peta yang jauh lebih kompleks. Dengan GIS, maka mungkin untuk melakukan pemodelan, dan analisa terhadap data yang banyak sekaligus dalam satu basis data.
+
+Gis melakukan abstraksi dengan membagi suatu peta kedalam layer-layer yang menunjukkan informasi yang berbeda. Layer-layer tersebut kemudian dapat disajikan dalam satu tampilan yang padu.
+<googlemaps>
+
+
+
 REFERENCES:
 http://dendieisme.blogspot.co.id/2011/03/konsep-digital-image-processing.html
 https://en.wikipedia.org/wiki/Image_analysis#Computer_Image_Analysis
+http://www.biometric-solutions.com/fingerprint-recognition.html
