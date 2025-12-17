@@ -1,24 +1,46 @@
-title: Royyan Dzakiy
-description: >-
-  Loving the coding craft
-baseurl: ""
-url: "https://royyandzakiy.github.io"
+# Site settings
+title:            Royyan Dzakiy
+description:      "Loving the coding craft"
+baseurl:          ""
+url:              "https://royyandzakiy.github.io"
 github_username:  royyandzakiy
 
-# Build settings (Factory Reset)
-# theme: minima
-# plugins:
-#   - jekyll-feed
+# Google Analytics
+google_analytics: UA—XXXXXXXX-X
 
-# Build settings (tale - bundle)
-# theme:      tale
-# permalink:  /:year-:month-:day/:title
-# paginate:   5
+# Author
+author:
+  name:         Royyan Dzakiy
 
-# Build settings (tale - github actions)
-remote_theme: chesterhow/tale
-permalink:    /:year-:month-:day/:title
-paginate:     5
+# Build settings
+markdown:       kramdown
+include:
+  - _pages
+
+# Assets
+sass:
+  sass_dir:     _sass
+  style:        compressed
+
+# theme: minima # default
+# theme:      tale # tale - bundle
+remote_theme: chesterhow/tale # tale - github actions
+
+# Gems
 plugins:
+  - jekyll-feed
   - jekyll-paginate
   - jekyll-remote-theme
+  - jekyll-seo-tag
+  - jemoji
+
+# Permalinks
+permalink:      /:year-:month-:day/:title
+paginate:       15
+
+# Excludes
+exclude:        [ Gemfile, Gemfile.lock ]
+
+# Disqus (Set to your disqus id)
+disqus:         jekyll-tale
+

@@ -3,8 +3,8 @@ source "https://rubygems.org"
 # bundle exec jekyll serve
 
 # THEME: FACTORY RESET
-# gem "jekyll", "~> 4.4.1"
 # gem "minima", "~> 2.5"
+# gem "jekyll", "~> 4.4.1"
 
 # THEME: TALE - Bundle
 # gem "tale"
@@ -12,6 +12,7 @@ source "https://rubygems.org"
 # THEME: TALE - Github Actions
 gem "jekyll-remote-theme"
 gem "jekyll-paginate"
+gem "jekyll-seo-tag", "~> 2.5"
 
 gem "github-pages", "~> 232", group: :jekyll_plugins # To upgrade, run `bundle update github-pages`.
 # disqus: <disqus-id> # this is not the right way to add this
