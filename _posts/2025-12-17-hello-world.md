@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  Forwarding "Hello World!"
+title:  Perfect Forwarding the "Hello World!"
 date:   2025-12-17 13:03:03 +0700
 categories: post
 ---
