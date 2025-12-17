@@ -29,7 +29,6 @@ url: "https://royyandzakiy.github.io" # the base hostname & protocol for your si
 github_username:  royyandzakiy
 
 # Build settings
-theme:      tale
 remote_theme: chesterhow/tale
 
 permalink:    /:year-:month-:day/:title
