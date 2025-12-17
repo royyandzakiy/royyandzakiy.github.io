@@ -1,6 +1,6 @@
 ---
 layout: post
-title: About
+title: Royyan
 permalink: /about/
 ---
 
