@@ -3,6 +3,7 @@ layout: post
 title:  C++ Type Traits & SFINAE 
 date:   2025-12-07 13:03:03 +0700
 categories: post
+# comments: true
 ---
 One of the tasks I need to do when developing Native Windows App Libraries is creating unit tests for each component. That process requires me to heavily use and maintain Interfaces, or abstract classes, in order to Mock the component in test, and therefore I can force insert specific values. That causes such a headache because of the class inheritence explosion *vomit*
 
