@@ -8,10 +8,10 @@ source "https://rubygems.org"
 # This will help ensure the proper Jekyll version is running.
 # Happy Jekylling!
 # gem "jekyll", "~> 4.4.1"
-gem "minima", "~> 2.5"
+# gem "minima", "~> 2.5"
 # gem "tale"
-# gem "jekyll-remote-theme"
-# gem "jekyll-paginate"
+gem "jekyll-remote-theme"
+gem "jekyll-paginate"
 # If you want to use GitHub Pages, remove the "gem "jekyll"" above and
 # uncomment the line below. To upgrade, run `bundle update github-pages`.
 # gem "github-pages", group: :jekyll_plugins

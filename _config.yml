@@ -30,17 +30,17 @@ github_username:  royyandzakiy
 # permalink:  /:year-:month-:day/:title
 # paginate:   5
 
-# # Build settings
-# remote_theme: chesterhow/tale
+# Build settings
+remote_theme: chesterhow/tale
 
-# permalink:    /:year-:month-:day/:title
-# paginate:     5
-
-# plugins:
-#   - jekyll-paginate
-#   - jekyll-remote-theme
-
-theme: minima
+permalink:    /:year-:month-:day/:title
+paginate:     5
 
 plugins:
-  - jekyll-feed
+  - jekyll-paginate
+  - jekyll-remote-theme
+
+# theme: minima
+
+# plugins:
+#   - jekyll-feed
