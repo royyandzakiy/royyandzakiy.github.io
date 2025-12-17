@@ -4,14 +4,14 @@ title:  "Hello World!"
 date:   2025-12-17 13:03:03 +0700
 categories: post
 ---
-Hello World!
+Here is a simple `Hello, World!` code implementation using C++23's `std::println`
 
-{% highlight cpp %} 
-#include <iostream> 
+```cpp
+#include <print> 
 #include <string>
 
 void say_hello(std::string name) {
-   std::cout << "Hello, " << name << std::endl; 
+   std::println("Hello, {}", name); 
 }
 
 int main() { 
@@ -19,4 +19,4 @@ int main() {
   
   return 0; 
 }
-{% endhighlight %}
+```
