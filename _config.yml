@@ -27,16 +27,16 @@ baseurl: ""
 url: "https://royyandzakiy.github.io"
 github_username:  royyandzakiy
 
-theme:      tale
+# theme:      tale
 
-permalink:  /:year-:month-:day/:title
-paginate:   5
+# permalink:  /:year-:month-:day/:title
+# paginate:   5
 
 # # Build settings
-# remote_theme: chesterhow/tale
+remote_theme: chesterhow/tale
 
-# permalink:    /:year-:month-:day/:title
-# paginate:     5
+permalink:    /:year-:month-:day/:title
+paginate:     5
 
 plugins:
   - jekyll-paginate
