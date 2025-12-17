@@ -18,8 +18,8 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Royyan Dzakiy's Blog
-email: your-email@example.com
+title: Royyan Dzakiy
+# email: your-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
   Write an awesome description for your new site here. You can edit this
   line in _config.yml. It will appear in your document head meta (for
@@ -29,9 +29,15 @@ url: "https://royyandzakiy.github.io" # the base hostname & protocol for your si
 github_username:  royyandzakiy
 
 # Build settings
-theme: minima
+theme:      tale
+remote_theme: chesterhow/tale
+
+permalink:    /:year-:month-:day/:title
+paginate:     5
+
 plugins:
-  - jekyll-feed
+  - jekyll-paginate
+  - jekyll-remote-theme
 
 # Exclude from processing.
 # The following items will not be processed, by default.
