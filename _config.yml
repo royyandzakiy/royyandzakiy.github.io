@@ -20,9 +20,7 @@
 
 title: Royyan Dzakiy
 description: >-
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
+  Loving the coding craft
 baseurl: ""
 url: "https://royyandzakiy.github.io"
 github_username:  royyandzakiy
@@ -33,11 +31,16 @@ github_username:  royyandzakiy
 # paginate:   5
 
 # # Build settings
-remote_theme: chesterhow/tale
+# remote_theme: chesterhow/tale
 
-permalink:    /:year-:month-:day/:title
-paginate:     5
+# permalink:    /:year-:month-:day/:title
+# paginate:     5
+
+# plugins:
+#   - jekyll-paginate
+#   - jekyll-remote-theme
+
+theme: minima
 
 plugins:
-  - jekyll-paginate
-  - jekyll-remote-theme
+  - jekyll-feed
