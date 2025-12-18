@@ -13,7 +13,8 @@ This talk by Ivan Grokhotkov really helps to be a primer on most things on what 
 
 Man, really love these espressif talks, super practical and recent. Really grateful for their effort in these
 
-![](youtube.com/watch?v=7utLBxSOXlQ&feature=youtu.be)
+[DevCon24 - Keynote 2nd Day - Mastering ESP-IDF Build System](youtube.com/watch?v=7utLBxSOXlQ&feature=youtu.be)
 
-Here's for further reading on espressifs concept of "components"
+Here's for further reading on espressifs concept of "components":
+
 [https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/build-system.html](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/build-system.html)

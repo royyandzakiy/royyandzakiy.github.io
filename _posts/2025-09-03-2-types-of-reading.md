@@ -15,4 +15,4 @@ This video here explains that there are 2 types of reading, to consume and to di
 
 Many thanks Justin, you make some really great content!
 
-![](https://www.youtube.com/watch?v=okHkUIW46ks&feature=youtu.be)
+[Justin Sung - How to Remember Everything You Read](https://www.youtube.com/watch?v=okHkUIW46ks&feature=youtu.be)

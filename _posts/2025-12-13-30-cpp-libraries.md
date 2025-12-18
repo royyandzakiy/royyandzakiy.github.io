@@ -11,4 +11,4 @@ One thing I love doing in my spare time is looking and trying out new C++ Librar
 
 This is a cool list made by Erarnitox
 
-https://lnkd.in/gJY5JJVk
+[Erarnitox - Top 30 C++ Libraries](https://www.youtube.com/watch?v=J2vGPrVeXig)

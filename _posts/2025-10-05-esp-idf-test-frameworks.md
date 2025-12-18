@@ -17,4 +17,4 @@ Some of the things he will talk about is as follows:
 - Using QEMU
 - Using Self-hosted test runner for on target tests (hardware based)
 
-![https://www.youtube.com/watch?v=HQcTWjOv8fM](https://www.youtube.com/watch?v=HQcTWjOv8fM)
+[EDC22 Day 2 Talk 9: Leveraging ESP IDF Test Framework in Third-Party Projects](https://www.youtube.com/watch?v=HQcTWjOv8fM)

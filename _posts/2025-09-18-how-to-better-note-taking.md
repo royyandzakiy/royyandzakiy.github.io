@@ -11,4 +11,4 @@ On the general topic of learning new things, one habit that I had was to vigorou
 
 The next skill I want to really wrap my head around is mind mapping. A tool my elementary school teachers taught me about, but I just really hated back then, because it makes me just want to doodle and make the most beautiful diagrams instead 😂😭
 
-![https://www.youtube.com/watch?v=gLHqVR6VDUg&feature=youtu.be](https://www.youtube.com/watch?v=gLHqVR6VDUg&feature=youtu.be)
+[Justin Sung - You’re Not Dumb: How to Mindmap as a Beginner](https://www.youtube.com/watch?v=gLHqVR6VDUg&feature=youtu.be)
