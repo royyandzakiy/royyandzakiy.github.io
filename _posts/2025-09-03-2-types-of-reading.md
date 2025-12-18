@@ -11,10 +11,8 @@ Lately I've been having a need to learn new things, one of them being Psychology
 
 I then had this daunting feeling as it feels like such a large task and I probably won't be able to learn them properly. So I've been trying to learn how to learn from different youtube gurus
 
-https://lnkd.in/e3rF6-w3
-
 This video here explains that there are 2 types of reading, to consume and to digest. Me personally a (now not so) proud fast note-taker had always had the urge driven by my anxiety to note down every word. I personally never find this way of learning of effective, but at least it gives me comfort. Now I know that conceptual and process types information are not retained that way, but by mapping, correlating, making critiques, and for process types is best by practicing right away (rings a bell for me when trying a new programming framework)
 
 Many thanks Justin, you make some really great content!
 
-https://www.linkedin.com/posts/royyandzakiy_how-to-remember-everything-you-read-activity-7371723227980668928-CiJw?utm_source=share&utm_medium=member_android&rcm=ACoAABwvhTIB0IwtTlYizsfI5cMPoQqnevPBdA8
+![](https://www.youtube.com/watch?v=okHkUIW46ks&feature=youtu.be)

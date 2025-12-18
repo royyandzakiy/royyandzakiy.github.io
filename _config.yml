@@ -41,6 +41,6 @@ paginate:       15
 # Excludes
 exclude:        [ Gemfile, Gemfile.lock ]
 
-# Disqus (Set to your disqus id)
-disqus:         royyandzakiyblog
+# Disqus
+disqus:         royyandzakiyblog # disqus webpage shortname
 

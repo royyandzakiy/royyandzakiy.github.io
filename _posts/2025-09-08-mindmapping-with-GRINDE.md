@@ -11,6 +11,4 @@ I'm currently learning how to draw mindmaps for better study outcome. I find thi
 
 And from his GRINDE framework, I find that Reflection and Non-Verbal as most valuable to me. My thought processes are wierd, so it might be fun just drawing it down whilst in the process of absorbing/learning, don't need to make it an end goal; Non-verbal meaning less text and more "analogies" and "mnemonics", so delayed learning and more symbols should make me remember them better visually
 
-https://lnkd.in/ef6R7DZ2
-
-src: https://www.linkedin.com/posts/royyandzakiy_youre-not-dumb-how-to-mindmap-as-a-beginner-activity-7372562187875422208-lkJC?utm_source=share&utm_medium=member_android&rcm=ACoAABwvhTIB0IwtTlYizsfI5cMPoQqnevPBdA8
+![https://www.youtube.com/watch?v=5zT_2aBP6vM&feature=youtu.be](https://www.youtube.com/watch?v=5zT_2aBP6vM&feature=youtu.be)

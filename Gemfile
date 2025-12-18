@@ -1,7 +1,5 @@
 source "https://rubygems.org"
 
-# bundle exec jekyll serve
-
 # THEME: FACTORY RESET
 # gem "minima", "~> 2.5"
 # gem "jekyll", "~> 4.4.1"

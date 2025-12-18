@@ -17,4 +17,4 @@ Some of the things he will talk about is as follows:
 - Using QEMU
 - Using Self-hosted test runner for on target tests (hardware based)
 
-https://lnkd.in/gyNR3RZM
+![https://www.youtube.com/watch?v=HQcTWjOv8fM](https://www.youtube.com/watch?v=HQcTWjOv8fM)
