@@ -24,4 +24,5 @@ Here, Cherno shares his take on it. He uses Premake (not CMake), and seperates a
 Here's another take, the Open Age of Empire (one of my favorite games as a kid), it also has some great docs.
 
 [github.com/SFTtech/openage](https://github.com/SFTtech/openage)
+
 I'm keen to learning more professional and scalable C++ project setups.
