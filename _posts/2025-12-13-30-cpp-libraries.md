@@ -11,5 +11,20 @@ One thing I love doing in my spare time is looking and trying out new C++ Librar
 
 This is a cool list made by Erarnitox
 
+## 1
 [Erarnitox - Top 30 C++ Libraries](https://www.youtube.com/watch?v=J2vGPrVeXig)
+
+## 2
+![](https://www.youtube.com/watch?v=J2vGPrVeXig)
+
+## 3
 {% raw %}{% youtube J2vGPrVeXig %}{% endraw %}
+
+## 4
+<div class="video-container">
+  <iframe src="https://www.youtube.com/embed/J2vGPrVeXig" 
+          frameborder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+  </iframe>
+</div>
