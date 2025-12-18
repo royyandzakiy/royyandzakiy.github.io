@@ -32,6 +32,7 @@ plugins:
   - jekyll-paginate
   - jekyll-remote-theme
   - jekyll-seo-tag
+  - jekyll-youtube
   - jemoji
 
 # Permalinks

@@ -18,6 +18,7 @@ gem "github-pages", "~> 232", group: :jekyll_plugins # To upgrade, run `bundle u
 # PLUGINS
 group :jekyll_plugins do
   gem "jekyll-feed", "~> 0.12"
+  gem "jekyll-youtube", "~> 0.12"
 end
 
 platforms :mingw, :x64_mingw, :mswin, :jruby do
