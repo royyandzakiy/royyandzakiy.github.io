@@ -18,4 +18,6 @@ Somethings that I think I would do better on next RTOS sessions:
 - For complex topics and abstract software ones like architecture, it's best to have it during qna or in a consulting manner when someone in the mid senior level actually bringing it up
 - I should reduce the amount of examples being run through. And I should groom them better, to not have too many example cases being presented. Or even better, just rewrite the code live (rather than running a premade code) to help give a gist to the students, including how to read the texh docs to get the API correct
 
-https://www.linkedin.com/posts/royyandzakiy_had-a-blast-sharing-with-the-synapsis-team-activity-7395443152733683712-GUkT?utm_source=share&utm_medium=member_android&rcm=ACoAABwvhTIB0IwtTlYizsfI5cMPoQqnevPBdA8
+![](1763211045758.jpg)
+![](2025-11-11-rtos-sharing-session/1763211046191.jpg)
+![](../_assets/1763211046241.jpg)
