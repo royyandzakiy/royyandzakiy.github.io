@@ -22,6 +22,8 @@
     - using bluetooth via winrt: scan
     - adding build example, run via cmake
     - interop, calling the .dll via c, python, zig
+- *rtos*
+    - 
 
 ## Ideas
 - vcpkg (template)
