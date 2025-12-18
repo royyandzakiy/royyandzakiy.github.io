@@ -42,5 +42,5 @@ paginate:       15
 exclude:        [ Gemfile, Gemfile.lock ]
 
 # Disqus (Set to your disqus id)
-disqus:         jekyll-tale
+disqus:         royyandzakiyblog
 
