@@ -16,88 +16,106 @@ Here is some snippets of using Type Traits to enable SFINAE (Substitution Failur
 In this example, I made a digital_input that will be inserted inside a Button class (a study case of Embedded Systems). Here I assume the digital_input is some sort of given library that I need to replace with a Mock. So I created a type trait that gets satisfied iff any type has the init() and read() function in them. I also made an example of a BAD digital_input_mock that does not have the required functions, hence spitting out a compilation error (noice!)
 
 ```cpp
-// -------------------------------------------
-// TYPE TRAIT using SFINAE
-// -------------------------------------------
+// ----------- Type Traits ----------- 
+// This is the default fallback of the return Type Trait if after any other template 
+// specialization fails
 template<typename T, typename = void>
-struct is_digital_input : std::false_type {};
+struct is_digital_input_like : std::false_type {};
 
+// Here, declval acts as a silent instance of T, decltype ensures init() and read() exists, 
+// resulting into an std::true_type as the final return of template type trait
 template<typename T>
-struct is_digital_input<T, std::void_t<
+struct is_digital_input_like<T, std::void_t<
     decltype(std::declval<T>().init()),
     decltype(std::declval<T>().read())>> : std::true_type {};
 
+// This is a helper to extract the value of the then either std::true_type or false_type
+// into the primitive boolean value of `true` or `false`
 template<typename T>
-constexpr bool is_digital_input_v = 
-	is_digital_input<T>::value;
+constexpr bool is_digital_input_like_v = 
+	is_digital_input_like<T>::value;
 
-// -------------------------------------------
-// BUTTON TEMPLATE, REQUIRES A CORRECT TYPE
-// -------------------------------------------
-template <typename DIn, typename = std::enable_if_t<is_digital_input_v<DIn>>>
+// ----------- Button Template Class ----------- 
+template <typename T, typename = std::enable_if_t<is_digital_input_like_v<T>>>
 class Button {
 public:
-	MyButton(DIn *input) : digitalInput_(input) {}
+	MyButton(T *input) : m_DigitalInput(input) {}
 
 	void init() {
-		digitalInput_->init();
+		m_DigitalInput->init();
 		// rest of logic...
 	}
 
 	int read() {
-		return digitalInput_->read();
+		return m_DigitalInput->read();
 	}
 
 private:	
-	DIn *digitalInput_;
+	T *m_DigitalInput;
 };
 
-// -------------------------------------------
-// DIGITAL INPUT MOCK (GOOD)
-// -------------------------------------------
-class DigitalInputMock {
+// ----------- Digital Input Classes ----------- 
+// Digital Input (Real)
+class DigitalInput {
 public:
 	void init() {}
-	int read() { return value_; }
+	bool read() { return value_; }
 
-	void set_value(int v) { value_ = v; }
+	void set_value(bool v) { value_ = v; }
 private:
-	int value_{};
+	bool value_{};
 };
 
-void test_good_mock() {
-	DigitalInputMock input;
-	Button<DigitalInputMock> button(&input);
+// Digital Input (Mock)
+class DigitalInputMock {
+public:
+	void init();
+	bool read();
+};
 
-	input.set_value(42);
-	std::println("test_good_mock");
-	std::println("button value: {}", button.read());
-	assert(button.read() == 42);
-}
+auto main() -> int {
+    DigitalInputMock digitalInput;
+    Button<DigitalInputMock> buttonWithMock(&digitalInput);
 
-/**
- * Output:
- * > test_good_mock
- * > button value: 42
- */
+	digitalInput.set_value(true);
+	std::println("Test Good Mock");
+	std::println("button value: {}", button.read() ? "True" : "False");
+	assert(button.read() == true);
 
-// -------------------------------------------
-// DIGITAL INPUT MOCK (BAD)
-// -------------------------------------------
-class MalformedDigitalInputMock { /* no init(), no read() */ };
-
-void test_malformed_mock() {
-    MalformedDigitalInputMock malformedInput;
-	// SFINAE in action! Compile error]
-	std::println("test_malformed_mock");
-    Button<MalformedDigitalInputMock> button(&malformedInput); 
+	return 0;
 }
 ```
 
 Output:
 
 ```bash
-/**
-main.cpp(281,5): error C2976: 'ButtonWithSfinae': too few template arguments, see declaration of 'ButtonWithSfinae'
+Test Good Mock
+button value: True
+# assert passess succesfully
+```
 
+```cpp
+// ...
+
+// Digital Input (Bad Mock)
+class DigitalInputMock_Bad { 
+public:
+	/* void init();  */ // init() missing!
+	bool not_read(); 	// read() missing!
+};
+
+auto main() -> int {
+    DigitalInputMock_Bad digitalInputBad;
+	std::println("Testing Bad Mock");
+    Button<DigitalInputMock_Bad> buttonWithBadMock(&digitalInputBad); 
+	// SFINAE in action! Resulting in a Compile error caused by the Type Trait returning std::false_type
+
+	return 0;
+}
+```
+
+Output:
+
+```bash
+main.cpp(281,5): error C2976: 'Button': too few template arguments, see declaration of 'Button'
 ```
