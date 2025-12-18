@@ -11,7 +11,15 @@ I've been exploring different kinds of C++ project setups. What philosophy do th
 
 Here, Cherno shares his take on it. He uses Premake (not CMake), and seperates a general Core and App architecture, to later be extendable to more Core components.
 
-[The Cherno - How to Properly Setup C++ Projects](https://www.youtube.com/watch?si=muy11EgPpNnuoI3s&v=5glH8dGoeCA&feature=youtu.be)
+[The Cherno - How to Properly Setup C++ Projects](https://www.youtube.com/watch?si=muy11EgPpNnuoI3s&v=&feature=youtu.be)
+
+<div class="video-container">
+  <iframe src="https://www.youtube.com/embed/5glH8dGoeCA" 
+          frameborder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+  </iframe>
+</div>
 
 Here's another take, the Open Age of Empire (one of my favorite games as a kid), it also has some great docs.
 

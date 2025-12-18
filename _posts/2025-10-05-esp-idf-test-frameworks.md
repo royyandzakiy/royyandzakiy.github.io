@@ -18,3 +18,11 @@ Some of the things he will talk about is as follows:
 - Using Self-hosted test runner for on target tests (hardware based)
 
 [EDC22 Day 2 Talk 9: Leveraging ESP IDF Test Framework in Third-Party Projects](https://www.youtube.com/watch?v=HQcTWjOv8fM)
+
+<div class="video-container">
+  <iframe src="https://www.youtube.com/embed/HQcTWjOv8fM" 
+          frameborder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+  </iframe>
+</div>
