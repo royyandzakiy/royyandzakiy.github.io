@@ -1,3 +1,10 @@
+---
+layout: post
+title:  RTOS Sharing Session
+date:   2025-11-11 13:03:03 +0700
+categories: post
+comments: true
+---
 Had a blast sharing with the Synapsis team! The topic was about Embedded RTOSes, we mainly talked about FreeRTOS and did hands-on using ESP32.
 
 One thing that I don't find talked about enough are RTOS & design patterns. How state machines are the bread and butter in many RTOS systems, also problems that may arise in different biz contexts, for instance in a multiple sensor and multi stage data processing device, we can leverage the pipeline pattern. 
