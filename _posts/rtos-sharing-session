@@ -1,0 +1,10 @@
+Had a blast sharing with the Synapsis team! The topic was about Embedded RTOSes, we mainly talked about FreeRTOS and did hands-on using ESP32.
+
+One thing that I don't find talked about enough are RTOS & design patterns. How state machines are the bread and butter in many RTOS systems, also problems that may arise in different biz contexts, for instance in a multiple sensor and multi stage data processing device, we can leverage the pipeline pattern. 
+
+Had fun preparing the talk, and hopefully it sparked some ideas!
+
+Somethings that I think I would do better on next RTOS sessions:
+- I'd rather have a handson session, rather than a talkish one, especially when majority are beginners. This way they can bring back the experience of running the code on their pcs, and me checking on them
+- For complex topics and abstract software ones like architecture, it's best to have it during qna or in a consulting manner when someone in the mid senior level actually bringing it up
+- I should reduce the amount of examples being run through. And I should groom them better, to not have too many example cases being presented. Or even better, just rewrite the code live (rather than running a premade code) to help give a gist to the students, including how to read the texh docs to get the API correct
