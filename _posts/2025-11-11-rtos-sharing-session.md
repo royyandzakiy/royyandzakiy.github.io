@@ -3,6 +3,8 @@ layout: post
 title:  RTOS Sharing Session
 date:   2025-11-11 13:03:03 +0700
 categories: post
+author: "Royyan"
+tags: embedded
 comments: true
 ---
 Had a blast sharing with the Synapsis team! The topic was about Embedded RTOSes, we mainly talked about FreeRTOS and did hands-on using ESP32.

@@ -3,6 +3,8 @@ layout: post
 title:  ESP-IDF Test Frameworks
 date:   2025-10-05 13:03:03 +0700
 categories: post
+author: "Royyan"
+tags: esp-idf
 comments: true
 ---
 I've lately been keen in learning test systems in the embedded, especially for esp-idf. I've been wanting to really understand how far I can take the automated testing and CI processes using built in tools of the espressif ecosystem, or common practices. This talk by Zim Kalinowski really fascinates me, knowing that within espressif, they have been implementing these full blown processes for the longest time. Really excited to ramp up my gear and try implementing these tools myself.

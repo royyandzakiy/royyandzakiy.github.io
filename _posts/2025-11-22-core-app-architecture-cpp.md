@@ -3,6 +3,8 @@ layout: post
 title:  Core-App Architecture for C++ Projects
 date:   2025-11-22 13:03:03 +0700
 categories: post
+author: "Royyan"
+tags: cpp
 comments: true
 ---
 I've been exploring different kinds of C++ project setups. What philosophy do they have, what overarching architecture do they use, what build system do they utilize.

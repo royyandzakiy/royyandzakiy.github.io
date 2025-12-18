@@ -3,6 +3,8 @@ layout: post
 title:  2 Types of Reading
 date:   2025-09-03 13:03:03 +0700
 categories: post
+author: "Royyan"
+tags: 
 comments: true
 ---
 Lately I've been having a need to learn new things, one of them being Psychology (because I do quite a bit of self dev & team building training for young adults but never learned the formal subject itself), and another is Physics (primer to understand control theory)
