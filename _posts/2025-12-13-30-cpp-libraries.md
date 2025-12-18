@@ -11,7 +11,6 @@ One thing I love doing in my spare time is looking and trying out new C++ Librar
 
 This is a cool list made by Erarnitox
 
-## 4
 <div class="video-container">
   <iframe src="https://www.youtube.com/embed/J2vGPrVeXig" 
           frameborder="0" 
