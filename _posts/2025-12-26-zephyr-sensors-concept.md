@@ -1,6 +1,6 @@
 ---
 date:   2025-12-26 13:03:03 +0700
-title:  Zephyr Modern C++: Sensors Concept
+title:  Zephyr Modern C++ - Sensors Concept
 layout: post
 categories: post
 author: "Royyan"
