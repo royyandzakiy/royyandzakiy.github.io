@@ -15,7 +15,7 @@ One particular feature I tried out in this example is the use of std::variant fo
 
 Let's say, a more shiny Statemachine haha. A different approach than using bare enums and switch statements (not simply saying they are less)
 
-Check it out!
+Check it out here!
 
 [github.com/royyandzakiy/zephyr-modern-cpp](https://github.com/royyandzakiy/zephyr-modern-cpp)
 
