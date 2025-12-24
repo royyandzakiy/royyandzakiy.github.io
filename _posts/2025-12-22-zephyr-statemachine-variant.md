@@ -81,6 +81,11 @@ class StateMachine {
 };
 
 auto main() -> int {
+    StateMachine sm_;
+	TemperatureSensor t_;
+	HumiditySensor h_;
+	PressureSensor p_;
+    
     sm_.process_sensors(t_, h_, p_);
 
     // ...
