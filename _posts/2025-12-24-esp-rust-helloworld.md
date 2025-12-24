@@ -9,7 +9,9 @@ comments: true
 ---
 Compiled and ran my first esp rust (auto generated) firmware!
 
-Can't wait to dive deeper and learn more about Rust!
+Planning to add a simple webserver API call, while learning Rust
+
+Can't wait to dive deeper!
 
 
-![alt text](assets/images/esp-rust-helloworld.png)
+![alt text](/assets/images/esp-rust-helloworld.png)
