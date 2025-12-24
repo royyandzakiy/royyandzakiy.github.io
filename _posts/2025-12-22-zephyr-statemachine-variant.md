@@ -20,5 +20,73 @@ Check it out here!
 [github.com/royyandzakiy/zephyr-modern-cpp](https://github.com/royyandzakiy/zephyr-modern-cpp)
 
 ```cpp
-// code will be added here...
+enum class StateId {
+	IDLE,
+	MONITORING,
+	ALERT,
+	CALIBRATING
+};
+struct IdleState {};
+struct MonitoringState {
+	int32_t average_temp_value;
+	int sample_count;
+};
+
+struct AlertState {
+	std::string_view message;
+	int32_t threshold_temp_value;
+};
+
+struct CalibratingState {
+	int32_t reference_temp_value;
+	int calibration_step;
+};
+
+using StateVariant = std::variant<std::monostate, IdleState, MonitoringState, AlertState, CalibratingState>;
+
+class StateMachine {
+    // ...
+    auto get_state_info() const -> std::string_view {
+		return std::visit(Overloaded{
+			[this](const IdleState&) -> std::string_view {
+				return "Status: Idle - Awaiting for sensor trigger"sv;
+			},
+			[this](const MonitoringState& s) -> std::string_view {
+				// psst: not using std::format because the zephyr SDK does not have #include <format>
+				int len = snprintf(format_buffer_.data(), format_buffer_.size(), 
+									"Status: Monitoring [Avg: %d.%02d°C | Samples: %d]",
+									ipart(s.average_temp_value), fpart(s.average_temp_value), s.sample_count);
+				return { format_buffer_.data(), static_cast<size_t>(len) };
+			},
+			[this](const AlertState& s) -> std::string_view {
+				int len = snprintf(format_buffer_.data(), format_buffer_.size(), 
+								"Status: ALERT [%.*s | Threshold: %d.%02d°C]", 
+								static_cast<int>(s.message.length()), s.message.data(),
+								ipart(s.threshold_temp_value), fpart(s.threshold_temp_value));
+				return {format_buffer_.data(), static_cast<size_t>(len)};
+			},
+			[this](const CalibratingState& s) -> std::string_view {
+				int len = snprintf(format_buffer_.data(), format_buffer_.size(), 
+								"Status: Calibrating [Ref: %d.%02d°C | Step: %d/5]", 
+								ipart(s.reference_temp_value), fpart(s.reference_temp_value), s.calibration_step);
+				return {format_buffer_.data(), static_cast<size_t>(len)};
+			},
+			[this](const auto&) -> std::string_view {
+				// default fallback
+				return "Status: Unknown State! [Error]"sv;
+			}
+		}, current_state_);
+	}
+    // ...
+};
+
+auto main() -> int {
+    sm_.process_sensors(t_, h_, p_);
+
+    // ...
+
+    auto info = sm_.get_state_info();
+
+    return 0;
+}
 ```
