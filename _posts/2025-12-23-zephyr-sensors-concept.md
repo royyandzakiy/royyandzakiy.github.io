@@ -1,5 +1,5 @@
 ---
-date:   2025-12-26 13:03:03 +0700
+date:   2025-12-23 13:03:03 +0700
 title:  Zephyr Modern C++ - Sensors Concept
 layout: post
 categories: post
@@ -13,7 +13,7 @@ Here is the continuation of the last post.
 
 This time I try using Concepts to iterate through a bunch of "Sensors". Here I use the generic function process_sensors that utilizes C++ Template Metaprogramming and uses the Ellipsis "..." operator to process through an arbritary amount of sensors (in this case, 3). The result is an expressive and elegant code (feels like I'm coding in javascript with the Spread Operator haha). 
 
-The measurements array stores results of read() of each sensors, invoked each time this process_sensors gets called. Fun fact, here the std::array automatically deduces it's own type and size because of Class Template Argument Deduction (CTAD) enforced by the SensorType concept (no need to define std::array<type, size>).
+The measurements array stores results of read() of each sensors, invoked each time this process_sensors gets called. Fun fact, here the std::array automatically deduces it's own type and size because of Class Template Argument Deduction (CTAD) enforced by the SensorLike concept (no need to define std::array<type, size>).
 
 Is it the most efficient in the case when we need to optimize for firmware size, probably not. Is it fun? Yesh
 
@@ -24,7 +24,7 @@ Check it out!
 ```cpp
 // --- Concepts & Constraints ---
 template <typename T>
-concept SensorType = requires(T t) {
+concept SensorLike = requires(T t) {
 	{ t.read() } -> std::convertible_to<int32_t>;
 	{ t.get_id() } -> std::convertible_to<int>;
 };
@@ -62,7 +62,7 @@ class PressureSensor {
 
 class StateMachine {
     // ...
-    template <SensorType... Sensors> auto process_sensors(Sensors &&...sensors) -> void {
+    template <SensorLike... Sensors> auto process_sensors(Sensors &&...sensors) -> void {
 		const std::array measurements{sensors.read()...};
 		int temperatureSensorIdx = 0;
 
