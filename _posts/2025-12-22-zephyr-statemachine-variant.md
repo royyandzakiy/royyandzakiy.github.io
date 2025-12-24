@@ -1,6 +1,6 @@
 ---
 date:   2025-12-22 13:03:03 +0700
-title:  Zephyr Modern C++ - Statemachines
+title:  Zephyr Modern C++ - Statemachines using std::variant/std::visit
 layout: post
 categories: post
 author: "Royyan"
