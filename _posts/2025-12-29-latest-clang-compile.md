@@ -15,7 +15,7 @@ Here Mike explained the steps very well through his youtube video "
 Build Clang++20 (LLVM 18 and lldb) from source"
 
 <div class="video-container">
-  <iframe src="https://www.youtube.com/watch?v=LbhGPiGI_Qs" 
+  <iframe src="https://www.youtube.com/embed/LbhGPiGI_Qs" 
           frameborder="0" 
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
           allowfullscreen>
