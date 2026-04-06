@@ -43,23 +43,23 @@ I also tried comparing when adding the C++ library to the compilation, and remov
 
 **State machine using std::variant, std::visit**
 
-![alt text](assets/images/zephyr-cpp-vs-c-size_variant.png)
+![alt text](/assets/images/zephyr-cpp-vs-c-size_variant.png)
 
 **State machine using enum & switch**
 
-![alt text](assets/images/zephyr-cpp-vs-c-size_switch.png)
+![alt text](/assets/images/zephyr-cpp-vs-c-size_switch.png)
 
 **Removing most all CPP code, change into C**
 
-![alt text](assets/images/zephyr-cpp-vs-c-size_c_cpp.png)
+![alt text](/assets/images/zephyr-cpp-vs-c-size_c_cpp.png)
 
 **Removing CPP lib in prj.conf**
 
-![alt text](assets/images/zephyr-cpp-vs-c-size_pure_c.png)
+![alt text](/assets/images/zephyr-cpp-vs-c-size_pure_c.png)
 
 **Code using enum & switch**
 
-![alt text](assets/images/zephyr-cpp-vs-c-size_recode_pure_c.png)
+![alt text](/assets/images/zephyr-cpp-vs-c-size_recode_pure_c.png)
 
 ---
 
