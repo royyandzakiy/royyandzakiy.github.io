@@ -10,7 +10,7 @@ comments: true
 
 I have been slowly adding more stuff for my complete [@royyandzakiy/cpp-project-template](https://github.com/royyandzakiy/cpp-project-template). Lately I've been focusing on adding things to do in the CI, and I was re-watching Jason's video on HIS version of C++ project template.
 
-![](https://youtu.be/YbgH7yat-Jo?si=aQe3pZWKQuQBzMV3)
+[https://youtu.be/YbgH7yat-Jo?si=aQe3pZWKQuQBzMV3](https://youtu.be/YbgH7yat-Jo?si=aQe3pZWKQuQBzMV3)
 
 Based on the video, here is a list of all the tools, libraries, and features that are used, added to, or used along with the cpp_starter_project:
 

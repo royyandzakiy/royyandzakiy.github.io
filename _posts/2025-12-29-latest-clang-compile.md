@@ -13,11 +13,7 @@ Compiled it in Linux WSL
 
 Here Mike explained the steps very well through his youtube video "
 Build Clang++20 (LLVM 18 and lldb) from source"
-![](https://www.youtube.com/watch?v=LbhGPiGI_Qs)
+[https://www.youtube.com/watch?v=LbhGPiGI_Qs](https://www.youtube.com/watch?v=LbhGPiGI_Qs)
 
 And the guide in the Clang website is surprisingly good to get started
 [LLVM - Getting Started: Building and Running Clang](https://clang.llvm.org/get_started.html)
-
-```cpp
-// code will be added here...
-```
