@@ -5,9 +5,6 @@ layout: post
 categories: post
 author: "Royyan"
 tags: zephyr cpp state-machine
-excerpt_separator: <!--more-->
-sticky: true
-hidden: true
 comments: true
 ---
 
