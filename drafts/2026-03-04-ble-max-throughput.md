@@ -1,0 +1,1 @@
+ble max throughput by changing settings; by pure beacon, or via client periph

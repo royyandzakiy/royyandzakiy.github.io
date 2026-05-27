@@ -1,0 +1,1 @@
+no to hidden logics, be explicit. easier to test

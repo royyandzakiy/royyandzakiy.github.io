@@ -6,7 +6,7 @@ Can we use the latest c++ features on microcontrollers? I've been testing out to
 Check it out!
 https://github.com/royyandzakiy/zephyr-modern-cpp
  * 
- */
+```cpp
 
 auto get_history_range() const -> std::tuple<int32_t, int32_t> {
     if (buffer_index_ == 0) {
@@ -27,3 +27,4 @@ auto get_history_range() const -> std::tuple<int32_t, int32_t> {
 }
 
 auto [min_temp, max_temp] = sm_.get_history_range();
+```
