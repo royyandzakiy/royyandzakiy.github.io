@@ -25,8 +25,6 @@ SMF tries to solve this problem by providing a more robust State Machine impleme
 
 ## Current Implementation
 
-This is a combination of code from `dbk-app` and `nexus-app`.
-
 > _Note: Do not focus on the specific implementation written here — focus on the refactoring possibilities and design patterns being used as discourse for decision making._
 
 ```c
@@ -36,18 +34,20 @@ static enum state_type {
     STATE_BLE_READY,
     STATE_BLE_CONNECTED,
     STATE_BLE_DISCONNECTED,
+    STATE_BLE_SENSOR_DATA_TRANSFER,
     STATE_SHUTDOWN
 } state;
 
 static char *state2str(enum state_type state)
 {
     switch (state) {
-    case STATE_BLE_INIT:        return "STATE_BLE_INIT";
-    case STATE_BLE_READY:       return "STATE_BLE_READY";
-    case STATE_BLE_DISCONNECTED:return "STATE_BLE_DISCONNECTED";
-    case STATE_BLE_CONNECTED:   return "STATE_BLE_CONNECTED";
-    case STATE_SHUTDOWN:        return "STATE_SHUTDOWN";
-    default:                    return "Unknown";
+    case STATE_BLE_INIT:                 return "STATE_BLE_INIT";
+    case STATE_BLE_READY:                return "STATE_BLE_READY";
+    case STATE_BLE_DISCONNECTED:         return "STATE_BLE_DISCONNECTED";
+    case STATE_BLE_CONNECTED:            return "STATE_BLE_CONNECTED";
+    case STATE_BLE_SENSOR_DATA_TRANSFER: return "STATE_BLE_SENSOR_DATA_TRANSFER";
+    case STATE_SHUTDOWN:                 return "STATE_SHUTDOWN";
+    default:                             return "Unknown";
     }
 }
 
@@ -86,7 +86,7 @@ static void module_thread_fn(void)
     while (true) {
         module_get_next_msg(&ble.self, &msg);
 
-        switch (ble.state) {
+        switch (state) {
         case STATE_BLE_INIT:
             on_state_init(&msg);
             break;
@@ -107,12 +107,11 @@ static void module_thread_fn(void)
 
 static void message_handler(struct ble_msg_data *msg)
 {
-    if (IS_EVENT(msg, message, MESSAGE_EVT_SETTINGS_READY_TO_SEND)) {
-        LOG_DBG("sending device info via BLE ...");
-        command_structure_t command = { ... };
+    if (IS_EVENT(msg, message, MESSAGE_EVT_PAYLOAD_READY)) {
+        LOG_DBG("sending payload via BLE ...");
         // ...
-        send_message_by_ble((const uint8_t *) payload, sizeof(payload));
-    } else if (IS_EVENT(msg, message, MESSAGE_EVT_COMMAND_TYPE_CALIBRATION_GET)) {
+        send_ble_notification((const uint8_t *) payload, sizeof(payload));
+    } else if (IS_EVENT(msg, message, MESSAGE_EVT_CMD_RECEIVED)) {
         // ...
     }
 }
@@ -125,30 +124,30 @@ static void message_handler(struct ble_msg_data *msg)
 - Add `smf_ctx` & `smf_event` inside `ble_t`
 - Implement `state_type` in HSM form and EVENT BITs for SMF use — intentional indentation emphasizes parent-child state relationships
 - Call `smf_set_state` where appropriate (inside a `state_ble_xxxx_yyyy`, or from a callback like `.connected`)
-- Utilize local events (`k_event_wait` with `K_NO_WAIT`) to help `state_ble_xxxx_run` decide what to process, ending with `return SMF_EVENT_HANDLED`
+- Utilize local events (`k_event_wait` with `K_NO_WAIT`) to help `state_ble_xxxx_run` decide what to process
 
 ```c
 /* Replace the enum with SMF state objects */
-static struct smf_state states[];
+static const struct smf_state states[];
 
 /* Event definitions */
 #define EVENT_ADV_STOP          BIT(0)
 #define EVENT_START_STREAMING   BIT(1)
 #define EVENT_STOP_STREAMING    BIT(2)
 #define EVENT_USB_CONNECTED     BIT(3)
-#define EVENT_SETTINGS_READY    BIT(4)
+#define EVENT_PAYLOAD_READY     BIT(4)
 
 typedef struct {
     struct smf_ctx ctx;
     struct k_event smf_event;
     struct bt_conn *current_conn;
     bool start_stream;
-    struct bt_nexus nexus_service;
-    string_t name;
+    struct bt_gatt_service gatt_service;
+    char name[CONFIG_BT_DEVICE_NAME_MAX];
     struct k_timer connection_timeout;
-    struct k_sem nexus_ble_parameter_sem;
-    struct k_sem connect_sema;
-    struct k_sem data_thread_sema;
+    struct k_sem param_update_sem;
+    struct k_sem connect_sem;
+    struct k_sem data_thread_sem;
 } ble_t;
 
 static ble_t ble;
@@ -253,7 +252,7 @@ static void state_ble_data_transfer_run(void *o) {
     if (s->start_stream && data_available()) {
         sensor_data_t data = acquire_sensor_data();
         process_and_filter_data(&data);
-        send_message_by_ble((uint8_t*)&data, sizeof(data));
+        send_ble_notification((uint8_t*)&data, sizeof(data));
     }
 }
 
@@ -264,12 +263,12 @@ static void state_ble_data_transfer_exit(void *o) {
 }
 
 static const struct smf_state states[] = {
-    [STATE_BLE_INIT] = SMF_CREATE_STATE(NULL, state_ble_init_run, NULL, NULL, NULL),
-    [STATE_BLE_READY] = SMF_CREATE_STATE(NULL, state_ble_ready_run, NULL, NULL, NULL),
-    [STATE_BLE_CONNECTED] = SMF_CREATE_STATE(NULL, state_ble_connected_run, NULL, &states[STATE_BLE_READY], NULL),
-    [STATE_BLE_DISCONNECTED] = SMF_CREATE_STATE(state_ble_disconnected_entry, state_ble_disconnected_run, state_ble_disconnected_exit, &states[STATE_BLE_READY], NULL),
+    [STATE_BLE_INIT]               = SMF_CREATE_STATE(NULL, state_ble_init_run, NULL, NULL, NULL),
+    [STATE_BLE_READY]              = SMF_CREATE_STATE(NULL, state_ble_ready_run, NULL, NULL, NULL),
+    [STATE_BLE_CONNECTED]          = SMF_CREATE_STATE(NULL, state_ble_connected_run, NULL, &states[STATE_BLE_READY], NULL),
+    [STATE_BLE_DISCONNECTED]       = SMF_CREATE_STATE(state_ble_disconnected_entry, state_ble_disconnected_run, state_ble_disconnected_exit, &states[STATE_BLE_READY], NULL),
     [STATE_BLE_SENSOR_DATA_TRANSFER] = SMF_CREATE_STATE(state_ble_data_transfer_entry, state_ble_data_transfer_run, state_ble_data_transfer_exit, &states[STATE_BLE_CONNECTED], NULL),
-    [STATE_SHUTDOWN] = SMF_CREATE_STATE(state_shutdown_entry, NULL, NULL, NULL, NULL)
+    [STATE_SHUTDOWN]               = SMF_CREATE_STATE(state_shutdown_entry, NULL, NULL, NULL, NULL)
 };
 ```
 
@@ -280,13 +279,13 @@ Calling state change and `event_post` from connection callbacks:
 ```c
 static void connected(struct bt_conn *conn, uint8_t err)
 {
-    smf_set_state(SMF_CTX(&ble.ctx), &demo_states[STATE_BLE_CONNECTED]);
+    smf_set_state(SMF_CTX(&ble), &states[STATE_BLE_CONNECTED]);
     k_event_post(&ble.smf_event, EVENT_ADV_STOP);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t err)
 {
-    smf_set_state(SMF_CTX(&ble.ctx), &demo_states[STATE_BLE_DISCONNECTED]);
+    smf_set_state(SMF_CTX(&ble), &states[STATE_BLE_DISCONNECTED]);
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
@@ -321,16 +320,16 @@ static void module_thread_fn(void)
         SEND_ERROR(ble, BLE_EVT_ERROR, err);
     }
 
-    smf_set_initial(&ctx, &states[STATE_BLE_INIT]);
+    smf_set_initial(SMF_CTX(&ble), &states[STATE_BLE_INIT]);
 
     while (true) {
         module_get_next_msg(&ble.self, &msg);
 
         /* Process message in current state context */
-        message_handler(msg);
+        message_handler(&msg);
 
         /* SMF handles state change requests and runs state_run logic */
-        smf_run_state(&ctx);
+        smf_run_state(SMF_CTX(&ble));
 
         k_sleep(K_MSEC(10));
     }
@@ -340,15 +339,15 @@ static void message_handler(struct ble_msg_data *msg)
 {
     if (IS_EVENT(msg, app, APP_EVT_BLE_START_STREAMING)) {
         LOG_DBG("Start streaming event");
-        k_event_post(&ble_smf_obj.smf_event, EVENT_START_STREAMING);
+        k_event_post(&ble.smf_event, EVENT_START_STREAMING);
 
     } else if (IS_EVENT(msg, app, APP_EVT_BLE_STOP_STREAMING)) {
         LOG_DBG("Stop streaming event");
-        k_event_post(&ble_smf_obj.smf_event, EVENT_STOP_STREAMING);
+        k_event_post(&ble.smf_event, EVENT_STOP_STREAMING);
 
     } else if (IS_EVENT(msg, app, APP_EVT_USB_CONNECTED)) {
         LOG_DBG("USB connected event");
-        k_event_post(&ble_smf_obj.smf_event, EVENT_USB_CONNECTED);
+        k_event_post(&ble.smf_event, EVENT_USB_CONNECTED);
     }
     // ... other events
 }
@@ -539,26 +538,26 @@ The code below properly utilizes `SMF_EVENT_PROPAGATE` (e.g., in `state_ble_data
 
 ```c
 /* Replace the enum with SMF state objects */
-static struct smf_state states[];
+static const struct smf_state states[];
 
 /* Event definitions */
 #define EVENT_ADV_STOP          BIT(0)
 #define EVENT_START_STREAMING   BIT(1)
 #define EVENT_STOP_STREAMING    BIT(2)
 #define EVENT_USB_CONNECTED     BIT(3)
-#define EVENT_SETTINGS_READY    BIT(4)
+#define EVENT_PAYLOAD_READY     BIT(4)
 
 typedef struct {
     struct smf_ctx ctx;       /* Must be first */
     struct k_event smf_event;
     struct bt_conn *current_conn;
     bool start_stream;
-    struct bt_nexus nexus_service;
-    string_t name;
+    struct bt_gatt_service gatt_service;
+    char name[CONFIG_BT_DEVICE_NAME_MAX];
     struct k_timer connection_timeout;
-    struct k_sem nexus_ble_parameter_sem;
-    struct k_sem connect_sema;
-    struct k_sem data_thread_sema;
+    struct k_sem param_update_sem;
+    struct k_sem connect_sem;
+    struct k_sem data_thread_sem;
 } ble_t;
 
 static ble_t ble;
@@ -571,37 +570,55 @@ static enum state_type {
             STATE_BLE_SENSOR_DATA_TRANSFER,
         STATE_BLE_DISCONNECTED,
     STATE_SHUTDOWN
-} states;
+} current_state;
 
 static enum smf_state_result state_ble_init_run(void *o) {
     bt_enable(NULL);
-    smf_set_state(SMF_CTX(&ble.ctx), &states[STATE_BLE_READY]);
+    smf_set_state(SMF_CTX(&ble), &states[STATE_BLE_READY]);
     return SMF_EVENT_HANDLED;
 }
 
 static enum smf_state_result state_ble_ready_run(void *o) {
-    smf_set_state(SMF_CTX(&ble.ctx), &states[STATE_BLE_DISCONNECTED]);
+    smf_set_state(SMF_CTX(&ble), &states[STATE_BLE_DISCONNECTED]);
     return SMF_EVENT_HANDLED;
 }
 
+static void state_ble_disconnected_entry(void *o) {
+    LOG_INF("Entering BLE_DISCONNECTED");
+    advertising_start(); // ensure called at least once, after initialization
+}
+
 static enum smf_state_result state_ble_disconnected_run(void *o) {
-    advertising_start();
+    ble_t *s = (ble_t *)o;
+
+    if (k_event_wait(&s->smf_event, EVENT_USB_CONNECTED, false, K_NO_WAIT)) {
+        smf_set_state(SMF_CTX(s), &states[STATE_SHUTDOWN]);
+        k_event_clear(&s->smf_event, EVENT_USB_CONNECTED);
+    }
+
     return SMF_EVENT_HANDLED;
+}
+
+static void state_ble_disconnected_exit(void *o) {
+    LOG_INF("Exiting BLE_DISCONNECTED");
+    advertising_stop(); // called once when successfully BLE connected
 }
 
 static enum smf_state_result state_ble_connected_run(void *o) {
     ble_t *s = (ble_t *)o;
-    uint32_t events = k_event_wait(&s->smf_event,
-                         EVENT_START_STREAMING | EVENT_STOP_STREAMING | EVENT_USB_CONNECTED,
-                         true, K_NO_WAIT);
 
-    if (events & EVENT_START_STREAMING) {
+    if (s->current_conn == NULL) {
+        smf_set_state(SMF_CTX(s), &states[STATE_BLE_DISCONNECTED]);
+        return SMF_EVENT_HANDLED;
+    }
+
+    if (k_event_wait(&s->smf_event, EVENT_START_STREAMING, false, K_NO_WAIT)) {
         smf_set_state(SMF_CTX(s), &states[STATE_BLE_SENSOR_DATA_TRANSFER]);
         k_event_clear(&s->smf_event, EVENT_START_STREAMING);
         return SMF_EVENT_HANDLED;
     }
 
-    if (events & EVENT_USB_CONNECTED) {
+    if (k_event_wait(&s->smf_event, EVENT_USB_CONNECTED, false, K_NO_WAIT)) {
         if (s->current_conn) {
             bt_conn_disconnect(s->current_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
         }
@@ -612,10 +629,16 @@ static enum smf_state_result state_ble_connected_run(void *o) {
     return SMF_EVENT_PROPAGATE; // Let parent (STATE_BLE_READY) run if needed
 }
 
+static void state_ble_data_transfer_entry(void *o) {
+    LOG_INF("Entering BLE_SENSOR_DATA_TRANSFER");
+    ble_t *s = (ble_t *)o;
+    s->start_stream = true;
+}
+
 static enum smf_state_result state_ble_data_transfer_run(void *o) {
     ble_t *s = (ble_t *)o;
 
-    if (k_event_wait(&s->smf_event, EVENT_STOP_STREAMING, true, K_NO_WAIT)) {
+    if (k_event_wait(&s->smf_event, EVENT_STOP_STREAMING, false, K_NO_WAIT)) {
         smf_set_state(SMF_CTX(s), &states[STATE_BLE_CONNECTED]);
         k_event_clear(&s->smf_event, EVENT_STOP_STREAMING);
         return SMF_EVENT_HANDLED;
@@ -624,10 +647,16 @@ static enum smf_state_result state_ble_data_transfer_run(void *o) {
     if (s->start_stream && data_available()) {
         sensor_data_t data = acquire_sensor_data();
         process_and_filter_data(&data);
-        send_message_by_ble((uint8_t*)&data, sizeof(data));
+        send_ble_notification((uint8_t*)&data, sizeof(data));
     }
 
     return SMF_EVENT_PROPAGATE; // Let parent (CONNECTED) handle other events
+}
+
+static void state_ble_data_transfer_exit(void *o) {
+    LOG_INF("Exiting BLE_SENSOR_DATA_TRANSFER");
+    ble_t *s = (ble_t *)o;
+    s->start_stream = false;
 }
 
 static enum smf_state_result state_shutdown_run(void *o) {
@@ -635,12 +664,12 @@ static enum smf_state_result state_shutdown_run(void *o) {
 }
 
 static const struct smf_state states[] = {
-    [STATE_BLE_INIT] = SMF_CREATE_STATE(NULL, state_ble_init_run, NULL, NULL, NULL),
-    [STATE_BLE_READY] = SMF_CREATE_STATE(NULL, state_ble_ready_run, NULL, NULL, NULL),
-    [STATE_BLE_CONNECTED] = SMF_CREATE_STATE(NULL, state_ble_connected_run, NULL, &states[STATE_BLE_READY], NULL),
-    [STATE_BLE_DISCONNECTED] = SMF_CREATE_STATE(NULL, state_ble_disconnected_run, NULL, &states[STATE_BLE_READY], NULL),
-    [STATE_BLE_SENSOR_DATA_TRANSFER] = SMF_CREATE_STATE(NULL, state_ble_data_transfer_run, NULL, &states[STATE_BLE_CONNECTED], NULL),
-    [STATE_SHUTDOWN] = SMF_CREATE_STATE(NULL, state_shutdown_run, NULL, NULL, NULL)
+    [STATE_BLE_INIT]               = SMF_CREATE_STATE(NULL, state_ble_init_run, NULL, NULL, NULL),
+    [STATE_BLE_READY]              = SMF_CREATE_STATE(NULL, state_ble_ready_run, NULL, NULL, NULL),
+    [STATE_BLE_CONNECTED]          = SMF_CREATE_STATE(NULL, state_ble_connected_run, NULL, &states[STATE_BLE_READY], NULL),
+    [STATE_BLE_DISCONNECTED]       = SMF_CREATE_STATE(state_ble_disconnected_entry, state_ble_disconnected_run, state_ble_disconnected_exit, &states[STATE_BLE_READY], NULL),
+    [STATE_BLE_SENSOR_DATA_TRANSFER] = SMF_CREATE_STATE(state_ble_data_transfer_entry, state_ble_data_transfer_run, state_ble_data_transfer_exit, &states[STATE_BLE_CONNECTED], NULL),
+    [STATE_SHUTDOWN]               = SMF_CREATE_STATE(NULL, state_shutdown_run, NULL, NULL, NULL)
 };
 ```
 
