@@ -12,7 +12,7 @@ static MdVector mdvectors[] = {
 // Highlighting is not part of the vectors: drop spans inside code blocks.
 static std::string_view unhighlight(Arena *a, std::string_view s)
 {
-    Buf b(a, std::ssize(s));
+    std::string b;
     b32 code = 0;
     for (iz i = 0; i < std::ssize(s);) {
         std::string_view rest = s.substr(i);
@@ -28,9 +28,9 @@ static std::string_view unhighlight(Arena *a, std::string_view s)
             i += 7;
             continue;
         }
-        putbyte(&b, s[i++]);
+        b += s[i++];
     }
-    return finish(&b);
+    return clone(a, b);
 }
 
 static void test_markdown(Test *t)
@@ -42,21 +42,21 @@ static void test_markdown(Test *t)
         Arena scratch = t->perm;
         scratch.beg   = perm.end;
         Log log = {};
-        log.buf = Buf(&perm, 1<<12);
+        log.buf.clear();
         Markdown md = markdown(mdvectors[i].in, "vector", 1, &perm, scratch, &log);
 
-        Buf name(&perm, 64);
-        print(&name, "markdown vector ");
-        print(&name, (i64)i);
-        print(&name, ": ");
-        print(&name, mdvectors[i].in);
-        expect(t, finish(&name), unhighlight(&perm, md.html), mdvectors[i].want);
+        std::string name;
+        name += "markdown vector ";
+        name += std::to_string(i);
+        name += ": ";
+        name += mdvectors[i].in;
+        expect(t, name, unhighlight(&perm, md.html), mdvectors[i].want);
     }
 
     // Excerpts end at a top-level <!--more-->, else at the first blank line
     Arena a = t->perm;
     Log log = {};
-    log.buf = Buf(&a, 1<<12);
+    log.buf.clear();
     Arena scratch = a;
     scratch.beg += (a.end - a.beg)/2;
     a.end = scratch.beg;
@@ -95,17 +95,17 @@ static void test_markdown(Test *t)
         Arena scratch = t->perm;
         scratch.beg   = perm.end;
         Log log = {};
-        log.buf = Buf(&perm, 1<<12);
+        log.buf.clear();
         markdown(warnings[i].in, "w", 1, &perm, scratch, &log);
-        std::string_view got  = finish(&log.buf);
+        std::string_view got  = log.buf;
         std::string_view want = warnings[i].want;
         if (std::ssize(want) && got.contains(want)) {
             got = want;
         }
-        Buf name(&perm, 64);
-        print(&name, "markdown warning: ");
-        print(&name, warnings[i].in);
-        expect(t, finish(&name), got, want);
+        std::string name;
+        name += "markdown warning: ";
+        name += warnings[i].in;
+        expect(t, name, got, want);
     }
 
     // Deep nesting renders as text, bounding recursion
@@ -114,13 +114,13 @@ static void test_markdown(Test *t)
     scratch       = t->perm;
     scratch.beg   = perm.end;
     log     = {};
-    log.buf = Buf(&perm, 1<<12);
-    Buf deep(&scratch, 1<<12);
+    log.buf.clear();
+    std::string deep;
     for (i32 i = 0; i < 2*MAXDEPTH; i++) {
-        print(&deep, "> <span>");
+        deep += "> <span>";
     }
-    markdown(finish(&deep), "w", 1, &perm, scratch, &log);
-    std::string_view got  = finish(&log.buf);
+    markdown(deep, "w", 1, &perm, scratch, &log);
+    std::string_view got  = log.buf;
     std::string_view want = "pathological nesting";
     expect(t, "markdown deep nesting", got.contains(want) ? want : got, want);
 }

@@ -1,4 +1,4 @@
-// Foundation: types, arenas, strings, buffers
+// Foundation: types, arenas, strings, output
 // This is free and unencumbered software released into the public domain.
 #include <algorithm>
 #include <chrono>
@@ -201,122 +201,45 @@ static i32 utf8prev(std::string_view s, iz i, iz *start)
 }
 
 
-// Output buffers: appending grows in the arena, in place when possible.
+// Output accumulates in std::string.
 
-struct Buf {
-    char  *data = {};
-    iz     len  = {};
-    iz     cap  = {};
-    Arena *a    = {};
-
-    Buf() = default;
-    Buf(Arena *a, iz cap = 1<<12) : data{allocbytes(a, cap)}, cap{cap}, a{a} {}
-
-    // For std::back_inserter, so std::format_to can append
-    using value_type = char;
-    void push_back(char c);
-};
-
-static void reserve(Buf *b, iz need)
-{
-    if (b->cap - b->len >= need) {
-        return;
-    }
-    Arena *a = b->a;
-    iz extend = b->cap > need ? b->cap : need;
-    if ((byte *)(b->data+b->cap) == a->beg) {
-        allocbytes(a, extend);
-    } else {
-        char *data = allocbytes(a, b->cap+extend);
-        copybytes(data, b->data, b->len);
-        b->data = data;
-    }
-    b->cap += extend;
-}
-
-static void print(Buf *b, std::string_view s)
-{
-    reserve(b, std::ssize(s));
-    copybytes(b->data+b->len, s.data(), std::ssize(s));
-    b->len += std::ssize(s);
-}
-
-static void putbyte(Buf *b, u8 c)
-{
-    reserve(b, 1);
-    b->data[b->len++] = (char)c;
-}
-
-void Buf::push_back(char c)
-{
-    putbyte(this, (u8)c);
-}
-
-// std::format into the buffer
+// std::format onto the end of b
 template<typename... Args>
-static void printfmt(Buf *b, std::format_string<Args...> fmt, Args &&...args)
+static void printfmt(std::string *b, std::format_string<Args...> fmt, Args &&...args)
 {
     std::format_to(std::back_inserter(*b), fmt, std::forward<Args>(args)...);
 }
 
-static void print(Buf *b, i64 v)
-{
-    printfmt(b, "{}", v);
-}
-
-// Zero-padded decimal of at least width digits.
-static void printpad(Buf *b, i64 v, i32 width)
-{
-    printfmt(b, "{:0{}}", v, width);
-}
-
 // The low digits hex digits of v, zero-padded.
-static void printhex(Buf *b, u64 v, i32 digits)
+static void printhex(std::string *b, u64 v, i32 digits)
 {
     u64 mask = digits<16 ? ((u64)1<<(4*digits)) - 1 : ~(u64)0;
     printfmt(b, "{:0{}x}", v & mask, digits);
 }
 
 // Escape & < > for HTML text content.
-static void printhtml(Buf *b, std::string_view s)
+static void printhtml(std::string *b, std::string_view s)
 {
-    iz last = 0;
-    for (iz i = 0; i < std::ssize(s); i++) {
-        std::string_view rep;
-        switch (s[i]) {
-        case '&': rep = "&amp;"; break;
-        case '<': rep = "&lt;";  break;
-        case '>': rep = "&gt;";  break;
-        default: continue;
+    for (char c : s) {
+        switch (c) {
+        case '&': *b += "&amp;"; break;
+        case '<': *b += "&lt;";  break;
+        case '>': *b += "&gt;";  break;
+        default:  *b += c;
         }
-        print(b, s.substr(last, i-last));
-        print(b, rep);
-        last = i + 1;
     }
-    print(b, s.substr(last));
 }
 
 // Escape & < > " for double-quoted HTML attributes.
-static void printattr(Buf *b, std::string_view s)
+static void printattr(std::string *b, std::string_view s)
 {
-    iz last = 0;
-    for (iz i = 0; i < std::ssize(s); i++) {
-        std::string_view rep;
-        switch (s[i]) {
-        case '&': rep = "&amp;";  break;
-        case '<': rep = "&lt;";   break;
-        case '>': rep = "&gt;";   break;
-        case '"': rep = "&quot;"; break;
-        default: continue;
+    for (char c : s) {
+        switch (c) {
+        case '&': *b += "&amp;";  break;
+        case '<': *b += "&lt;";   break;
+        case '>': *b += "&gt;";   break;
+        case '"': *b += "&quot;"; break;
+        default:  *b += c;
         }
-        print(b, s.substr(last, i-last));
-        print(b, rep);
-        last = i + 1;
     }
-    print(b, s.substr(last));
-}
-
-static std::string_view finish(Buf *b)
-{
-    return {b->data, (uz)b->len};
 }

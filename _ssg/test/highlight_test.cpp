@@ -2,10 +2,10 @@
 
 static std::string_view hlrender(Arena *perm, std::string_view lang, std::string_view code, Arena scratch, b32 *known = 0)
 {
-    Buf b(perm, 256);
+    std::string b;
     b32 ok = highlight(&b, lang, code, scratch);
     if (known) *known = ok;
-    return finish(&b);
+    return clone(perm, b);
 }
 
 // Class of the first span wrapping exactly tok (escaped), or "" if none.

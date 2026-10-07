@@ -50,7 +50,7 @@ static Draft parsedraft(std::string_view src)
 
 // Runs of non-alphanumerics become a dash. A leading dash is dropped, but
 // a trailing dash is kept, as in existing names like "...-in-C-" (C++).
-static void printslug(Buf *b, std::string_view title)
+static void printslug(std::string *b, std::string_view title)
 {
     b32 dash = 0;
     b32 any  = 0;
@@ -61,49 +61,49 @@ static void printslug(Buf *b, std::string_view title)
             continue;
         }
         if (dash && any) {
-            putbyte(b, '-');
+            *b += '-';
         }
-        putbyte(b, c);
+        *b += c;
         dash = 0;
         any  = 1;
     }
     if (dash && any) {
-        putbyte(b, '-');
+        *b += '-';
     }
 }
 
 // A YAML scalar: plain when safe, otherwise single-quoted.
-static void printyaml(Buf *b, std::string_view s)
+static void printyaml(std::string *b, std::string_view s)
 {
     b32 quote = s.empty() || s[std::ssize(s)-1]==':' || !(trim(s) == s) ||
                 s.contains(": ") || s.contains(" #") ||
                 std::string_view("-?:,[]{}#&*!|>'\"%@`").contains(s[0]);
     if (!quote) {
-        print(b, s);
+        *b += s;
         return;
     }
-    putbyte(b, '\'');
+    *b += '\'';
     for (iz i = 0; i < std::ssize(s); i++) {
         if (s[i] == '\'') {
-            putbyte(b, '\'');
+            *b += '\'';
         }
-        putbyte(b, s[i]);
+        *b += s[i];
     }
-    putbyte(b, '\'');
+    *b += '\'';
 }
 
 static std::string_view postname(Arena *perm, std::string_view title, i64 now)  // or empty
 {
-    Buf name(perm, 64+std::ssize(title));
+    std::string name;
     printymd(&name, now);
-    putbyte(&name, '-');
-    iz prefix = name.len;
+    name += '-';
+    iz prefix = std::ssize(name);
     printslug(&name, title);
-    if (name.len == prefix) {
+    if (std::ssize(name) == prefix) {
         return {};
     }
-    print(&name, ".markdown");
-    return finish(&name);
+    name += ".markdown";
+    return clone(perm, name);
 }
 
 // Write the draft into _posts, dated now, and print its path.
@@ -137,25 +137,25 @@ static i32 newpost(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
 
     std::string_view uuid = deriveuuid(perm, name);
     std::string_view path = join(perm, dir, name);
-    Buf b(&scratch, 1<<12);
-    print(&b, "---\ntitle: ");
+    std::string b;
+    b += "---\ntitle: ";
     printyaml(&b, d.title);
-    print(&b, "\ndate: ");
+    b += "\ndate: ";
     printiso(&b, opt->now);
-    print(&b, "\ntags: []\nuuid: ");
-    print(&b, uuid);
-    print(&b, "\n---\n\n");
-    print(&b, d.body);
-    putbyte(&b, '\n');
-    std::string_view post = finish(&b);
+    b += "\ntags: []\nuuid: ";
+    b += uuid;
+    b += "\n---\n\n";
+    b += d.body;
+    b += '\n';
+    std::string_view post = b;
     if (!os_write(os, scratch, path, post)) {
         error(log, path, 0, "could not write file");
         return 1;
     }
 
-    Buf out(&scratch, std::ssize(path)+1);
-    print(&out, path);
-    putbyte(&out, '\n');
-    os_print(os, 1, finish(&out));
+    std::string out;
+    out += path;
+    out += '\n';
+    os_print(os, 1, out);
     return 0;
 }

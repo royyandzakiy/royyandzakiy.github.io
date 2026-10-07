@@ -79,22 +79,22 @@ static i64 parsetimestamp(std::string_view s)
 
 // Without a locale argument, names are the C locale's (English).
 
-static void printymd(Buf *b, i64 t)
+static void printymd(std::string *b, i64 t)
 {
     printfmt(b, "{:%Y-%m-%d}", systime(t));
 }
 
-static void printlongdate(Buf *b, i64 t)
+static void printlongdate(std::string *b, i64 t)
 {
     printfmt(b, "{:%B %d, %Y}", systime(t));
 }
 
-static void printiso(Buf *b, i64 t)
+static void printiso(std::string *b, i64 t)
 {
     printfmt(b, "{:%Y-%m-%dT%H:%M:%SZ}", systime(t));
 }
 
-static void printrfc822(Buf *b, i64 t)
+static void printrfc822(std::string *b, i64 t)
 {
     printfmt(b, "{:%a, %d %b %Y %H:%M:%S GMT}", systime(t));
 }
@@ -102,23 +102,23 @@ static void printrfc822(Buf *b, i64 t)
 
 // URL encoders matching Liquid's uri_escape and url_encode filters
 
-static void percent(Buf *b, u8 c)
+static void percent(std::string *b, u8 c)
 {
-    putbyte(b, '%');
-    putbyte(b, "0123456789ABCDEF"[c>>4]);
-    putbyte(b, "0123456789ABCDEF"[c&15]);
+    *b += '%';
+    *b += "0123456789ABCDEF"[c>>4];
+    *b += "0123456789ABCDEF"[c&15];
 }
 
 // Addressable::URI.normalize_component: keep unreserved and reserved.
 // Output is escaped for use inside an HTML attribute.
-static void printuriescape(Buf *b, std::string_view s)
+static void printuriescape(std::string *b, std::string_view s)
 {
     for (iz i = 0; i < std::ssize(s); i++) {
         u8 c = s[i];
         if (c == '&') {
-            print(b, "&amp;");
+            *b += "&amp;";
         } else if (alnum(c) || (c && c<0x80 && std::string_view("-._~:/?#[]@!$'()*+,;=").contains((char)c))) {
-            putbyte(b, c);
+            *b += c;
         } else {
             percent(b, c);
         }
@@ -126,14 +126,14 @@ static void printuriescape(Buf *b, std::string_view s)
 }
 
 // CGI.escape: keep A-Za-z0-9 _.-~, space as +.
-static void printurlencode(Buf *b, std::string_view s)
+static void printurlencode(std::string *b, std::string_view s)
 {
     for (iz i = 0; i < std::ssize(s); i++) {
         u8 c = s[i];
         if (alnum(c) || c=='_' || c=='.' || c=='-' || c=='~') {
-            putbyte(b, c);
+            *b += c;
         } else if (c == ' ') {
-            putbyte(b, '+');
+            *b += '+';
         } else {
             percent(b, c);
         }
@@ -207,17 +207,17 @@ static std::string_view deriveuuid(Arena *perm, std::string_view name)
     u64 lo = hash(concat(perm, name, "\n"));
     hi = (hi & ~(u64)0xf000) | 0x8000;                // version 8
     lo = (lo & ~((u64)3<<62)) | ((u64)2<<62);         // RFC 9562 variant
-    Buf b(perm, 36);
+    std::string b;
     printhex(&b, hi>>32, 8);
-    putbyte(&b, '-');
+    b += '-';
     printhex(&b, hi>>16, 4);
-    putbyte(&b, '-');
+    b += '-';
     printhex(&b, hi, 4);
-    putbyte(&b, '-');
+    b += '-';
     printhex(&b, lo>>48, 4);
-    putbyte(&b, '-');
+    b += '-';
     printhex(&b, lo, 12);
-    return finish(&b);
+    return clone(perm, b);
 }
 
 static b32 validuuid(std::string_view s)
@@ -393,12 +393,12 @@ static Post *loadpost(Ctx *c, std::string_view name, Arena scratch)
     // /YYYY-MM-DD/slug/, gets a page redirecting here.
     std::string_view slug = name.substr(11);
     slug = slug.substr(0, slug.size()-(slug.ends_with(".md") ? 3 : 9));
-    Buf url(perm, 32);
+    std::string url;
     printfmt(&url, "/blog/{}/{}/", name.substr(0, 7), slug);
-    p->url = finish(&url);
-    Buf oldurl(perm, 32);
+    p->url = clone(perm, url);
+    std::string oldurl;
     printfmt(&oldurl, "/{}/{}/", name.substr(0, 10), slug);
-    p->oldurl = finish(&oldurl);
+    p->oldurl = clone(perm, oldurl);
     return p;
 }
 

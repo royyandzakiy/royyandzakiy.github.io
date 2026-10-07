@@ -34,7 +34,7 @@ enum {
 static std::string_view hlclasses[] = {"", "c", "k", "t", "s", "m", "p", "v", "f", "gi", "gd", "gh"};
 
 struct Hl {
-    Buf *b;
+    std::string *b;
     std::string_view  s;     // the code
     iz   i;     // scan position
     iz   done;  // code before this position has been written
@@ -50,15 +50,15 @@ static void hlflush(Hl *x)
 static void hlopen(Hl *x, i32 cls)
 {
     hlflush(x);
-    print(x->b, "<span class=\"");
-    print(x->b, hlclasses[cls]);
-    print(x->b, "\">");
+    *x->b += "<span class=\"";
+    *x->b += hlclasses[cls];
+    *x->b += "\">";
 }
 
 static void hlclose(Hl *x)
 {
     hlflush(x);
-    print(x->b, "</span>");
+    *x->b += "</span>";
 }
 
 // Emit the code from the scan position to end as one token.
@@ -1744,7 +1744,7 @@ static b32 hlroundtrip(std::string_view html, std::string_view code)
 // Write code to b, HTML-escaped, with tokens wrapped in <span class="X">.
 // Returns false if the language is unknown, in which case the code is
 // written escaped without highlighting. No language is not unknown.
-static b32 highlight(Buf *b, std::string_view lang, std::string_view code, Arena scratch)
+static b32 highlight(std::string *b, std::string_view lang, std::string_view code, Arena scratch)
 {
     (void)scratch;  // lexers run in constant space
     HlLang l = hllang(lang);
@@ -1753,7 +1753,7 @@ static b32 highlight(Buf *b, std::string_view lang, std::string_view code, Arena
         return lang.empty();
     }
 
-    iz start = b->len;
+    iz start = std::ssize(*b);
     Hl x     = {};
     x.b = b;
     x.s = code;
@@ -1763,7 +1763,7 @@ static b32 highlight(Buf *b, std::string_view lang, std::string_view code, Arena
     hlflush(&x);
 
     #ifndef NDEBUG
-    assert(hlroundtrip(std::string_view(b->data+start, b->data+b->len), code));
+    assert(hlroundtrip(std::string_view(*b).substr(start), code));
     #endif
     (void)start;
     return 1;

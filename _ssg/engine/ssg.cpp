@@ -40,21 +40,19 @@ static std::string_view stylesheet(Ctx *c, Arena *a)
 {
     static std::string_view parts[] = {"main.css", "print.css", "syntax.css", "dark.css"};
     std::string_view data[std::ssize(parts)] = {};
-    iz  total = 0;
     for (iz i = 0; i < std::ssize(parts); i++) {
         std::string_view rel = join(a, "css", parts[i]);
         data[i] = os_read(c->os, a, srcpath(c, a, rel));
         if (!data[i].data()) {
             error(c->log, rel, 0, "could not read file");
         }
-        total += std::ssize(data[i]) + 1;
     }
-    Buf b(a, total);
+    std::string b;
     for (iz i = 0; i < std::ssize(parts); i++) {
-        print(&b, data[i]);
-        putbyte(&b, '\n');
+        b += data[i];
+        b += '\n';
     }
-    return finish(&b);
+    return clone(a, b);
 }
 
 static i32 build(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
@@ -77,9 +75,9 @@ static i32 build(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
 
     #define EMIT(path, call) do { \
             Arena tmp = scratch; \
-            Buf b(&tmp, 1<<16); \
+            std::string b; \
             call; \
-            emit(&c, path, finish(&b), tmp); \
+            emit(&c, path, b, tmp); \
         } while (0)
 
     for (iz i = 0; i < std::ssize(site.posts); i++) {
@@ -119,19 +117,10 @@ static i32 build(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
     }
 
     if (!opt->quiet) {
-        Buf b(&scratch, 256);
-        print(&b, "ssg: ");
-        print(&b, (i64)std::ssize(site.posts));
-        print(&b, " posts, ");
-        print(&b, (i64)c.written);
-        print(&b, " pages written, ");
-        print(&b, (i64)c.copied);
-        print(&b, " files copied, ");
-        print(&b, (i64)c.skipped);
-        print(&b, " unchanged in ");
-        print(&b, os_clock(os) - start);
-        print(&b, " ms\n");
-        os_print(os, 2, finish(&b));
+        std::string b = std::format(
+            "ssg: {} posts, {} pages written, {} files copied, {} unchanged in {} ms\n",
+            site.posts.size(), c.written, c.copied, c.skipped, os_clock(os) - start);
+        os_print(os, 2, b);
     }
     return log->errors ? 1 : 0;
 }
@@ -199,12 +188,12 @@ static u64 fingerprint(Os *os, Options *opt, std::string_view rel, std::string_v
     for (;;) {
         Arena p = perm;
         Log log = {};
-        log.buf = Buf(&p, 1<<14);
+        log.buf.clear();
         if (!opt->fixedtime) {
             opt->now = os_now(os);
         }
         build(os, opt, &log, &p, scratch);
-        os_print(os, 2, finish(&log.buf));
+        os_print(os, 2, log.buf);
 
         // Wait for a change, then for the tree to settle (e.g. mid-save)
         u64 fp = last;
@@ -284,7 +273,7 @@ static i32 ssg_main(Os *os, Arena mem, std::string_view *args, i32 nargs)
     }
 
     Log log = {};
-    log.buf = Buf(&perm, 1<<14);
+    log.buf.clear();
 
     i32 status = 0;
     if (opt.mdfile.data()) {
@@ -295,7 +284,7 @@ static i32 ssg_main(Os *os, Arena mem, std::string_view *args, i32 nargs)
         status = build(os, &opt, &log, &perm, scratch);
     }
 
-    os_print(os, 2, finish(&log.buf));
+    os_print(os, 2, log.buf);
     if (log.errors && !status) {
         status = 1;
     }
