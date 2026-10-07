@@ -16,7 +16,7 @@ Needs CMake and a C++ compiler (g++ or clang++).
 A unity build: a platform file includes `engine/ssg.cpp`, which includes
 the rest.
 
-    _ssg/core/      base types, arenas, strings; the os_* interface; logging
+    _ssg/core/      base types, strings, output; the os_* interface; logging
     _ssg/parser/    front matter, Markdown, syntax highlighting
     _ssg/engine/    site model, page templates, build driver
     _ssg/platform/  main.cpp: os_* with <filesystem>, <fstream>, <chrono>
@@ -45,7 +45,8 @@ Add `_posts/YYYY-MM-DD-slug.markdown`:
 
 Or write a draft whose first line is `# Title` and run
 `_ssg/build/ssg -n draft.md` to file it into `_posts/` with today's date.
-Post URLs are `/YYYY-MM-DD/slug/`, from the file name.
+Post URLs are `/blog/YYYY-MM/slug/`, from the file name; the old
+`/YYYY-MM-DD/slug/` addresses get pages that redirect there.
 
 Tag pages and feeds are generated from the posts' front matter. Other
 files are published as-is, except those starting with `_` or `.`.

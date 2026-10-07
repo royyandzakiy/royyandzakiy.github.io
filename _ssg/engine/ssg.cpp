@@ -16,89 +16,78 @@
 #include "engine/templates.cpp"
 
 
-static Str outpath(Arena *a, Str url)  // "/x/y/" -> "x/y/index.html"
+static std::string outpath(std::string_view url)  // "/x/y/" -> "x/y/index.html"
 {
-    return concat(a, cuthead(url, 1), "index.html");
+    return std::format("{}index.html", url.substr(1));
 }
 
-static void render(Ctx *c, Site *site, Arena scratch)
+static void render(Ctx *c, Site *site)
 {
-    for (iz i = 0; i < site->posts.len; i++) {
-        Post *p = site->posts[i];
-        Markdown md = markdown(p->body, p->src, p->bodyline, c->perm, scratch, c->log);
-        p->html    = md.html;
+    for (auto &p : site->posts) {
+        Markdown md = markdown(p->body, p->src, p->bodyline, c->log);
+        p->html    = std::move(md.html);
         p->excerpt = md.excerpt;
     }
-    for (iz i = 0; i < site->pages.len; i++) {
-        Page *p = site->pages[i];
-        p->html = markdown(p->body, p->src, p->bodyline, c->perm, scratch, c->log).html;
+    for (auto &p : site->pages) {
+        p->html = markdown(p->body, p->src, p->bodyline, c->log).html;
     }
 }
 
 // Concatenate the stylesheet parts, formerly done with Liquid includes.
-static Str stylesheet(Ctx *c, Arena *a)
+static std::string stylesheet(Ctx *c)
 {
-    static Str parts[] = {"main.css", "print.css", "syntax.css", "dark.css"};
-    Str data[std::ssize(parts)] = {};
-    iz  total = 0;
-    for (iz i = 0; i < std::ssize(parts); i++) {
-        Str rel = join(a, "css", parts[i]);
-        data[i] = os_read(c->os, a, srcpath(c, a, rel));
-        if (!data[i].data) {
+    static std::string_view parts[] = {"main.css", "print.css", "syntax.css", "dark.css"};
+    std::string b;
+    for (std::string_view part : parts) {
+        std::string rel = join("css", part);
+        std::optional<std::string> data = os_read(c->os, srcpath(c, rel));
+        if (!data) {
             error(c->log, rel, 0, "could not read file");
         }
-        total += data[i].len + 1;
+        b += data.value_or("");
+        b += '\n';
     }
-    Buf b(a, total);
-    for (iz i = 0; i < std::ssize(parts); i++) {
-        print(&b, data[i]);
-        putbyte(&b, '\n');
-    }
-    return finish(&b);
+    return b;
 }
 
-static i32 build(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
+static i32 build(Os *os, Options *opt, Log *log)
 {
     i64 start = os_clock(os);
     Ctx c  = {};
     c.os   = os;
     c.opt  = opt;
     c.log  = log;
-    c.perm = perm;
 
     Site site = {};
     site.now = opt->now;
-    loadposts(&c, &site, scratch);
-    walk(&c, &site, {}, relativeout(opt, perm), scratch);
+    loadposts(&c, &site);
+    walk(&c, &site, {}, relativeout(opt));
     if (log->errors) {
         return 1;
     }
-    render(&c, &site, scratch);
+    render(&c, &site);
 
     #define EMIT(path, call) do { \
-            Arena tmp = scratch; \
-            Buf b(&tmp, 1<<16); \
+            std::string b; \
+            b.reserve(1<<16); \
             call; \
-            emit(&c, path, finish(&b), tmp); \
+            emit(&c, path, b); \
         } while (0)
 
-    for (iz i = 0; i < site.posts.len; i++) {
-        Post *p = site.posts[i];
-        EMIT(outpath(perm, p->url), postpage(&b, p));
+    for (auto &p : site.posts) {
+        EMIT(outpath(p->url), postpage(&b, p.get()));
+        EMIT(outpath(p->oldurl), redirectpage(&b, p.get()));
     }
-    for (iz i = 0; i < site.tags.len; i++) {
-        Tag *t   = site.tags[i];
-        Str  dir = concat(perm, concat(perm, "tags/", t->name), "/");
-        EMIT(concat(perm, dir, "index.html"), tagpage(&b, t));
-        dir = concat(perm, concat(perm, "tags/", t->name), "/");
-        EMIT(concat(perm, dir, "feed/index.xml"), tagfeed(&b, &site, t));
+    for (auto &t : site.tags) {
+        std::string dir = std::format("tags/{}/", t->name);
+        EMIT(dir + "index.html", tagpage(&b, t.get()));
+        EMIT(dir + "feed/index.xml", tagfeed(&b, &site, t.get()));
     }
-    for (iz i = 0; i < site.pages.len; i++) {
-        Page *p = site.pages[i];
-        EMIT(p->out, aboutpage(&b, p));
+    for (auto &p : site.pages) {
+        EMIT(p->out, aboutpage(&b, p.get()));
     }
     if (opt->excerpts) {
-        EMIT("index.html",   homepage(&b, &site, site.posts.len));
+        EMIT("index.html",   homepage(&b, &site, std::ssize(site.posts)));
     } else {
         EMIT("index.html",   homelist(&b, &site));
     }
@@ -106,121 +95,105 @@ static i32 build(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
     EMIT("tags/index.html",  tagindexpage(&b, &site));
     EMIT("feed/index.xml",   atomfeed(&b, &site));
     EMIT("blog/index.rss",   rssfeed(&b, &site));
-    {
-        Arena tmp = scratch;
-        Str css = stylesheet(&c, &tmp);
-        emit(&c, "css/full.css", css, tmp);
-    }
+    emit(&c, "css/full.css", stylesheet(&c));
     #undef EMIT
 
-    for (iz i = 0; i < site.statics.len; i++) {
-        copystatic(&c, site.statics[i], scratch);
+    for (std::string &rel : site.statics) {
+        copystatic(&c, rel);
     }
 
     if (!opt->quiet) {
-        Buf b(&scratch, 256);
-        print(&b, "ssg: ");
-        print(&b, (i64)site.posts.len);
-        print(&b, " posts, ");
-        print(&b, (i64)c.written);
-        print(&b, " pages written, ");
-        print(&b, (i64)c.copied);
-        print(&b, " files copied, ");
-        print(&b, (i64)c.skipped);
-        print(&b, " unchanged in ");
-        print(&b, os_clock(os) - start);
-        print(&b, " ms\n");
-        os_print(os, 2, finish(&b));
+        std::string b = std::format(
+            "ssg: {} posts, {} pages written, {} files copied, {} unchanged in {} ms\n",
+            site.posts.size(), c.written, c.copied, c.skipped, os_clock(os) - start);
+        os_print(os, 2, b);
     }
     return log->errors ? 1 : 0;
 }
 
 // Debug: render a single Markdown file to standard output.
-static i32 rendermd(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
+static i32 rendermd(Os *os, Options *opt, Log *log)
 {
-    Str src = os_read(os, perm, opt->mdfile);
-    if (!src.data) {
+    std::optional<std::string> src = os_read(os, opt->mdfile);
+    if (!src) {
         error(log, opt->mdfile, 0, "could not read file");
         return 1;
     }
-    src = normalize(src);
-    iz line = 1;
-    if (startswith(src, "---\n")) {
-        FrontMatter fm = parsefrontmatter(src, perm);
+    normalize(&*src);
+    std::string_view body = *src;
+    iz               line = 1;
+    if (body.starts_with("---\n")) {
+        FrontMatter fm = parsefrontmatter(body);
         if (!fm.ok) {
             error(log, opt->mdfile, fm.errline, fm.err);
             return 1;
         }
-        src  = fm.body;
+        body = fm.body;
         line = fm.bodyline;
     }
-    Markdown md = markdown(src, opt->mdfile, line, perm, scratch, log);
-    os_print(os, 1, md.html);
+    os_print(os, 1, markdown(body, opt->mdfile, line, log).html);
     return 0;
 }
 
 // Summarize the source files a build reads, as walked by loadposts() and
 // walk(): names, sizes, and modification times, order-independent.
-static u64 fingerprint(Os *os, Options *opt, Str rel, Str outdir, Arena scratch)
+static u64 fingerprint(Os *os, Options *opt, std::string_view rel, std::string_view outdir)
 {
-    Str dir = rel.len ? join(&scratch, opt->src, rel) : opt->src;
+    std::string dir = rel.empty() ? std::string(opt->src) : join(opt->src, rel);
     u64 sum = 0;
-    for (Dirent *e = os_list(os, &scratch, dir); e; e = e->next) {
-        b32 posts = !rel.len && e->isdir && e->name == "_posts";
-        if (!posts && skipentry(rel, e->name)) {
+    for (Dirent &e : os_list(os, dir)) {
+        b32 posts = rel.empty() && e.isdir && e.name == "_posts";
+        if (!posts && skipentry(rel, e.name)) {
             continue;
         }
-        Str child = join(&scratch, rel, e->name);
-        if (e->isdir) {
+        std::string child = join(rel, e.name);
+        if (e.isdir) {
             if (child != outdir) {
-                sum += fingerprint(os, opt, child, outdir, scratch);
+                sum += fingerprint(os, opt, child, outdir);
             }
             continue;
         }
         u64 h = hash(child);
-        h ^= (u64)e->size;
+        h ^= (u64)e.size;
         h *= 1111111111111111111u;
-        h ^= (u64)e->mtime;
+        h ^= (u64)e.mtime;
         h *= 1111111111111111111u;
         sum += h ^ h>>32;
     }
     return sum;
 }
 
-// Rebuild whenever the source tree changes, until interrupted. Every
-// build starts from the same arenas, so memory use does not grow, and
-// each is identical to a fresh build.
-[[noreturn]] static void watch(Os *os, Options *opt, Arena perm, Arena scratch)
+// Rebuild whenever the source tree changes, until interrupted. Each build
+// starts from nothing, so it is identical to a fresh build.
+[[noreturn]] static void watch(Os *os, Options *opt)
 {
-    i32 interval = 250;  // ms
-    Str outdir   = relativeout(opt, &perm);
-    u64 last     = fingerprint(os, opt, {}, outdir, scratch);
+    i32         interval = 250;  // ms
+    std::string outdir   = relativeout(opt);
+    u64         last     = fingerprint(os, opt, {}, outdir);
     for (;;) {
-        Arena p = perm;
         Log log = {};
-        log.buf = Buf(&p, 1<<14);
         if (!opt->fixedtime) {
             opt->now = os_now(os);
         }
-        build(os, opt, &log, &p, scratch);
-        os_print(os, 2, finish(&log.buf));
+        build(os, opt, &log);
+        os_print(os, 2, log.buf);
 
         // Wait for a change, then for the tree to settle (e.g. mid-save)
         u64 fp = last;
         while (fp == last) {
             os_sleep(os, interval);
-            fp = fingerprint(os, opt, {}, outdir, scratch);
+            fp = fingerprint(os, opt, {}, outdir);
         }
         for (u64 prev = last; fp != prev;) {
             prev = fp;
             os_sleep(os, interval);
-            fp = fingerprint(os, opt, {}, outdir, scratch);
+            fp = fingerprint(os, opt, {}, outdir);
         }
         last = fp;
     }
 }
 
-static Str usage =
+static std::string_view usage =
 "usage: ssg [-C SRCDIR] [-o OUTDIR] [-t UNIXTIME] [-w] [-n FILE] [-E] [-m FILE]\n"
 "  -C DIR    source directory (default: .)\n"
 "  -o DIR    output directory (default: _site)\n"
@@ -233,32 +206,26 @@ static Str usage =
 "  -q        quiet: only print warnings and errors\n"
 "  -h        print this message\n";
 
-static i32 ssg_main(Os *os, Arena mem, Str *args, i32 nargs)
+// The arguments, args[0] being the program name, must outlive the call.
+static i32 ssg_main(Os *os, std::span<std::string_view const> args)
 {
-    // Split memory: permanent storage and a scratch region reset per task.
-    iz    cap     = mem.end - mem.beg;
-    Arena perm    = mem;
-    Arena scratch = mem;
-    perm.end    = mem.beg + cap/4*3;
-    scratch.beg = perm.end;
-
     Options opt = {};
     opt.src = ".";
     opt.out = "_site";
-    for (i32 i = 1; i < nargs; i++) {
-        Str a = args[i];
-        Str v = i+1 < nargs ? args[i+1] : Str{};
-        if (a == "-C" && v.data) {
+    for (uz i = 1; i < args.size(); i++) {
+        std::string_view a = args[i];
+        std::string_view v = i+1 < args.size() ? args[i+1] : std::string_view{};
+        if (a == "-C" && v.data()) {
             opt.src = v; i++;
-        } else if (a == "-o" && v.data) {
+        } else if (a == "-o" && v.data()) {
             opt.out = v; i++;
-        } else if (a == "-t" && v.data) {
+        } else if (a == "-t" && v.data()) {
             opt.now = parseint(v);
             opt.fixedtime = 1;
             i++;
-        } else if (a == "-m" && v.data) {
+        } else if (a == "-m" && v.data()) {
             opt.mdfile = v; i++;
-        } else if (a == "-n" && v.data) {
+        } else if (a == "-n" && v.data()) {
             opt.newpost = v; i++;
         } else if (a == "-w") {
             opt.watch = 1;
@@ -278,23 +245,21 @@ static i32 ssg_main(Os *os, Arena mem, Str *args, i32 nargs)
         opt.now = os_now(os);
     }
 
-    if (opt.watch && !opt.mdfile.data && !opt.newpost.data) {
-        watch(os, &opt, perm, scratch);
+    if (opt.watch && !opt.mdfile.data() && !opt.newpost.data()) {
+        watch(os, &opt);
     }
 
     Log log = {};
-    log.buf = Buf(&perm, 1<<14);
-
     i32 status = 0;
-    if (opt.mdfile.data) {
-        status = rendermd(os, &opt, &log, &perm, scratch);
-    } else if (opt.newpost.data) {
-        status = newpost(os, &opt, &log, &perm, scratch);
+    if (opt.mdfile.data()) {
+        status = rendermd(os, &opt, &log);
+    } else if (opt.newpost.data()) {
+        status = newpost(os, &opt, &log);
     } else {
-        status = build(os, &opt, &log, &perm, scratch);
+        status = build(os, &opt, &log);
     }
 
-    os_print(os, 2, finish(&log.buf));
+    os_print(os, 2, log.buf);
     if (log.errors && !status) {
         status = 1;
     }

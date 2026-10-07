@@ -16,21 +16,21 @@
 // This is free and unencumbered software released into the public domain.
 
 struct Markdown {
-    Str html;
-    iz  excerpt;  // length of the excerpt prefix of html
+    std::string html;
+    iz          excerpt;  // length of the excerpt prefix of html
 };
 
 
 // Characters
 
-static u8 at(Str s, iz i)
+static u8 at(std::string_view s, iz i)
 {
-    return i>=0 && i<s.len ? s.data[i] : 0;
+    return i>=0 && i<std::ssize(s) ? (u8)s[i] : 0;
 }
 
-static Str slice(Str s, iz beg, iz end)
+static std::string_view slice(std::string_view s, iz beg, iz end)
 {
-    return {s.data+beg, end-beg};
+    return s.substr(beg, end-beg);
 }
 
 static b32 wordbyte(u8 c)
@@ -48,19 +48,19 @@ static b32 hexdigit(u8 c)
     return digit(c) || (lowercase(c)>='a' && lowercase(c)<='f');
 }
 
-static b32 inset(Str set, u8 c)
+static b32 inset(std::string_view set, u8 c)
 {
-    for (iz i = 0; i < set.len; i++) {
-        if (set.data[i] == c) return 1;
+    for (iz i = 0; i < std::ssize(set); i++) {
+        if ((u8)set[i] == c) return 1;
     }
     return 0;
 }
 
-static i32 cpat(Str s, iz i, iz *len)
+static i32 cpat(std::string_view s, iz i, iz *len)
 {
-    if (s.data[i] < 0x80) {
+    if ((u8)s[i] < 0x80) {
         *len = 1;
-        return s.data[i];
+        return (u8)s[i];
     }
     iz  j = i;
     i32 r = utf8decode(s, &j);
@@ -68,10 +68,10 @@ static i32 cpat(Str s, iz i, iz *len)
     return r;
 }
 
-static iz cplen(Str s, iz i)
+static iz cplen(std::string_view s, iz i)
 {
     iz n = 1;
-    if (s.data[i] >= 0xc0) cpat(s, i, &n);
+    if ((u8)s[i] >= 0xc0) cpat(s, i, &n);
     return n;
 }
 
@@ -129,10 +129,10 @@ static b32 unialnum(i32 c)
     return c<0x80 ? alnum((u8)c) : uniletter(c);
 }
 
-static b32 wordat(Str s, iz i)
+static b32 wordat(std::string_view s, iz i)
 {
     iz n;
-    return i>=0 && i<s.len && uniword(cpat(s, i, &n));
+    return i>=0 && i<std::ssize(s) && uniword(cpat(s, i, &n));
 }
 
 // Ruby's String#downcase for Latin, Greek, Cyrillic, Armenian, and
@@ -190,104 +190,104 @@ static b32 blank(u8 c)  // [ \t]
     return c==' ' || c=='\t';
 }
 
-static iz lineend(Str s, iz i)
+static iz lineend(std::string_view s, iz i)
 {
-    if (i >= s.len) {
+    if (i >= std::ssize(s)) {
         return i;
     }
-    u8 *p = (u8 *)std::memchr(s.data+i, '\n', (uz)(s.len-i));
-    return p ? p-s.data : s.len;
+    uz p = s.find('\n', i);
+    return p==s.npos ? std::ssize(s) : (iz)p;
 }
 
-static iz nextline(Str s, iz i)
+static iz nextline(std::string_view s, iz i)
 {
     i = lineend(s, i);
-    return i<s.len ? i+1 : i;
+    return i<std::ssize(s) ? i+1 : i;
 }
 
-static iz skipspaces(Str s, iz i, iz max)
+static iz skipspaces(std::string_view s, iz i, iz max)
 {
     for (iz n = 0; n<max && at(s, i)==' '; n++, i++) {}
     return i;
 }
 
-static iz skipblanks(Str s, iz i)  // [ \t]*
+static iz skipblanks(std::string_view s, iz i)  // [ \t]*
 {
     for (; blank(at(s, i)); i++) {}
     return i;
 }
 
-static iz skipws(Str s, iz i)  // \s*
+static iz skipws(std::string_view s, iz i)  // \s*
 {
-    for (; i<s.len && whitespace(s.data[i]); i++) {}
+    for (; i<std::ssize(s) && whitespace((u8)s[i]); i++) {}
     return i;
 }
 
 // Is the rest of the line whitespace, ending in a newline (\s*?\n)?
-static iz restblank(Str s, iz i)
+static iz restblank(std::string_view s, iz i)
 {
-    for (; i<s.len && whitespace(s.data[i]) && s.data[i]!='\n'; i++) {}
+    for (; i<std::ssize(s) && whitespace((u8)s[i]) && s[i]!='\n'; i++) {}
     return at(s, i)=='\n' ? i+1 : -1;
 }
 
-static b32 equalfold(Str a, Str b)
+static b32 equalfold(std::string_view a, std::string_view b)
 {
-    if (a.len != b.len) return 0;
-    for (iz i = 0; i < a.len; i++) {
-        if (lowercase(a.data[i]) != lowercase(b.data[i])) return 0;
+    if (std::ssize(a) != std::ssize(b)) return 0;
+    for (iz i = 0; i < std::ssize(a); i++) {
+        if (lowercase((u8)a[i]) != lowercase((u8)b[i])) return 0;
     }
     return 1;
 }
 
-static b32 startsfold(Str s, iz i, Str prefix)
+static b32 startsfold(std::string_view s, iz i, std::string_view prefix)
 {
-    return i+prefix.len<=s.len && equalfold(slice(s, i, i+prefix.len), prefix);
+    return i+std::ssize(prefix)<=std::ssize(s) && equalfold(slice(s, i, i+std::ssize(prefix)), prefix);
 }
 
-static b32 startsat(Str s, iz i, Str prefix)
+static b32 startsat(std::string_view s, iz i, std::string_view prefix)
 {
-    return i+prefix.len<=s.len && slice(s, i, i+prefix.len)==prefix;
+    return i+std::ssize(prefix)<=std::ssize(s) && slice(s, i, i+std::ssize(prefix))==prefix;
 }
 
 // Like find(), but fast: the first index of needle in s at or after i.
-static iz search(Str s, iz i, Str needle)
+static iz search(std::string_view s, iz i, std::string_view needle)
 {
-    u8 c = needle.data[0];
-    for (iz end = s.len-needle.len; i <= end; i++) {
-        if (s.data[i]==c && startsat(s, i, needle)) return i;
+    u8 c = needle[0];
+    for (iz end = std::ssize(s)-std::ssize(needle); i <= end; i++) {
+        if ((u8)s[i]==c && startsat(s, i, needle)) return i;
     }
     return -1;
 }
 
-static void putcp(Buf *b, i32 c)
+static void putcp(std::string *b, i32 c)
 {
     if (c < 0x80) {
-        putbyte(b, (u8)c);
+        *b += (u8)c;
     } else if (c < 0x800) {
-        putbyte(b, (u8)(0xc0 | c>>6));
-        putbyte(b, (u8)(0x80 | (c & 0x3f)));
+        *b += (u8)(0xc0 | c>>6);
+        *b += (u8)(0x80 | (c & 0x3f));
     } else if (c < 0x10000) {
-        putbyte(b, (u8)(0xe0 | c>>12));
-        putbyte(b, (u8)(0x80 | (c>>6 & 0x3f)));
-        putbyte(b, (u8)(0x80 | (c & 0x3f)));
+        *b += (u8)(0xe0 | c>>12);
+        *b += (u8)(0x80 | (c>>6 & 0x3f));
+        *b += (u8)(0x80 | (c & 0x3f));
     } else {
-        putbyte(b, (u8)(0xf0 | c>>18));
-        putbyte(b, (u8)(0x80 | (c>>12 & 0x3f)));
-        putbyte(b, (u8)(0x80 | (c>>6 & 0x3f)));
-        putbyte(b, (u8)(0x80 | (c & 0x3f)));
+        *b += (u8)(0xf0 | c>>18);
+        *b += (u8)(0x80 | (c>>12 & 0x3f));
+        *b += (u8)(0x80 | (c>>6 & 0x3f));
+        *b += (u8)(0x80 | (c & 0x3f));
     }
 }
 
-static void putspaces(Buf *b, iz n)
+static void putspaces(std::string *b, iz n)
 {
-    for (iz i = 0; i < n; i++) putbyte(b, ' ');
+    for (iz i = 0; i < n; i++) *b += ' ';
 }
 
 
 // Output escaping, matching kramdown's escape_html
 
 // REXML's REFERENCE_RE at s[i]: &name; &#123; &#x7b;
-static b32 isref(Str s, iz i)
+static b32 isref(std::string_view s, iz i)
 {
     iz j = i + 1;
     u8 c = at(s, j);
@@ -305,48 +305,48 @@ static b32 isref(Str s, iz i)
 
 // Escape < > and &, except & starting a reference. Attributes also
 // escape the double quote.
-static void printesc(Buf *b, Str s, b32 attr)
+static void printesc(std::string *b, std::string_view s, b32 attr)
 {
     iz last = 0;
-    for (iz i = 0; i < s.len; i++) {
-        u8 c = s.data[i];
+    for (iz i = 0; i < std::ssize(s); i++) {
+        u8 c = s[i];
         if (c!='<' && c!='>' && c!='&' && c!='"') continue;
-        Str rep = c=='<' ? Str("&lt;") : c=='>' ? Str("&gt;") :
-                  c=='&' ? (isref(s, i) ? Str() : Str("&amp;")) :
-                  attr ? Str("&quot;") : Str();
-        if (rep.len) {
-            print(b, slice(s, last, i));
-            print(b, rep);
+        std::string_view rep = c=='<' ? std::string_view("&lt;") : c=='>' ? std::string_view("&gt;") :
+                  c=='&' ? (isref(s, i) ? std::string_view() : std::string_view("&amp;")) :
+                  attr ? std::string_view("&quot;") : std::string_view();
+        if (std::ssize(rep)) {
+            *b += slice(s, last, i);
+            *b += rep;
             last = i + 1;
         }
     }
-    print(b, cuthead(s, last));
+    *b += s.substr(last);
 }
 
 
 // HTML knowledge, the element lists from kramdown's parser/html.rb
 
-static Str html_span =
+static std::string_view html_span =
     " a abbr acronym b big bdo br button cite code del dfn em i img input"
     " ins kbd label mark option q rb rbc rp rt rtc ruby samp select small"
     " span strong sub sup time tt u var ";
-static Str html_block =
+static std::string_view html_block =
     " address article aside applet body blockquote caption col colgroup dd"
     " div dl dt fieldset figcaption footer form h1 h2 h3 h4 h5 h6 header"
     " hgroup hr html head iframe legend menu li main map nav ol optgroup p"
     " pre section summary table tbody td th thead tfoot tr ul ";
-static Str html_void =
+static std::string_view html_void =
     " area base br col command embed hr img input keygen link meta param"
     " source track wbr ";
-static Str html_model_block =
+static std::string_view html_model_block =
     " address applet article aside blockquote body dd details div dl"
     " fieldset figure figcaption footer form header hgroup iframe li main"
     " map menu nav noscript object section summary td ";
-static Str html_model_span =
+static std::string_view html_model_span =
     " a abbr acronym b bdo big button cite caption del dfn dt em h1 h2 h3"
     " h4 h5 h6 i ins label legend optgroup p q rb rbc rp rt rtc ruby select"
     " small span strong sub sup th tt ";
-static Str html_model_raw =
+static std::string_view html_model_raw =
     " script style math option textarea pre code kbd samp var ";
 
 enum {
@@ -357,24 +357,24 @@ enum {
     H_RAW   = 1<<4,  // explicitly raw content model
 };
 
-static b32 inlist(Str list, Str name, b32 fold)
+static b32 inlist(std::string_view list, std::string_view name, b32 fold)
 {
-    u8 buf[16];
-    if (!name.len || name.len > std::ssize(buf)-2) return 0;
-    buf[0] = buf[name.len+1] = ' ';
-    for (iz i = 0; i < name.len; i++) {
-        buf[i+1] = fold ? lowercase(name.data[i]) : name.data[i];
+    char buf[16];
+    if (name.empty() || std::ssize(name) > std::ssize(buf)-2) return 0;
+    buf[0] = buf[std::ssize(name)+1] = ' ';
+    for (iz i = 0; i < std::ssize(name); i++) {
+        buf[i+1] = fold ? (char)lowercase(name[i]) : name[i];
     }
-    Str key = {buf, name.len+2};
-    for (iz i = 0; i+key.len <= list.len; i++) {
-        if (list.data[i]==' ' && startsat(list, i, key)) return 1;
+    std::string_view key = {buf, name.size()+2};
+    for (iz i = 0; i+std::ssize(key) <= std::ssize(list); i++) {
+        if (list[i]==' ' && startsat(list, i, key)) return 1;
     }
     return 0;
 }
 
 // Flags for a tag name, ignoring case. Zero for unknown elements, which
 // kramdown leaves in their original case.
-static i32 htmlflags(Str name)
+static i32 htmlflags(std::string_view name)
 {
     b32 parse = inlist(html_model_block, name, 1) || inlist(html_model_span, name, 1);
     return (inlist(html_span,  name, 1) ? H_SPAN  : 0) |
@@ -384,21 +384,21 @@ static i32 htmlflags(Str name)
            (parse ? H_PARSE : 0);
 }
 
-static void printname(Buf *b, Str name, b32 known)
+static void printname(std::string *b, std::string_view name, b32 known)
 {
-    for (iz i = 0; i < name.len; i++) {
-        putbyte(b, known ? lowercase(name.data[i]) : name.data[i]);
+    for (iz i = 0; i < std::ssize(name); i++) {
+        *b += known ? lowercase((u8)name[i]) : (u8)name[i];
     }
 }
 
 // XML NCName with Unicode classes: [[:alpha:]_][-[:alnum:]._]*
-static iz ncname(Str s, iz i)
+static iz ncname(std::string_view s, iz i)
 {
     iz n;
-    if (i >= s.len) return -1;
+    if (i >= std::ssize(s)) return -1;
     i32 c = cpat(s, i, &n);
     if (c!='_' && !unialpha(c)) return -1;
-    for (i += n; i < s.len; i += n) {
+    for (i += n; i < std::ssize(s); i += n) {
         c = cpat(s, i, &n);
         if (c!='-' && c!='.' && c!='_' && !unialnum(c)) break;
     }
@@ -406,7 +406,7 @@ static iz ncname(Str s, iz i)
 }
 
 // REXML UNAME_STR: an NCName with an optional prefix
-static iz xmlname(Str s, iz i)
+static iz xmlname(std::string_view s, iz i)
 {
     iz j = ncname(s, i);
     if (j>=0 && at(s, j)==':') {
@@ -418,13 +418,13 @@ static iz xmlname(Str s, iz i)
 
 struct HtmlTag {
     iz  end;        // just past the tag, or -1 when there is no match
-    Str name;
-    Str attrs;      // attribute source
+    std::string_view name;
+    std::string_view attrs;      // attribute source
     b32 selfclose;
 };
 
 // HTML_TAG_RE: a start tag whose attribute values are words or quoted.
-static HtmlTag matchtag(Str s, iz i)
+static HtmlTag matchtag(std::string_view s, iz i)
 {
     HtmlTag r = {};
     r.end = -1;
@@ -443,8 +443,8 @@ static HtmlTag matchtag(Str s, iz i)
                 e = v;
             } else if (isquote(at(s, v))) {
                 iz w = v + 1;
-                for (; w<s.len && s.data[w]!=s.data[v]; w++) {}
-                if (w < s.len) e = w + 1;
+                for (; w<std::ssize(s) && (u8)s[w]!=(u8)s[v]; w++) {}
+                if (w < std::ssize(s)) e = w + 1;
             }
         }
         k = e;
@@ -461,7 +461,7 @@ static HtmlTag matchtag(Str s, iz i)
 }
 
 // HTML_TAG_CLOSE_RE
-static HtmlTag matchclose(Str s, iz i)
+static HtmlTag matchclose(std::string_view s, iz i)
 {
     HtmlTag r = {};
     r.end = -1;
@@ -475,39 +475,39 @@ static HtmlTag matchclose(Str s, iz i)
 }
 
 // Find the end of a delimited construct like <!-- ... -->, or -1.
-static iz delimited(Str s, iz i, Str open, Str close)
+static iz delimited(std::string_view s, iz i, std::string_view open, std::string_view close)
 {
     if (!startsat(s, i, open)) return -1;
-    iz j = search(s, i+open.len, close);
-    return j<0 ? -1 : j+close.len;
+    iz j = search(s, i+std::ssize(open), close);
+    return j<0 ? -1 : j+std::ssize(close);
 }
 
 // Print attributes the way kramdown re-serializes them: lowercase names
 // for known elements, first position but last value for duplicates,
 // double-quoted escaped values, no empty id, and no markdown attribute.
-static void printattrs(Buf *b, Str attrs, b32 known, b32 span)
+static void printattrs(std::string *b, std::string_view attrs, b32 known, b32 span)
 {
-    struct Attr { Str name, value; };
+    struct Attr { std::string_view name, value; };
     Attr list[32];
     iz   n = 0;
-    for (iz i = 0; i < attrs.len;) {
+    for (iz i = 0; i < std::ssize(attrs);) {
         iz a = skipws(attrs, i);
         iz e = xmlname(attrs, a);
         if (e < 0) break;
-        Attr attr = {slice(attrs, a, e), {attrs.data+e, 0}};
+        Attr attr = {slice(attrs, a, e), {attrs.data()+e, 0}};
         iz v = skipws(attrs, e);
         i = e;
-        if (v<attrs.len && attrs.data[v]=='=') {
+        if (v<std::ssize(attrs) && attrs[v]=='=') {
             v = skipws(attrs, v+1);
             if (wordat(attrs, v)) {
                 iz w = v;
                 for (; wordat(attrs, w); w += cplen(attrs, w)) {}
                 attr.value = slice(attrs, v, w);
                 i = w;
-            } else if (v<attrs.len && isquote(attrs.data[v])) {
+            } else if (v<std::ssize(attrs) && isquote((u8)attrs[v])) {
                 iz w = v + 1;
-                for (; w<attrs.len && attrs.data[w]!=attrs.data[v]; w++) {}
-                if (w < attrs.len) {
+                for (; w<std::ssize(attrs) && (u8)attrs[w]!=(u8)attrs[v]; w++) {}
+                if (w < std::ssize(attrs)) {
                     attr.value = slice(attrs, v+1, w);
                     i = w + 1;
                 }
@@ -525,45 +525,45 @@ static void printattrs(Buf *b, Str attrs, b32 known, b32 span)
         }
     }
     for (iz k = 0; k < n; k++) {
-        Str name = list[k].name;
+        std::string_view name = list[k].name;
         b32 id   = known ? equalfold(name, "id") : name=="id";
         b32 md   = known ? equalfold(name, "markdown") : name=="markdown";
-        if (md || (id && !trim(list[k].value).len)) {
+        if (md || (id && !std::ssize(trim(list[k].value)))) {
             continue;
         }
-        putbyte(b, ' ');
+        *b += ' ';
         printname(b, list[k].name, known);
-        print(b, "=\"");
-        Str v = list[k].value;
+        *b += "=\"";
+        std::string_view v = list[k].value;
         if (span) {
             // Newline runs in span tag attributes become one space
             iz last = 0;
-            for (iz i = 0; i < v.len; i++) {
-                if (v.data[i] == '\n') {
+            for (iz i = 0; i < std::ssize(v); i++) {
+                if (v[i] == '\n') {
                     printesc(b, slice(v, last, i), 1);
-                    putbyte(b, ' ');
-                    for (; i+1<v.len && v.data[i+1]=='\n'; i++) {}
+                    *b += ' ';
+                    for (; i+1<std::ssize(v) && v[i+1]=='\n'; i++) {}
                     last = i + 1;
                 }
             }
-            v = cuthead(v, last);
+            v = v.substr(last);
         }
         printesc(b, v, 1);
-        putbyte(b, '"');
+        *b += '"';
     }
 }
 
 // LAZY_END_HTML_START and LAZY_END_HTML_STOP exclude span elements and
 // script, compared case-sensitively up to a word boundary.
-static b32 lazyspanname(Str s, iz i)
+static b32 lazyspanname(std::string_view s, iz i)
 {
     iz j = i;
     for (; wordat(s, j); j += cplen(s, j)) {}
-    Str w = slice(s, i, j);
+    std::string_view w = slice(s, i, j);
     return w=="script" || inlist(html_span, w, 0);
 }
 
-static b32 lazyhtml(Str s, iz i)  // both start and stop, at s[i]
+static b32 lazyhtml(std::string_view s, iz i)  // both start and stop, at s[i]
 {
     if (at(s, i) != '<') return 0;
     if (at(s, i+1) != '/') {
@@ -585,7 +585,7 @@ enum {
 // A block scanner. Nested sources (blockquotes, list items) map their
 // lines one-to-one onto the parent starting at poff.
 struct MdSrc {
-    Str    s;
+    std::string_view    s;
     iz     pos;
     MdSrc *parent;
     iz     poff;
@@ -605,25 +605,35 @@ struct MdBlock {
     i32      level;        // header level
     b32      transparent;  // paragraph without <p>
     b32      boundary;     // EOB marker, as opposed to a definition
-    Str      text;         // raw text, code, or serialized HTML
-    Str      lang;         // fenced code language
-    Str      id;           // explicit header id
+    std::string_view      text;         // raw text, code, or serialized HTML
+    std::string_view      lang;         // fenced code language
+    std::string_view      id;           // explicit header id
 };
 
 struct MdDef {
-    Str url;
-    Str title;  // null when absent
+    std::string_view url;
+    std::string_view title;  // null when absent
 };
 
+// A document being parsed. It owns its nodes and the text built while
+// parsing; deques, so the views and pointers into them stay valid.
 struct Md {
-    Arena      *a;
-    Log        *log;
-    Str         name;
-    Map<MdDef> *defs;
-    Map<i32>   *ids;
-    i32         depth;  // block nesting
-    b32         deep;   // reported nesting beyond MAXDEPTH
+    Log                                *log;
+    std::string_view                    name;
+    std::deque<MdBlock>                 blocks;
+    std::deque<MdSrc>                   srcs;
+    std::deque<std::string>             texts;
+    std::unordered_map<std::string, MdDef> defs;  // by normalized label
+    std::unordered_map<std::string, i32>   ids;   // header ids used
+    i32                                 depth;   // block nesting
+    b32                                 deep;    // reported nesting beyond MAXDEPTH
 };
+
+// Keep text built while parsing for as long as the document.
+static std::string_view keep(Md *m, std::string s)
+{
+    return m->texts.emplace_back(std::move(s));
+}
 
 // Nesting beyond this is treated as text, bounding recursion on
 // pathological input like 10,000 unclosed <span> tags. Posts nest a few
@@ -634,24 +644,24 @@ enum { MAXDEPTH = 100 };
 
 static iz srcline(MdSrc *src, iz off)
 {
-    off = off<src->s.len ? off : src->s.len;
+    off = off<std::ssize(src->s) ? off : std::ssize(src->s);
     if (off < src->noff) {
         src->noff = src->nls = 0;
     }
     for (; src->noff < off; src->noff++) {
-        src->nls += src->s.data[src->noff] == '\n';
+        src->nls += src->s[src->noff] == '\n';
     }
     return (src->parent ? srcline(src->parent, src->poff) : src->line0) + src->nls;
 }
 
-static void mdwarn(Md *m, iz line, Str msg)
+static void mdwarn(Md *m, iz line, std::string_view msg)
 {
     warn(m->log, m->name, line, msg);
 }
 
 static MdBlock *addblock(Md *m, MdBlock *tree, i32 type, MdSrc *src, iz off)
 {
-    MdBlock *b = alloc<MdBlock>(m->a);
+    MdBlock *b = &m->blocks.emplace_back();
     b->type = type;
     b->src  = src;
     b->off  = off;
@@ -664,9 +674,9 @@ static MdBlock *addblock(Md *m, MdBlock *tree, i32 type, MdSrc *src, iz off)
     return b;
 }
 
-static MdSrc *newsrc(Md *m, Str s, MdSrc *parent, iz poff)
+static MdSrc *newsrc(Md *m, std::string_view s, MdSrc *parent, iz poff)
 {
-    MdSrc *src  = alloc<MdSrc>(m->a);
+    MdSrc *src  = &m->srcs.emplace_back();
     src->s      = s;
     src->parent = parent;
     src->poff   = poff;
@@ -674,42 +684,42 @@ static MdSrc *newsrc(Md *m, Str s, MdSrc *parent, iz poff)
 }
 
 // BLANK_LINE: whitespace-only lines, returning the end or -1.
-static iz blankend(Str s, iz i)
+static iz blankend(std::string_view s, iz i)
 {
     iz last = -1;
-    for (; i<s.len && whitespace(s.data[i]); i++) {
-        if (s.data[i] == '\n') last = i;
+    for (; i<std::ssize(s) && whitespace((u8)s[i]); i++) {
+        if (s[i] == '\n') last = i;
     }
     return last<0 ? -1 : last+1;
 }
 
-static b32 indentat(Str s, iz i)  // INDENT
+static b32 indentat(std::string_view s, iz i)  // INDENT
 {
     return at(s, i)=='\t' || startsat(s, i, "    ");
 }
 
 // IAL_BLOCK: {:attributes} alone on a line
-static iz ialblock(Str s, iz i)
+static iz ialblock(std::string_view s, iz i)
 {
     if (at(s, i)!='{' || at(s, i+1)!=':' || at(s, i+2)==':' || at(s, i+2)=='/') {
         return -1;
     }
     iz j = i + 2;
-    for (; j<s.len && s.data[j]!='}'; j++) {
-        j += s.data[j]=='\\' && at(s, j+1)=='}';
+    for (; j<std::ssize(s) && s[j]!='}'; j++) {
+        j += s[j]=='\\' && at(s, j+1)=='}';
     }
-    return j>i+2 && j<s.len ? restblank(s, j+1) : -1;
+    return j>i+2 && j<std::ssize(s) ? restblank(s, j+1) : -1;
 }
 
-static iz eobmarker(Str s, iz i)  // EOB_MARKER: ^ alone on a line
+static iz eobmarker(std::string_view s, iz i)  // EOB_MARKER: ^ alone on a line
 {
     return at(s, i)=='^' ? restblank(s, i+1) : -1;
 }
 
 // LAZY_END: where blockquotes and lazy lines stop
-static b32 lazyend(Str s, iz i)
+static b32 lazyend(std::string_view s, iz i)
 {
-    if (i>=s.len || (i==s.len-1 && s.data[i]=='\n')) return 1;
+    if (i>=std::ssize(s) || (i==std::ssize(s)-1 && s[i]=='\n')) return 1;
     if (blankend(s, i) >= 0) return 1;
     iz j = skipspaces(s, i, 3);
     return ialblock(s, j)>=0 || eobmarker(s, i)>=0 || lazyhtml(s, j);
@@ -717,7 +727,7 @@ static b32 lazyend(Str s, iz i)
 
 // LIST_START_UL or LIST_START_OL with limited indentation: returns the
 // index of the separator after the marker, or -1.
-static iz liststart(Str s, iz i, i32 type, iz maxspaces)
+static iz liststart(std::string_view s, iz i, i32 type, iz maxspaces)
 {
     i = skipspaces(s, i, maxspaces);
     u8 c = at(s, i);
@@ -731,37 +741,37 @@ static iz liststart(Str s, iz i, i32 type, iz maxspaces)
         i++;
     }
     c = at(s, i);
-    return (blank(c) || c=='|') && lineend(s, i)<s.len ? i : -1;
+    return (blank(c) || c=='|') && lineend(s, i)<std::ssize(s) ? i : -1;
 }
 
-static b32 anylist(Str s, iz i)
+static b32 anylist(std::string_view s, iz i)
 {
     return liststart(s, i, B_UL, 3)>=0 || liststart(s, i, B_OL, 3)>=0;
 }
 
-static iz atxlevel(Str s, iz i)  // ATX_HEADER_START (GFM)
+static iz atxlevel(std::string_view s, iz i)  // ATX_HEADER_START (GFM)
 {
     iz n = 0;
     for (; at(s, i+n)=='#'; n++) {}
-    return n>=1 && n<=6 && blank(at(s, i+n)) && lineend(s, i)<s.len ? n : 0;
+    return n>=1 && n<=6 && blank(at(s, i+n)) && lineend(s, i)<std::ssize(s) ? n : 0;
 }
 
-static iz fencerun(Str s, iz i)
+static iz fencerun(std::string_view s, iz i)
 {
     iz n = 0;
     for (; at(s, i+n)=='~' || at(s, i+n)=='`'; n++) {}
     return n;
 }
 
-static b32 dlstart(Str s, iz i)  // DEFINITION_LIST_START
+static b32 dlstart(std::string_view s, iz i)  // DEFINITION_LIST_START
 {
     i = skipspaces(s, i, 3);
     u8 c = at(s, i+1);
-    return at(s, i)==':' && (blank(c) || c=='|') && lineend(s, i)<s.len;
+    return at(s, i)==':' && (blank(c) || c=='|') && lineend(s, i)<std::ssize(s);
 }
 
 // PARAGRAPH_END_GFM
-static b32 paraend(Str s, iz i)
+static b32 paraend(std::string_view s, iz i)
 {
     if (lazyend(s, i) || anylist(s, i) || atxlevel(s, i) || dlstart(s, i)) {
         return 1;
@@ -770,14 +780,14 @@ static b32 paraend(Str s, iz i)
     return at(s, j)=='>' || fencerun(s, j)>=3;
 }
 
-static b32 hrule(Str s, iz i)  // HR_START
+static b32 hrule(std::string_view s, iz i)  // HR_START
 {
     i = skipspaces(s, i, 3);
     u8 c = at(s, i);
     if (c!='*' && c!='-' && c!='_') return 0;
     iz n = 0;
-    for (; i<s.len && (s.data[i]==c || blank(s.data[i])); i++) {
-        n += s.data[i] == c;
+    for (; i<std::ssize(s) && ((u8)s[i]==c || blank((u8)s[i])); i++) {
+        n += (u8)s[i] == c;
     }
     return n>=3 && at(s, i)=='\n';
 }
@@ -805,28 +815,28 @@ static b32 blankline(Md *m, MdBlock *tree, MdSrc *src)
 }
 
 // A line of indented code: INDENT[ \t]*\S.*\n
-static b32 codeline(Str s, iz i)
+static b32 codeline(std::string_view s, iz i)
 {
     if (!indentat(s, i)) return 0;
     i += at(s, i)=='\t' ? 1 : 4;
     for (; blank(at(s, i)); i++) {}
-    return i<s.len && !whitespace(s.data[i]) && lineend(s, i)<s.len;
+    return i<std::ssize(s) && !whitespace((u8)s[i]) && lineend(s, i)<std::ssize(s);
 }
 
 // Does the line have a non-space character and a newline (.*\S.*\n)?
-static b32 hastext(Str s, iz i)
+static b32 hastext(std::string_view s, iz i)
 {
     iz  e    = lineend(s, i);
     b32 text = 0;
     for (iz k = i; k < e; k++) {
-        text |= !whitespace(s.data[k]);
+        text |= !whitespace((u8)s[k]);
     }
-    return text && e<s.len;
+    return text && e<std::ssize(s);
 }
 
 // A lazy line continuing a code block or list item: non-blank, and not
 // an IAL, EOB, or block HTML after up to maxspaces spaces.
-static b32 lazyline(Str s, iz i, iz maxspaces, b32 eob)
+static b32 lazyline(std::string_view s, iz i, iz maxspaces, b32 eob)
 {
     iz j = skipspaces(s, i, maxspaces);
     return hastext(s, i) && ialblock(s, j)<0 && !lazyhtml(s, j) &&
@@ -835,7 +845,7 @@ static b32 lazyline(Str s, iz i, iz maxspaces, b32 eob)
 
 static b32 indented(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s   = src->s;
+    std::string_view s   = src->s;
     iz  pos = src->pos;
     if (!indentat(s, pos)) return 0;
 
@@ -854,27 +864,27 @@ static b32 indented(Md *m, MdBlock *tree, MdSrc *src)
     }
 
     // Join lazy lines with a space, then remove one level of indentation
-    Str data = slice(s, pos, end);
-    Str code = {allocbytes(m->a, data.len), 0};
-    for (iz i = 0; i < data.len;) {
+    std::string_view data = slice(s, pos, end);
+    std::string code;
+    for (iz i = 0; i < std::ssize(data);) {
         i += at(data, i)=='\t' ? 1 : startsat(data, i, "    ") ? 4 : 0;
-        for (; i < data.len; i++) {
-            u8 c = data.data[i];
+        for (; i < std::ssize(data); i++) {
+            char c = data[i];
             if (c == '\n') {
                 iz j = skipspaces(data, i+1, 3);
-                if (j<data.len && !whitespace(data.data[j])) {
+                if (j<std::ssize(data) && !whitespace(data[j])) {
                     c = ' ';
                 } else {
-                    code.data[code.len++] = c;
+                    code += c;
                     i++;
                     break;
                 }
             }
-            code.data[code.len++] = c;
+            code += c;
         }
     }
     MdBlock *b = addblock(m, tree, B_CODE, src, pos);
-    b->text  = code;
+    b->text  = keep(m, std::move(code));
     src->pos = end;
     return 1;
 }
@@ -887,16 +897,16 @@ struct FenceRange {
     iz hi;
 };
 
-static FenceRange closerrange(Str s, iz k, Str fence)
+static FenceRange closerrange(std::string_view s, iz k, std::string_view fence)
 {
     FenceRange r = {1, 0};
     iz c   = skipspaces(s, k, 3);
     iz len = fencerun(s, c);
     if (!len || restblank(s, c+len)<0) return r;
     iz p = 0;  // common prefix with the fence
-    for (; p<len && p<fence.len && s.data[c+p]==fence.data[p]; p++) {}
+    for (; p<len && p<std::ssize(fence) && (u8)s[c+p]==(u8)fence[p]; p++) {}
     iz t = len - 1;  // start of the run's uniform tail
-    for (; t>0 && s.data[c+t-1]==s.data[c+len-1]; t--) {}
+    for (; t>0 && (u8)s[c+t-1]==(u8)s[c+len-1]; t--) {}
     r.lo = t + 1;
     r.hi = p;
     return r;
@@ -904,22 +914,22 @@ static FenceRange closerrange(Str s, iz k, Str fence)
 
 static b32 fenced(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s   = src->s;
+    std::string_view s   = src->s;
     iz  pos = src->pos;
     iz  i   = skipspaces(s, pos, 3);
     iz  run = fencerun(s, i);
     if (run < 3) return 0;
-    Str fence = slice(s, i, i+run);
+    std::string_view fence = slice(s, i, i+run);
 
     // Info string: \s*?((\S+?)(?:\?\S*)?)?\s*?\n
     // The regex backtracks over the fence length, so a longer opening
     // fence may pair with a shorter closer, its excess starting the info.
     iz  j    = i + run;
-    for (; j<s.len && whitespace(s.data[j]) && s.data[j]!='\n'; j++) {}
+    for (; j<std::ssize(s) && whitespace((u8)s[j]) && s[j]!='\n'; j++) {}
     iz  wend = j;
-    for (; wend<s.len && !whitespace(s.data[wend]); wend++) {}
+    for (; wend<std::ssize(s) && !whitespace((u8)s[wend]); wend++) {}
     iz  pend = i + run;
-    for (; pend<s.len && !whitespace(s.data[pend]); pend++) {}
+    for (; pend<std::ssize(s) && !whitespace((u8)s[pend]); pend++) {}
     b32 full = restblank(s, wend) >= 0;  // the whole run as the fence
     b32 part = restblank(s, pend) >= 0;  // a shorter fence
     if (!full && !part) return 0;
@@ -928,7 +938,7 @@ static b32 fenced(Md *m, MdBlock *tree, MdSrc *src)
     // Skip the search when no closer can follow, e.g. many unclosed fences
     if (!src->fences) {
         src->fences = 1;
-        for (iz k = 0; k < s.len; k = nextline(s, k)) {
+        for (iz k = 0; k < std::ssize(s); k = nextline(s, k)) {
             iz c = skipspaces(s, k, 3);
             iz n = fencerun(s, c);
             if (n>=3 && restblank(s, c+n)>=0) src->fences = 1 + k;
@@ -938,14 +948,14 @@ static b32 fenced(Md *m, MdBlock *tree, MdSrc *src)
 
     // The longest usable fence, then the first line closing it
     iz best = 0;
-    for (iz k = body; k < s.len; k = nextline(s, k)) {
+    for (iz k = body; k < std::ssize(s); k = nextline(s, k)) {
         FenceRange r = closerrange(s, k, fence);
         iz n = full && r.hi==run ? run : part ? (r.hi<run ? r.hi : run-1) : 0;
         if (n>=3 && n>=r.lo && n>best) best = n;
         if (best == run) break;
     }
     if (!best) return 0;
-    for (iz k = body; k < s.len; k = nextline(s, k)) {
+    for (iz k = body; k < std::ssize(s); k = nextline(s, k)) {
         FenceRange r = closerrange(s, k, fence);
         if (r.lo<=best && best<=r.hi) {
             MdBlock *b = addblock(m, tree, B_CODE, src, pos);
@@ -961,7 +971,7 @@ static b32 fenced(Md *m, MdBlock *tree, MdSrc *src)
 
 static b32 blockquote(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s   = src->s;
+    std::string_view s   = src->s;
     iz  pos = src->pos;
     if (at(s, skipspaces(s, pos, 3)) != '>') return 0;
 
@@ -969,47 +979,46 @@ static b32 blockquote(Md *m, MdBlock *tree, MdSrc *src)
     for (; !lazyend(s, end); end = nextline(s, end)) {}
 
     // Strip ^ {0,3}> ? from every line
-    Str text = {allocbytes(m->a, end-pos), 0};
+    std::string text;
     for (iz i = pos; i < end;) {
         iz j = skipspaces(s, i, 3);
         if (at(s, j) == '>') {
             i = j + 1 + (at(s, j+1)==' ');
         }
         iz e = nextline(s, i);
-        copybytes(text.data+text.len, s.data+i, e-i);
-        text.len += e - i;
+        text += s.substr(i, e-i);
         i = e;
     }
 
     MdBlock *b = addblock(m, tree, B_QUOTE, src, pos);
     src->pos = end;
-    parseblocks(m, b, newsrc(m, text, src, pos));
+    parseblocks(m, b, newsrc(m, keep(m, std::move(text)), src, pos));
     return 1;
 }
 
 // HEADER_ID: a trailing {#id}
-static Str headerid(Str *text)
+static std::string_view headerid(std::string_view *text)
 {
-    Str t = *text;
-    if (!t.len || t.data[t.len-1]!='}') return {};
-    iz i = t.len - 2;
-    for (; i >= 0 && t.data[i] != '{'; i--) {}
-    if (i<1 || !blank(t.data[i-1]) || at(t, i+1)!='#') return {};
-    Str id = slice(t, i+2, t.len-1);
-    for (iz k = 0; k < id.len; k++) {
-        u8  c = id.data[k];
+    std::string_view t = *text;
+    if (t.empty() || t[std::ssize(t)-1]!='}') return {};
+    iz i = std::ssize(t) - 2;
+    for (; i >= 0 && t[i] != '{'; i--) {}
+    if (i<1 || !blank((u8)t[i-1]) || at(t, i+1)!='#') return {};
+    std::string_view id = slice(t, i+2, std::ssize(t)-1);
+    for (iz k = 0; k < std::ssize(id); k++) {
+        u8  c = id[k];
         b32 ok = letter(c) || c=='_' || c==':' || c>=0x80 ||
                  (k && (digit(c) || c=='-' || c=='.'));
         if (!ok) return {};
     }
-    if (!id.len) return {};
+    if (id.empty()) return {};
     *text = trimright(slice(t, 0, i-1));
     return id;
 }
 
 static b32 atxheader(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s     = src->s;
+    std::string_view s     = src->s;
     iz  pos   = src->pos;
     iz  level = atxlevel(s, pos);
     if (!level) return 0;
@@ -1017,15 +1026,15 @@ static b32 atxheader(Md *m, MdBlock *tree, MdSrc *src)
     iz  i    = pos + level;
     for (; blank(at(s, i)); i++) {}
     iz  eol  = lineend(s, i);
-    Str text = trimright(slice(s, i, eol));
-    Str id   = headerid(&text);
+    std::string_view text = trimright(slice(s, i, eol));
+    std::string_view id   = headerid(&text);
     // text.sub!(/[\t ]#+\z/, '') && text.rstrip!
-    iz  k    = text.len;
-    for (; k>0 && text.data[k-1]=='#'; k--) {}
-    if (k<text.len && k>0 && blank(text.data[k-1])) {
-        text = trimright(takehead(text, k-1));
+    iz  k    = std::ssize(text);
+    for (; k>0 && text[k-1]=='#'; k--) {}
+    if (k<std::ssize(text) && k>0 && blank((u8)text[k-1])) {
+        text = trimright(text.substr(0, k-1));
     }
-    if (!text.len) return 0;
+    if (text.empty()) return 0;
 
     MdBlock *b = addblock(m, tree, B_HEADER, src, pos);
     b->level = (i32)level;
@@ -1044,7 +1053,7 @@ static b32 hrblock(Md *m, MdBlock *tree, MdSrc *src)
 }
 
 // List item content_re: indented by at least ind columns, non-blank
-static b32 contentline(Str s, iz i, iz ind)
+static b32 contentline(std::string_view s, iz i, iz ind)
 {
     for (i32 alt = 0; alt < 2; alt++) {
         iz  k  = i;
@@ -1071,7 +1080,7 @@ static b32 contentline(Str s, iz i, iz ind)
 struct MdPiece {
     i32 kind;    // PIECE_*
     iz  spaces;  // leading spaces to insert
-    Str text;
+    std::string_view text;
     iz  off;     // line start in the list source
 };
 
@@ -1079,19 +1088,19 @@ enum { PIECE_ITEM, PIECE_CHUNK, PIECE_LINE };
 
 static b32 list(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s = src->s;
+    std::string_view s = src->s;
     i32 type = liststart(s, src->pos, B_UL, 3)>=0 ? B_UL :
                liststart(s, src->pos, B_OL, 3)>=0 ? B_OL : 0;
     if (!type) return 0;
     MdBlock *list = addblock(m, tree, type, src, src->pos);
 
-    Slice<MdPiece> pieces = {};
+    std::vector<MdPiece> pieces = {};
     iz  ind       = 0;
     iz  maxspaces = 3;
     b32 nested    = 0;
     b32 lastblank = 0;
     b32 eob       = 0;
-    while (src->pos < s.len) {
+    while (src->pos < std::ssize(s)) {
         iz pos = src->pos;
         iz e;
         if (lastblank && hrule(s, pos)) {
@@ -1102,23 +1111,23 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
             eob = 1;
             break;
         } else if ((e = liststart(s, pos, type, maxspaces)) >= 0) {
-            if (type==B_UL && s.data[e-1]!='*') {
+            if (type==B_UL && s[e-1]!='*') {
                 mdwarn(m, srcline(src, pos), "only '*' bullets are supported");
             }
             // parse_first_list_line
             ind = e - pos;
             iz  eol   = lineend(s, e);
-            Str rest  = slice(s, e, eol+1);
+            std::string_view rest  = slice(s, e, eol+1);
             b32 empty = 1;
-            for (iz i = 0; i < rest.len; i++) {
-                empty &= whitespace(rest.data[i]);
+            for (iz i = 0; i < std::ssize(rest); i++) {
+                empty &= whitespace((u8)rest[i]);
             }
             if (empty) {
                 ind = 4;
             } else {
                 iz lead = 0;
-                for (iz i = 0; i<rest.len && blank(rest.data[i]); i++) {
-                    if (rest.data[i] == ' ') {
+                for (iz i = 0; i<std::ssize(rest) && blank((u8)rest[i]); i++) {
+                    if (rest[i] == ' ') {
                         lead++;
                     } else {
                         iz tabs = 0;
@@ -1129,12 +1138,12 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
                 }
                 ind += lead;
             }
-            Str content = trimleft(rest);
-            if (startswith(content, "{:")) {
+            std::string_view content = trimleft(rest);
+            if (content.starts_with("{:")) {
                 mdwarn(m, srcline(src, pos), "IAL syntax is not supported");
             }
             MdPiece p = {PIECE_ITEM, 0, content, pos};
-            pieces    = push(m->a, pieces, p);
+            pieces.push_back(p);
             maxspaces = ind<4 ? ind-1 : 3;
             nested    = anylist(content, 0);
             lastblank = 0;
@@ -1144,9 +1153,9 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
             // Leading tabs become four spaces each, then remove ind spaces
             iz  eol   = lineend(s, pos);
             iz  tabs  = 0;
-            for (; s.data[pos+tabs]=='\t'; tabs++) {}
+            for (; s[pos+tabs]=='\t'; tabs++) {}
             iz  sp    = 0;
-            for (; s.data[pos+tabs+sp]==' '; sp++) {}
+            for (; s[pos+tabs+sp]==' '; sp++) {}
             iz  lead  = tabs*4 + sp;
             b32 found = lead >= ind;
             MdPiece p = {PIECE_LINE, 0, slice(s, pos+tabs+sp, eol+1), pos};
@@ -1161,17 +1170,17 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
             b32 islist = lsp<=3 && anylist(p.text, 0);
             if (!nested && found && islist) {
                 MdPiece c = {PIECE_CHUNK, 0, {}, pos};
-                pieces = push(m->a, pieces, c);
+                pieces.push_back(c);
                 nested = 1;
             } else if (nested && !found && islist) {
                 p.spaces += ind + 4;
             }
-            pieces    = push(m->a, pieces, p);
+            pieces.push_back(p);
             lastblank = 0;
             src->pos  = eol + 1;
         } else if ((e = blankend(s, pos)) >= 0) {
             MdPiece p = {PIECE_LINE, 0, slice(s, pos, e), pos};
-            pieces    = push(m->a, pieces, p);
+            pieces.push_back(p);
             nested    = 1;
             lastblank = 1;
             src->pos  = e;
@@ -1182,25 +1191,19 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
 
     // Parse each item's chunks as blocks
     i32 nitems = 0;
-    for (iz i = 0; i < pieces.len;) {
+    for (iz i = 0; i < std::ssize(pieces);) {
         MdBlock *li = addblock(m, list, B_LI, src, pieces[i].off);
         nitems++;
         do {
             iz start = i;
-            iz len   = pieces[i].text.len;
-            for (i++; i<pieces.len && pieces[i].kind==PIECE_LINE; i++) {
-                len += pieces[i].spaces + pieces[i].text.len;
-            }
-            Str chunk = {allocbytes(m->a, len), 0};
+            for (i++; i<std::ssize(pieces) && pieces[i].kind==PIECE_LINE; i++) {}
+            std::string chunk;
             for (iz k = start; k < i; k++) {
-                for (iz n = 0; n < pieces[k].spaces; n++) {
-                    chunk.data[chunk.len++] = ' ';
-                }
-                copybytes(chunk.data+chunk.len, pieces[k].text.data, pieces[k].text.len);
-                chunk.len += pieces[k].text.len;
+                chunk.append((uz)pieces[k].spaces, ' ');
+                chunk += pieces[k].text;
             }
-            parseblocks(m, li, newsrc(m, chunk, src, pieces[start].off));
-        } while (i<pieces.len && pieces[i].kind==PIECE_CHUNK);
+            parseblocks(m, li, newsrc(m, keep(m, std::move(chunk)), src, pieces[start].off));
+        } while (i<std::ssize(pieces) && pieces[i].kind==PIECE_CHUNK);
     }
 
     // Tight or loose (list.rb:125-141)
@@ -1218,11 +1221,11 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
                 (!second || second->type!=B_BLANK || (islast && !second->next && !eob)) &&
                 (!islast || nitems==1 || anyloose)) {
             if (second && second->type!=B_BLANK) {
-                first->text = concat(m->a, first->text, "\n");
+                first->text = keep(m, std::string(first->text) + "\n");
             }
             first->transparent = 1;
         }
-        Str t = trimleft(first->text);
+        std::string_view t = trimleft(first->text);
         if (first->type==B_P && (startsat(t, 0, "[ ]") || startsfold(t, 0, "[x]")) &&
                 whitespace(at(t, 3))) {
             mdwarn(m, srcline(first->src, first->off), "task lists are not supported");
@@ -1254,9 +1257,9 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
 
 // Emulate kramdown parsing raw block HTML and serializing it again.
 struct MdRaw {
-    Str  s;
+    std::string_view  s;
     iz   pos;
-    Buf *out;
+    std::string *out;
     b32  eof;
     b32  mdattr;  // saw a markdown attribute
 };
@@ -1270,14 +1273,14 @@ static void rawtext(MdRaw *r, iz end)
 }
 
 // parse_raw_html: children until the element's own close tag
-static void rawchildren(MdRaw *r, Str name, b32 known)
+static void rawchildren(MdRaw *r, std::string_view name, b32 known)
 {
-    Str s = r->s;
+    std::string_view s = r->s;
     for (;;) {
         // HTML_RAW_START: <(UNAME|/|!--|\?|!\[CDATA\[)
         iz i = r->pos;
-        for (; i < s.len; i++) {
-            if (s.data[i]!='<') continue;
+        for (; i < std::ssize(s); i++) {
+            if (s[i]!='<') continue;
             u8 c = at(s, i+1);
             if (c=='/' || c=='?' || startsat(s, i+1, "!--") ||
                     startsat(s, i+1, "![CDATA[") || xmlname(s, i+1)>=0) {
@@ -1285,7 +1288,7 @@ static void rawchildren(MdRaw *r, Str name, b32 known)
             }
         }
         rawtext(r, i);
-        if (i >= s.len) {
+        if (i >= std::ssize(s)) {
             r->eof = 1;
             return;
         }
@@ -1294,7 +1297,7 @@ static void rawchildren(MdRaw *r, Str name, b32 known)
         HtmlTag t;
         if ((e = delimited(s, i, "<!--", "-->")) >= 0 ||
                 (e = delimited(s, i, "<?", "?>")) >= 0) {
-            print(r->out, slice(s, i, e));
+            *r->out += slice(s, i, e);
             r->pos = e;
         } else if ((e = delimited(s, i, "<![CDATA[", "]]>")) >= 0) {
             printesc(r->out, slice(s, i+9, e-3), 0);
@@ -1317,45 +1320,45 @@ static void rawchildren(MdRaw *r, Str name, b32 known)
 
 static void rawelement(MdRaw *r, HtmlTag t, b32 top)
 {
-    Buf *b      = r->out;
+    std::string *b      = r->out;
     i32  fl     = htmlflags(t.name);
     b32  known  = fl != 0;
     b32  closed = t.selfclose || (fl & H_VOID);
     r->mdattr |= search(t.attrs, 0, "markdown") >= 0;
-    putbyte(b, '<');
+    *b += '<';
     printname(b, t.name, known);
     printattrs(b, t.attrs, known, 0);
 
     if (equalfold(t.name, "script") || equalfold(t.name, "style")) {
         // Raw text up to the close tag, matched without case
         iz i = r->pos;
-        for (; i < r->s.len; i++) {
+        for (; i < std::ssize(r->s); i++) {
             HtmlTag c = matchclose(r->s, i);
             if (c.end>=0 && equalfold(c.name, t.name)) break;
         }
-        putbyte(b, '>');
-        print(b, slice(r->s, r->pos, i));
+        *b += '>';
+        *b += slice(r->s, r->pos, i);
         r->pos = i;
-        if (i < r->s.len) {
+        if (i < std::ssize(r->s)) {
             r->pos = matchclose(r->s, i).end;
         } else {
             r->eof = 1;
         }
-        print(b, "</");
+        *b += "</";
         printname(b, t.name, known);
-        putbyte(b, '>');
+        *b += '>';
         return;
     }
 
     if (closed) {
-        print(b, " />");
+        *b += " />";
         return;
     }
-    putbyte(b, '>');
+    *b += '>';
     rawchildren(r, t.name, known);
-    print(b, "</");
+    *b += "</";
     printname(b, t.name, known);
-    putbyte(b, '>');
+    *b += '>';
     if (top && !r->eof) {
         // TRAILING_WHITESPACE
         iz i = r->pos;
@@ -1366,7 +1369,7 @@ static void rawelement(MdRaw *r, HtmlTag t, b32 top)
 
 static b32 blockhtml(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s   = src->s;
+    std::string_view s   = src->s;
     iz  pos = src->pos;
     iz  i   = skipspaces(s, pos, 3);
     if (at(s, i) != '<') return 0;
@@ -1385,29 +1388,29 @@ static b32 blockhtml(Md *m, MdBlock *tree, MdSrc *src)
     if (t.end<0 || (htmlflags(t.name) & H_SPAN)) {
         return 0;
     }
-    Buf   out(m->a, 256);
+    std::string   out;
     MdRaw r = {s, t.end, &out, 0, 0};
     rawelement(&r, t, 1);
     if (r.mdattr) {
         mdwarn(m, srcline(src, pos), "the markdown attribute is not supported");
     }
     if (r.eof) {
-        Str msg = "HTML block runs to the end of the document";
+        std::string_view msg = "HTML block runs to the end of the document";
         error(m->log, m->name, srcline(src, pos), msg);
     }
     MdBlock *b = addblock(m, tree, B_HTML, src, pos);
-    b->text  = finish(&out);
+    b->text  = keep(m, std::move(out));
     src->pos = r.pos;
     return 1;
 }
 
 static b32 setext(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s   = src->s;
+    std::string_view s   = src->s;
     iz  pos = src->pos;
     iz  i   = skipspaces(s, pos, 3);
     iz  eol = lineend(s, pos);
-    if (i>=eol || blank(s.data[i]) || eol>=s.len || !afterboundary(tree)) {
+    if (i>=eol || blank((u8)s[i]) || eol>=std::ssize(s) || !afterboundary(tree)) {
         return 0;
     }
     u8 c = at(s, eol+1);
@@ -1418,8 +1421,8 @@ static b32 setext(Md *m, MdBlock *tree, MdSrc *src)
     if (end < 0) return 0;
 
     mdwarn(m, srcline(src, pos), "setext headers are not supported");
-    Str text = trimright(slice(s, i, eol));
-    Str id   = headerid(&text);
+    std::string_view text = trimright(slice(s, i, eol));
+    std::string_view id   = headerid(&text);
     MdBlock *b = addblock(m, tree, B_HEADER, src, pos);
     b->level = c=='=' ? 1 : 2;
     b->text  = text;
@@ -1429,7 +1432,7 @@ static b32 setext(Md *m, MdBlock *tree, MdSrc *src)
 }
 
 // FOOTNOTE_DEFINITION_START: [^name]: where name is \w[\w-]*
-static b32 footnotedef(Str s, iz i)
+static b32 footnotedef(std::string_view s, iz i)
 {
     if (!startsat(s, i, "[^") || !wordbyte(at(s, i+2))) return 0;
     iz j = i + 3;
@@ -1437,18 +1440,18 @@ static b32 footnotedef(Str s, iz i)
     return startsat(s, j, "]:");
 }
 
-static b32 istable(Md *, Str, iz);
+static b32 istable(Md *, std::string_view, iz);
 
 // BLOCK_BOUNDARY at a line start: a blank line, EOB, IAL, or the end
-static b32 beforeboundary(Str s, iz k)
+static b32 beforeboundary(std::string_view s, iz k)
 {
-    return k>=s.len || (k==s.len-1 && s.data[k]=='\n') || blankend(s, k)>=0 ||
+    return k>=std::ssize(s) || (k==std::ssize(s)-1 && s[k]=='\n') || blankend(s, k)>=0 ||
            eobmarker(s, k)>=0 || ialblock(s, skipspaces(s, k, 3))>=0;
 }
 
 // Would kramdown parse a math block (math.rb)? When escaped, it instead
 // drops the backslash, which also changes the output.
-static b32 mathblock(MdBlock *tree, Str s, iz pos)
+static b32 mathblock(MdBlock *tree, std::string_view s, iz pos)
 {
     iz  i   = skipspaces(s, pos, 3);
     b32 esc = at(s, i) == '\\';
@@ -1476,7 +1479,7 @@ static b32 afterpara(MdBlock *tree)
 // warn but do not consume, so the text renders as a paragraph instead.
 static void unsupported(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s   = src->s;
+    std::string_view s   = src->s;
     iz  pos = src->pos;
     iz  i   = skipspaces(s, pos, 3);
     if (footnotedef(s, i)) {
@@ -1494,7 +1497,7 @@ static void unsupported(Md *m, MdBlock *tree, MdSrc *src)
 
 // The end of a link definition after its URL: an optional title, on this
 // line after blanks or alone on the next line, then the end of the line.
-static iz defrest(Str s, iz k, Str *title)
+static iz defrest(std::string_view s, iz k, std::string_view *title)
 {
     iz t = k;
     for (; blank(at(s, t)); t++) {}
@@ -1508,7 +1511,7 @@ static iz defrest(Str s, iz k, Str *title)
         for (iz c = t+2; c < e; c++) {
             iz r = c + 1;
             for (; blank(at(s, r)); r++) {}
-            if (s.data[c]==s.data[t] && at(s, r)=='\n') {
+            if ((u8)s[c]==(u8)s[t] && at(s, r)=='\n') {
                 *title = slice(s, t+1, c);
                 return r + 1;
             }
@@ -1519,61 +1522,61 @@ static iz defrest(Str s, iz k, Str *title)
 }
 
 // Normalize a link label: \s+ to one space, then lowercase
-static Str normlabel(Arena *a, Str label)
+static std::string normlabel(std::string_view label)
 {
-    Buf key(a, 2*label.len);
-    for (iz k = 0; k < label.len;) {
+    std::string key;
+    for (iz k = 0; k < std::ssize(label);) {
         iz  n;
         i32 c = cpat(label, k, &n);
         k += n;
         if (c < 0x80 && whitespace((u8)c)) {
-            for (; k<label.len && whitespace(label.data[k]); k++) {}
+            for (; k<std::ssize(label) && whitespace((u8)label[k]); k++) {}
             c = ' ';
         }
         c = downcase(c);
         putcp(&key, c==0x130 ? 'i' : c);
         if (c == 0x130) putcp(&key, 0x307);
     }
-    return finish(&key);
+    return key;
 }
 
 // LINK_DEFINITION_START: the URL is the shortest that lets the rest of
 // the line (and perhaps the next) match.
 static b32 linkdef(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s   = src->s;
+    std::string_view s   = src->s;
     iz  pos = src->pos;
     iz  i   = skipspaces(s, pos, 3);
     iz  j   = i + 1;
-    for (; j<s.len && s.data[j]!=']' && s.data[j]!='\n'; j++) {}
+    for (; j<std::ssize(s) && s[j]!=']' && s[j]!='\n'; j++) {}
     if (at(s, i)!='[' || j==i+1 || at(s, j)!=']' || at(s, j+1)!=':') {
         return 0;
     }
-    Str label = slice(s, i+1, j);
+    std::string_view label = slice(s, i+1, j);
     iz  u     = j + 2;
     for (; blank(at(s, u)); u++) {}
     iz  eol   = lineend(s, u);
 
-    Str url   = {};
-    Str title = {};
+    std::string_view url   = {};
+    std::string_view title = {};
     iz  end   = -1;
     for (iz g = u+1; at(s, u)=='<' && g<eol && end<0; g++) {
-        if (s.data[g] == '>') {
+        if (s[g] == '>') {
             end = defrest(s, g+1, &title);
             url = slice(s, u+1, g);
         }
     }
-    for (iz e = u+1; e<=eol && eol<s.len && end<0; e++) {
-        if (e<eol && !blank(s.data[e])) continue;
+    for (iz e = u+1; e<=eol && eol<std::ssize(s) && end<0; e++) {
+        if (e<eol && !blank((u8)s[e])) continue;
         end = defrest(s, e, &title);
         url = slice(s, u, e);
-        for (iz k = 0; end>=0 && k+1<url.len; k++) {
-            if (blank(url.data[k]) && isquote(url.data[k+1])) return 0;
+        for (iz k = 0; end>=0 && k+1<std::ssize(url); k++) {
+            if (blank((u8)url[k]) && isquote((u8)url[k+1])) return 0;
         }
     }
     if (end < 0) return 0;
 
-    MdDef *d = upsert(&m->defs, normlabel(m->a, label), m->a);
+    MdDef *d = &m->defs[normlabel(label)];
     d->url   = url;
     d->title = title;
     addblock(m, tree, B_EOB, src, pos);
@@ -1583,7 +1586,7 @@ static b32 linkdef(Md *m, MdBlock *tree, MdSrc *src)
 
 static b32 extension(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s   = src->s;
+    std::string_view s   = src->s;
     iz  pos = src->pos;
     iz  i   = skipspaces(s, pos, 3);
     iz  e   = -1;
@@ -1616,21 +1619,20 @@ static b32 extension(Md *m, MdBlock *tree, MdSrc *src)
 
 static b32 paragraph(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s   = src->s;
+    std::string_view s   = src->s;
     iz  pos = src->pos;
     iz  i   = skipspaces(s, pos, 3);
-    if (i>=s.len || blank(s.data[i])) return 0;
+    if (i>=std::ssize(s) || blank((u8)s[i])) return 0;
 
     iz end = nextline(s, pos);
     for (; !paraend(s, end); end = nextline(s, end)) {}
-    Str text = trimright(slice(s, pos, end));
+    std::string_view text = trimright(slice(s, pos, end));
 
     MdBlock *last = tree->tail;
     if (last && last->type==B_P) {
         // Continues a paragraph that a failed block parser interrupted
-        Str joiner = pos>=3 && slice(s, pos-3, pos)=="  \n" ? Str("  \n") : Str("\n");
-        // concat() copies only when it cannot extend in place
-        last->text = concat(m->a, concat(m->a, last->text, joiner), text);
+        std::string_view joiner = pos>=3 && slice(s, pos-3, pos)=="  \n" ? std::string_view("  \n") : std::string_view("\n");
+        last->text = keep(m, std::format("{}{}{}", last->text, joiner, text));
     } else {
         MdBlock *b = addblock(m, tree, B_P, src, pos);
         b->text = trimleft(text);
@@ -1641,13 +1643,13 @@ static b32 paragraph(Md *m, MdBlock *tree, MdSrc *src)
 
 static void parseblocks(Md *m, MdBlock *tree, MdSrc *src)
 {
-    Str s    = src->s;
+    std::string_view s    = src->s;
     b32 deep = ++m->depth > MAXDEPTH;
     if (deep && !m->deep) {
         m->deep = 1;
         mdwarn(m, srcline(src, src->pos), "pathological nesting, rendered as text");
     }
-    while (src->pos < s.len) {
+    while (src->pos < std::ssize(s)) {
         if (blankline(m, tree, src))  continue;
         if (indented(m, tree, src))   continue;
         if (fenced(m, tree, src))     continue;
@@ -1667,9 +1669,9 @@ static void parseblocks(Md *m, MdBlock *tree, MdSrc *src)
         // is contiguous with the raw text before it
         iz end = nextline(s, src->pos);
         if (tree->tail && tree->tail->type==B_TEXT) {
-            Str *text = &tree->tail->text;
-            assert(text->data+text->len == s.data+src->pos);
-            text->len += end - src->pos;
+            std::string_view *text = &tree->tail->text;
+            assert(text->data()+text->size() == s.data()+src->pos);
+            *text = {text->data(), text->size() + (uz)(end - src->pos)};
         } else {
             addblock(m, tree, B_TEXT, src, src->pos)->text = slice(s, src->pos, end);
         }
@@ -1699,9 +1701,9 @@ enum { TAG_KNOWN = 1<<0, TAG_VOID = 1<<1, MAILTO = 1<<2 };
 struct MdSpan {
     i32 type;
     i32 aux;    // code point, symbol, or TAG_* flags
-    Str text;   // text, code, href, src, or tag name
-    Str attr;   // title, or tag attributes
-    Str alt;
+    std::string_view text;   // text, code, href, src, or tag name
+    std::string_view attr;   // title, or tag attributes
+    std::string_view alt;
 };
 
 enum { STOP_NONE, STOP_EM, STOP_LINK, STOP_TAG };
@@ -1713,19 +1715,17 @@ struct MdFrame {
     i32 nimg;   // image children, for link bracket counting
     b32 raw;    // only HTML tags are recognized
     i32 stop;
-    Str delim;  // emphasis delimiter or close tag name
+    std::string_view delim;  // emphasis delimiter or close tag name
     b32 known;  // close tag matched without case
     i32 count;  // link bracket depth
     b32 table;  // only code spans and HTML tags (table.rb)
 };
 
 struct MdSpans {
-    Md            *m;
-    Arena         *a;     // nodes only
-    Arena         *misc;  // everything else
-    Str            s;
+    Md            *m;     // owns text built while parsing spans
+    std::string_view            s;
     iz             pos;
-    Slice<MdSpan>  nodes;
+    std::vector<MdSpan>  nodes;
     i32            inem;
     i32            instrong;
     i32            inlink;
@@ -1733,23 +1733,23 @@ struct MdSpans {
     iz             fuel;  // scanning budget against exponential backtracking
 };
 
-static void pushspan(MdSpans *sp, i32 type, Str text = {}, i32 aux = 0)
+static void pushspan(MdSpans *sp, i32 type, std::string_view text = {}, i32 aux = 0)
 {
     MdSpan n = {};
     n.type   = type;
     n.text   = text;
     n.aux    = aux;
-    sp->nodes = push(sp->a, sp->nodes, n);
+    sp->nodes.push_back(n);
 }
 
-static void addtext(MdSpans *sp, Str text)
+static void addtext(MdSpans *sp, std::string_view text)
 {
-    if (!text.len) return;
-    Slice<MdSpan> *v = &sp->nodes;
-    if (v->len) {
-        MdSpan *last = &v->data[v->len-1];
-        if (last->type==S_TEXT && last->text.data+last->text.len==text.data) {
-            last->text.len += text.len;
+    if (text.empty()) return;
+    std::vector<MdSpan> *v = &sp->nodes;
+    if (!v->empty()) {
+        MdSpan *last = &v->back();
+        if (last->type==S_TEXT && last->text.data()+std::ssize(last->text)==text.data()) {
+            last->text = {last->text.data(), last->text.size() + text.size()};
             return;
         }
     }
@@ -1763,19 +1763,19 @@ static void getch(MdSpans *sp)
     sp->pos += n;
 }
 
-static void spanwarn(MdSpans *sp, Str msg)
+static void spanwarn(MdSpans *sp, std::string_view msg)
 {
     MdSpan n = {};
     n.type = S_WARN;
     n.text = msg;
     n.attr = slice(sp->s, sp->pos, sp->pos);  // position, for the line
-    sp->nodes = push(sp->a, sp->nodes, n);
+    sp->nodes.push_back(n);
 }
 
 // The span_start regex union: where the scanner stops for a parser
-static b32 spanstart(Str s, iz i)
+static b32 spanstart(std::string_view s, iz i)
 {
-    u8 c = s.data[i], c1 = at(s, i+1);
+    u8 c = s[i], c1 = at(s, i+1);
     switch (c) {
     case '*': case '_': case '`': case '<': case '[': case '$': case '&':
     case '\\': case '"': case '\'':
@@ -1796,18 +1796,18 @@ static b32 spanstart(Str s, iz i)
 
 static b32 stopat(MdSpans *sp, MdFrame *f, iz i)
 {
-    Str s = sp->s;
+    std::string_view s = sp->s;
     switch (f->stop) {
     case STOP_EM:
-        return s.data[i]==f->delim.data[0] && startsat(s, i, f->delim);
+        return (u8)s[i]==(u8)f->delim[0] && startsat(s, i, f->delim);
     case STOP_LINK:
-        return s.data[i]==']' || s.data[i]=='[' || (s.data[i]=='!' && at(s, i+1)=='[');
+        return s[i]==']' || s[i]=='[' || (s[i]=='!' && at(s, i+1)=='[');
     case STOP_TAG:
         if (at(s, i)!='<' || at(s, i+1)!='/') return 0;
         if (f->known ? !startsfold(s, i+2, f->delim) : !startsat(s, i+2, f->delim)) {
             return 0;
         }
-        return at(s, skipws(s, i+2+f->delim.len)) == '>';
+        return at(s, skipws(s, i+2+std::ssize(f->delim))) == '>';
     }
     return 0;
 }
@@ -1815,23 +1815,23 @@ static b32 stopat(MdSpans *sp, MdFrame *f, iz i)
 // The condition kramdown attaches to a stop regex match
 static b32 stopcond(MdSpans *sp, MdFrame *f)
 {
-    Str s = sp->s;
+    std::string_view s = sp->s;
     iz  p = sp->pos;
     switch (f->stop) {
     case STOP_EM: {
-        u8 d = f->delim.data[0];
-        iz n = f->delim.len;
-        if (p>0 && whitespace(s.data[p-1])) return 0;
+        u8 d = f->delim[0];
+        iz n = std::ssize(f->delim);
+        if (p>0 && whitespace((u8)s[p-1])) return 0;
         if (f->type==S_EM && at(s, p+1)==d && at(s, p+2)!=d) return 0;
-        if (d=='_' && p+n<s.len) {
+        if (d=='_' && p+n<std::ssize(s)) {
             iz  k;
             i32 c = cpat(s, p+n, &k);
             if (unialnum(c)) return 0;
         }
-        return sp->nodes.len > f->first;
+        return std::ssize(sp->nodes) > f->first;
     }
     case STOP_LINK:
-        f->count += s.data[p]==']' ? -1 : 1;
+        f->count += s[p]==']' ? -1 : 1;
         return f->count - f->nimg == 0;
     case STOP_TAG:
         return 1;
@@ -1843,20 +1843,20 @@ static b32 parsespans(MdSpans *sp, MdFrame *f);
 
 static void emphasis(MdSpans *sp, MdFrame *f)
 {
-    Str s      = sp->s;
+    std::string_view s      = sp->s;
     iz  saved  = sp->pos;
-    u8  type   = s.data[saved];
+    u8  type   = s[saved];
     iz  n      = at(s, saved+1)==type ? 2 : 1;
     i32 elem   = n==2 ? S_STRONG : S_EM;
-    Str result = slice(s, saved, saved+n);
+    std::string_view result = slice(s, saved, saved+n);
     sp->pos += n;
 
-    b32 literal = sp->pos<s.len && whitespace(s.data[sp->pos]);
+    b32 literal = sp->pos<std::ssize(s) && whitespace((u8)s[sp->pos]);
     literal |= elem==S_EM ? sp->inem>0 : sp->instrong>0;
     if (type == '_') {
         // pre_match =~ /[[:alpha:]]-?[[:alpha:]]*_*\z/
         iz j = saved;
-        for (; j>0 && s.data[j-1]=='_'; j--) {}
+        for (; j>0 && s[j-1]=='_'; j--) {}
         iz  k;
         i32 c = utf8prev(s, j, &k);
         if (c=='-' && k>0) {
@@ -1869,24 +1869,24 @@ static void emphasis(MdSpans *sp, MdFrame *f)
         return;
     }
 
-    iz mark = sp->nodes.len;
+    iz mark = std::ssize(sp->nodes);
     for (i32 attempt = 0; attempt < 2; attempt++) {
         MdFrame g = {};
         g.type  = elem;
         g.stop  = STOP_EM;
         g.delim = elem==S_STRONG ? result : slice(s, saved, saved+1);
         pushspan(sp, elem, {}, type);
-        g.first = sp->nodes.len;
+        g.first = std::ssize(sp->nodes);
         i32 *depth = elem==S_EM ? &sp->inem : &sp->instrong;
         ++*depth;
         b32 found = parsespans(sp, &g);
         --*depth;
         if (found) {
-            sp->pos += g.delim.len;
+            sp->pos += std::ssize(g.delim);
             pushspan(sp, elem==S_EM ? S_EMEND : S_STRONGEND);
             return;
         }
-        sp->nodes.len = mark;
+        sp->nodes.resize(mark);
         if (elem!=S_STRONG || f->type==S_EM) break;
         // Retry the second delimiter character as emphasis
         sp->pos = saved + 1;
@@ -1898,49 +1898,49 @@ static void emphasis(MdSpans *sp, MdFrame *f)
 
 static void codespan(MdSpans *sp)
 {
-    Str s     = sp->s;
+    std::string_view s     = sp->s;
     iz  start = sp->pos;
     iz  n     = 0;
     for (; at(s, start+n)=='`'; n++) {}
-    Str delim = slice(s, start, start+n);
+    std::string_view delim = slice(s, start, start+n);
     sp->pos = start + n;
 
-    if (n==1 && (!start || whitespace(s.data[start-1])) &&
-            sp->pos<s.len && whitespace(s.data[sp->pos])) {
+    if (n==1 && (!start || whitespace((u8)s[start-1])) &&
+            sp->pos<std::ssize(s) && whitespace((u8)s[sp->pos])) {
         addtext(sp, delim);
         return;
     }
     iz e = search(s, sp->pos, delim);
-    sp->fuel -= (e<0 ? s.len : e) - sp->pos;
+    sp->fuel -= (e<0 ? std::ssize(s) : e) - sp->pos;
     if (e < 0) {
         addtext(sp, delim);
         return;
     }
-    Str code = slice(s, sp->pos, e);
+    std::string_view code = slice(s, sp->pos, e);
     sp->pos = e + n;
     if (n > 1) {
-        if (code.len && code.data[0]==' ') code = cuthead(code, 1);
-        if (code.len && code.data[code.len-1]==' ') code = cuttail(code, 1);
+        if (std::ssize(code) && code[0]==' ') code = code.substr(1);
+        if (std::ssize(code) && code[std::ssize(code)-1]==' ') code = code.substr(0, code.size()-1);
     }
     pushspan(sp, S_CODE, code);
 }
 
 static b32 autolink(MdSpans *sp)
 {
-    static Str schemes[] = {"mailto", "https", "http", "ftps", "ftp"};
-    Str s = sp->s;
+    static std::string_view schemes[] = {"mailto", "https", "http", "ftps", "ftp"};
+    std::string_view s = sp->s;
     iz  p = sp->pos;
     for (iz i = 0; i < std::ssize(schemes); i++) {
-        iz c = p + 1 + schemes[i].len;
+        iz c = p + 1 + std::ssize(schemes[i]);
         if (!startsat(s, p+1, schemes[i]) || at(s, c)!=':') continue;
         // .+? then >
-        if (c+1>=s.len || s.data[c+1]=='\n') return 0;
+        if (c+1>=std::ssize(s) || s[c+1]=='\n') return 0;
         iz j = c + 2;
-        for (; j<s.len && s.data[j]!='>' && s.data[j]!='\n'; j++) {}
+        for (; j<std::ssize(s) && s[j]!='>' && s[j]!='\n'; j++) {}
         sp->fuel -= j - p;
         if (at(s, j) != '>') return 0;
-        Str url  = slice(s, p+1, j);
-        Str text = startswith(url, "mailto:") ? cuthead(url, 7) : url;
+        std::string_view url  = slice(s, p+1, j);
+        std::string_view text = url.starts_with("mailto:") ? url.substr(7) : url;
         pushspan(sp, S_A, url);
         addtext(sp, text);
         pushspan(sp, S_AEND);
@@ -1952,7 +1952,7 @@ static b32 autolink(MdSpans *sp)
     iz j = p + 1;
     for (i32 part = 0; part < 2; part++) {
         iz start = j;
-        for (; j < s.len; j += cplen(s, j)) {
+        for (; j < std::ssize(s); j += cplen(s, j)) {
             iz  n;
             i32 c = cpat(s, j, &n);
             if (c!='-' && c!='_' && c!='.' && !unialnum(c)) break;
@@ -1961,7 +1961,7 @@ static b32 autolink(MdSpans *sp)
         if (j==start || at(s, j)!=(part ? '>' : '@')) return 0;
         j++;
     }
-    Str addr = slice(s, p+1, j-1);
+    std::string_view addr = slice(s, p+1, j-1);
     pushspan(sp, S_A, addr, MAILTO);
     addtext(sp, addr);
     pushspan(sp, S_AEND);
@@ -1970,7 +1970,7 @@ static b32 autolink(MdSpans *sp)
 }
 
 // HTML_SPAN_START: <(UNAME|!--|/|!\[CDATA\[)
-static b32 spanhtmlstart(Str s, iz i)
+static b32 spanhtmlstart(std::string_view s, iz i)
 {
     return at(s, i)=='<' && (at(s, i+1)=='/' || startsat(s, i+1, "!--") ||
            startsat(s, i+1, "![CDATA[") || xmlname(s, i+1)>=0);
@@ -1978,11 +1978,11 @@ static b32 spanhtmlstart(Str s, iz i)
 
 static void spanhtml(MdSpans *sp, MdFrame *f)
 {
-    Str s = sp->s;
+    std::string_view s = sp->s;
     iz  p = sp->pos;
     iz  e;
     if (startsat(s, p, "<!--") || startsat(s, p, "<![CDATA[")) {
-        sp->fuel -= s.len - p;  // an upper bound on the search
+        sp->fuel -= std::ssize(s) - p;  // an upper bound on the search
     }
     if ((e = delimited(s, p, "<!--", "-->")) >= 0) {
         pushspan(sp, S_COMMENT, slice(s, p, e));
@@ -2017,14 +2017,14 @@ static void spanhtml(MdSpans *sp, MdFrame *f)
 
     i32 flags = (fl ? TAG_KNOWN : 0) | (fl&H_VOID ? TAG_VOID : 0);
     pushspan(sp, S_TAG, t.name, flags);
-    sp->nodes.data[sp->nodes.len-1].attr = t.attrs;
+    sp->nodes.data()[std::ssize(sp->nodes)-1].attr = t.attrs;
     if (fl & H_VOID) {
         return;
     }
     if (!t.selfclose) {
         MdFrame g = {};
         g.type  = S_TAG;
-        g.first = sp->nodes.len;
+        g.first = std::ssize(sp->nodes);
         g.raw   = f->raw || !(fl & H_PARSE);
         g.stop  = STOP_TAG;
         g.delim = t.name;
@@ -2033,37 +2033,37 @@ static void spanhtml(MdSpans *sp, MdFrame *f)
             sp->pos = matchclose(s, sp->pos).end;
         } else {
             spanwarn(sp, "HTML element has no end tag");
-            addtext(sp, cuthead(s, sp->pos));
-            sp->pos = s.len;
+            addtext(sp, s.substr(sp->pos));
+            sp->pos = std::ssize(s);
         }
     }
     pushspan(sp, S_TAGEND, t.name, flags);
 }
 
 // Remove backslashes from kramdown's (non-GFM) ESCAPED_CHARS
-static Str unescape(Arena *a, Str s)
+static std::string unescape(std::string_view s)
 {
-    if (search(s, 0, "\\") < 0) return s;
-    Str r = {allocbytes(a, s.len), 0};
-    for (iz i = 0; i < s.len; i++) {
-        u8 c = s.data[i];
-        if (c=='\\' && i+1<s.len && inset("\\.*_+`<>()[]{}#!:|\"'$=-", s.data[i+1])) {
-            c = s.data[++i];
+    if (search(s, 0, "\\") < 0) return std::string(s);
+    std::string r;
+    for (iz i = 0; i < std::ssize(s); i++) {
+        char c = s[i];
+        if (c=='\\' && i+1<std::ssize(s) && inset("\\.*_+`<>()[]{}#!:|\"'$=-", s[i+1])) {
+            c = s[++i];
         }
-        r.data[r.len++] = c;
+        r += c;
     }
     return r;
 }
 
 // Complete a link or image whose open node is at mark (add_link)
-static void addlink(MdSpans *sp, MdFrame *f, iz mark, Str url, Str title, Str alt)
+static void addlink(MdSpans *sp, MdFrame *f, iz mark, std::string_view url, std::string_view title, std::string_view alt)
 {
-    MdSpan *n = sp->nodes.data + mark;
+    MdSpan *n = sp->nodes.data() + mark;
     n->text = url;
     n->attr = title;
     if (n->type == S_IMG) {
         n->alt = alt;
-        sp->nodes.len = mark + 1;
+        sp->nodes.resize(mark + 1);
         f->nimg++;
     } else {
         pushspan(sp, S_AEND);
@@ -2072,11 +2072,11 @@ static void addlink(MdSpans *sp, MdFrame *f, iz mark, Str url, Str title, Str al
 
 static void parselink(MdSpans *sp, MdFrame *f)
 {
-    Str s      = sp->s;
+    std::string_view s      = sp->s;
     iz  start  = sp->pos;
-    b32 img    = s.data[start] == '!';
-    Str result = slice(s, start, start+1+img);
-    sp->pos += result.len;
+    b32 img    = s[start] == '!';
+    std::string_view result = slice(s, start, start+1+img);
+    sp->pos += std::ssize(result);
     iz  curpos = sp->pos;
     if (!img && sp->inlink) {
         addtext(sp, result);
@@ -2084,50 +2084,50 @@ static void parselink(MdSpans *sp, MdFrame *f)
     }
 
     // Link text, counting brackets
-    iz mark = sp->nodes.len;
+    iz mark = std::ssize(sp->nodes);
     pushspan(sp, img ? S_IMG : S_A);
     MdFrame g = {};
     g.type  = img ? S_IMG : S_A;
-    g.first = sp->nodes.len;
+    g.first = std::ssize(sp->nodes);
     g.stop  = STOP_LINK;
     g.count = 1;
     sp->inlink++;
     b32 found = parsespans(sp, &g);
     sp->inlink--;
-    Str alt       = {};
+    std::string_view alt       = {};
     b32 undefined = 0;
     if (found) {
-        alt = unescape(sp->misc, slice(s, curpos, sp->pos));
+        alt = keep(sp->m, unescape(slice(s, curpos, sp->pos)));
         sp->pos++;  // ]
     }
 
     // Reference: [text][id], [text][], or [text] not followed by (
     iz  i    = skipws(s, sp->pos);
     iz  j    = i + 1;
-    for (; at(s, i)=='[' && j<s.len && s.data[j]!=']'; j++) {}
-    b32 isid = at(s, i)=='[' && j<s.len;
+    for (; at(s, i)=='[' && j<std::ssize(s) && s[j]!=']'; j++) {}
+    b32 isid = at(s, i)=='[' && j<std::ssize(s);
     sp->fuel -= j - sp->pos;
     if (found && (isid || at(s, sp->pos)!='(')) {
-        Str id = alt;
+        std::string_view id = alt;
         if (isid) {
             sp->pos = j + 1;
             id = j>i+1 ? slice(s, i+1, j) : alt;
         }
-        MdDef *d = upsert(&sp->m->defs, normlabel(sp->misc, id), 0);
-        if (d) {
-            addlink(sp, f, mark, d->url, d->title, alt);
+        auto d = sp->m->defs.find(normlabel(id));
+        if (d != sp->m->defs.end()) {
+            addlink(sp, f, mark, d->second.url, d->second.title, alt);
             return;
         }
         undefined = isid;
         found = 0;
     }
 
-    Str url = {};
+    std::string_view url = {};
     if (found) {
         // Inline: (<url>) or balanced parentheses, then perhaps a title
         iz p = sp->pos;
         iz k = p + 2;
-        for (; k<s.len && s.data[k]!='>' && s.data[k]!='\n'; k++) {}
+        for (; k<std::ssize(s) && s[k]!='>' && s[k]!='\n'; k++) {}
         if (at(s, p+1)=='<' && at(s, k)=='>') {
             url = slice(s, p+2, k);
             sp->pos = k + 1;
@@ -2140,10 +2140,10 @@ static void parselink(MdSpans *sp, MdFrame *f)
             iz  last = p;
             i32 nr   = 0;
             for (k = p;;) {
-                for (; k<s.len && s.data[k]!='(' && s.data[k]!=')' &&
-                       !(whitespace(s.data[k]) && isquote(at(s, k+1))); k++) {}
-                if (k >= s.len) break;
-                u8 c = s.data[k];
+                for (; k<std::ssize(s) && s[k]!='(' && s[k]!=')' &&
+                       !(whitespace((u8)s[k]) && isquote(at(s, k+1))); k++) {}
+                if (k >= std::ssize(s)) break;
+                u8 c = s[k];
                 last = ++k;
                 if (c == ')') {
                     if (!--nr) break;
@@ -2164,8 +2164,8 @@ static void parselink(MdSpans *sp, MdFrame *f)
 
         // LINK_INLINE_TITLE_RE: \s*?(["'])(.+?)\1\s*?\)
         iz t = skipws(s, sp->pos);
-        for (iz c = t+2; isquote(at(s, t)) && c<s.len; c++) {
-            if (s.data[c] != s.data[t]) continue;
+        for (iz c = t+2; isquote(at(s, t)) && c<std::ssize(s); c++) {
+            if ((u8)s[c] != (u8)s[t]) continue;
             iz r = skipws(s, c+1);
             if (at(s, r) == ')') {
                 sp->pos = r + 1;
@@ -2173,10 +2173,10 @@ static void parselink(MdSpans *sp, MdFrame *f)
                 return;
             }
         }
-        sp->fuel -= isquote(at(s, t)) ? s.len-t : 0;
+        sp->fuel -= isquote(at(s, t)) ? std::ssize(s)-t : 0;
     }
 
-    sp->nodes.len = mark;
+    sp->nodes.resize(mark);
     sp->pos = curpos;
     if (undefined) {
         spanwarn(sp, "undefined link reference");
@@ -2204,14 +2204,14 @@ static i32 closequote(u8 q)
 // SQ_RULES from smart_quotes.rb, tried in order at the scanner position
 static void smartquote(MdSpans *sp)
 {
-    Str s  = sp->s;
+    std::string_view s  = sp->s;
     iz  p  = sp->pos;
-    u8  c  = s.data[p];
+    u8  c  = s[p];
     u8  c1 = at(s, p+1);
     u8  c2 = at(s, p+2);
 
     // ("|')(?=[_*]{1,2}\S)
-    if (isquote(c) && (c1=='_' || c1=='*') && p+2<s.len && !whitespace(c2)) {
+    if (isquote(c) && (c1=='_' || c1=='*') && p+2<std::ssize(s) && !whitespace(c2)) {
         pushspan(sp, S_CHAR, {}, openquote(c));
         sp->pos = p + 1;
         return;
@@ -2260,7 +2260,7 @@ static void smartquote(MdSpans *sp)
         return;
     }
     // ("|')(?=\s|s\b|$)
-    if (isquote(c) && (p+1==s.len || whitespace(c1) || (c1=='s' && !wordat(s, p+2)))) {
+    if (isquote(c) && (p+1==std::ssize(s) || whitespace(c1) || (c1=='s' && !wordat(s, p+2)))) {
         pushspan(sp, S_CHAR, {}, closequote(c));
         sp->pos = p + 1;
         return;
@@ -2286,23 +2286,23 @@ static void smartquote(MdSpans *sp)
 // HTML_ENTITY_RE, output as a character except for markup characters
 static b32 entity(MdSpans *sp)
 {
-    Str s = sp->s;
+    std::string_view s = sp->s;
     iz  p = sp->pos;
     iz  j = p + 1;
     i32 cp = -1;
-    Str name = {};
+    std::string_view name = {};
     if (wordbyte(at(s, j)) || at(s, j)==':') {
         for (j++; namebyte(at(s, j)); j++) {}
         name = slice(s, p+1, j);
     } else if (at(s, j)=='#' && digit(at(s, j+1))) {
         cp = 0;
         for (j++; digit(at(s, j)); j++) {
-            cp = cp>0x10ffff ? cp : cp*10 + (s.data[j] - '0');
+            cp = cp>0x10ffff ? cp : cp*10 + ((u8)s[j] - '0');
         }
     } else if (at(s, j)=='#' && at(s, j+1)=='x' && hexdigit(at(s, j+2))) {
         cp = 0;
         for (j += 2; hexdigit(at(s, j)); j++) {
-            u8 c = s.data[j];
+            u8 c = s[j];
             i32 v = digit(c) ? c-'0' : (lowercase(c)-'a'+10);
             cp = cp>0x10ffff ? cp : cp*16 + v;
         }
@@ -2310,10 +2310,10 @@ static b32 entity(MdSpans *sp)
         return 0;
     }
     if (at(s, j) != ';') return 0;
-    Str orig = slice(s, p, j+1);
+    std::string_view orig = slice(s, p, j+1);
     sp->pos = j + 1;
 
-    if (name.data) {
+    if (name.data()) {
         // Without kramdown's table, names pass through as written.
         cp = name=="quot" ? '"' : name=="amp" ? '&' : name=="lt" ? '<' :
              name=="gt" ? '>' : -1;
@@ -2329,7 +2329,7 @@ static b32 entity(MdSpans *sp)
 
 static b32 typographic(MdSpans *sp)
 {
-    static struct { Str match; i32 type; i32 aux; } syms[] = {
+    static struct { std::string_view match; i32 type; i32 aux; } syms[] = {
         {"---", S_CHAR, MDASH}, {"--", S_CHAR, NDASH}, {"...", S_CHAR, HELLIP},
         {"\\<<", S_ENTITY, '<'}, {"\\>>", S_ENTITY, '>'},
         {"<< ", S_SYM, LAQUO}, {" >>", S_SYM, RAQUO},
@@ -2337,9 +2337,9 @@ static b32 typographic(MdSpans *sp)
     };
     for (iz i = 0; i < std::ssize(syms); i++) {
         if (!startsat(sp->s, sp->pos, syms[i].match)) continue;
-        sp->pos += syms[i].match.len;
+        sp->pos += std::ssize(syms[i].match);
         if (syms[i].type == S_ENTITY) {
-            Str e = syms[i].aux=='<' ? Str("&lt;") : Str("&gt;");
+            std::string_view e = syms[i].aux=='<' ? std::string_view("&lt;") : std::string_view("&gt;");
             pushspan(sp, S_ENTITY, e, syms[i].aux);
             pushspan(sp, S_ENTITY, e, syms[i].aux);
         } else {
@@ -2353,19 +2353,19 @@ static b32 typographic(MdSpans *sp)
 static b32 strikethrough(MdSpans *sp)
 {
     // ~~(?!\s|~).*?[^\s~]~~
-    Str s = sp->s;
+    std::string_view s = sp->s;
     iz  p = sp->pos;
     u8  c = at(s, p+2);
-    if (!startsat(s, p, "~~") || p+2>=s.len || whitespace(c) || c=='~') {
+    if (!startsat(s, p, "~~") || p+2>=std::ssize(s) || whitespace(c) || c=='~') {
         return 0;
     }
     iz k = p + 2;
-    for (; k+2 < s.len; k++) {
-        c = s.data[k];
-        if (!whitespace(c) && c!='~' && s.data[k+1]=='~' && s.data[k+2]=='~') break;
+    for (; k+2 < std::ssize(s); k++) {
+        c = (u8)s[k];
+        if (!whitespace(c) && c!='~' && s[k+1]=='~' && s[k+2]=='~') break;
     }
     sp->fuel -= k - p;
-    if (k+2 >= s.len) return 0;
+    if (k+2 >= std::ssize(s)) return 0;
 
     // The interior gets a fresh scanner and environment
     MdSpans save = *sp;
@@ -2375,7 +2375,7 @@ static b32 strikethrough(MdSpans *sp)
     sp->inem     = sp->instrong = sp->inlink = 0;
     MdFrame g = {};
     g.type  = S_DEL;
-    g.first = sp->nodes.len;
+    g.first = std::ssize(sp->nodes);
     parsespans(sp, &g);
     sp->s        = save.s;
     sp->pos      = k + 3;
@@ -2389,15 +2389,15 @@ static b32 strikethrough(MdSpans *sp)
 // Span extensions and IALs: {:...}
 static void spanext(MdSpans *sp, MdFrame *f)
 {
-    Str s = sp->s;
+    std::string_view s = sp->s;
     iz  p = sp->pos;
     iz  j = p + 2;
-    for (; j<s.len && s.data[j]!='}'; j++) {
-        j += s.data[j]=='\\' && at(s, j+1)=='}';
+    for (; j<std::ssize(s) && s[j]!='}'; j++) {
+        j += s[j]=='\\' && at(s, j+1)=='}';
     }
     sp->fuel -= j - p;
-    if (j<s.len && j>p+2) {
-        MdSpan *last = sp->nodes.len>f->first ? &sp->nodes.data[sp->nodes.len-1] : 0;
+    if (j<std::ssize(s) && j>p+2) {
+        MdSpan *last = std::ssize(sp->nodes)>f->first ? &sp->nodes.data()[std::ssize(sp->nodes)-1] : 0;
         b32     ial  = last && last->type!=S_TEXT && at(s, p+2)!=':' && at(s, p+2)!='/';
         spanwarn(sp, "IAL and extension syntax is not supported");
         if (ial) {
@@ -2410,9 +2410,9 @@ static void spanext(MdSpans *sp, MdFrame *f)
 
 static b32 tryparsers(MdSpans *sp, MdFrame *f)
 {
-    Str s  = sp->s;
+    std::string_view s  = sp->s;
     iz  p  = sp->pos;
-    u8  c  = s.data[p];
+    u8  c  = s[p];
     u8  c1 = at(s, p+1);
     if (f->raw || f->table) {
         if (f->table && c=='`') {
@@ -2449,8 +2449,8 @@ static b32 tryparsers(MdSpans *sp, MdFrame *f)
         }
     }
     // LINK_START: !?\[(?=[^^])
-    if ((c=='[' && p+1<s.len && c1!='^') ||
-            (c=='!' && c1=='[' && p+2<s.len && s.data[p+2]!='^')) {
+    if ((c=='[' && p+1<std::ssize(s) && c1!='^') ||
+            (c=='!' && c1=='[' && p+2<std::ssize(s) && s[p+2]!='^')) {
         parselink(sp, f);
         return 1;
     }
@@ -2460,7 +2460,7 @@ static b32 tryparsers(MdSpans *sp, MdFrame *f)
     }
     if (c=='$' && c1=='$') {
         iz e = search(s, p+2, "$$");
-        sp->fuel -= (e<0 ? s.len : e) - p;
+        sp->fuel -= (e<0 ? std::ssize(s) : e) - p;
         if (e >= 0) {
             spanwarn(sp, "math is not supported");
             addtext(sp, slice(s, p, e+2));
@@ -2479,7 +2479,7 @@ static b32 tryparsers(MdSpans *sp, MdFrame *f)
         sp->pos += 2;
         return 1;
     }
-    if (c=='\\' && inset("\\.*_+`<>()[]{}#!:|\"'$=-~", c1) && p+1<s.len) {
+    if (c=='\\' && inset("\\.*_+`<>()[]{}#!:|\"'$=-~", c1) && p+1<std::ssize(s)) {
         addtext(sp, slice(s, p+1, p+2));  // ESCAPED_CHARS_GFM
         sp->pos += 2;
         return 1;
@@ -2496,13 +2496,13 @@ static b32 parsespans(MdSpans *sp, MdFrame *f)
         sp->fuel = -1;  // the rest is text, with a warning
     }
     for (;;) {
-        Str s = sp->s;
-        if (sp->pos>=s.len || (sp->fuel<0 && f->stop)) break;
+        std::string_view s = sp->s;
+        if (sp->pos>=std::ssize(s) || (sp->fuel<0 && f->stop)) break;
 
         // scan_until: the leftmost stop or span start
         iz i = sp->pos;
-        for (; i < s.len; i++) {
-            u8 c = s.data[i];
+        for (; i < std::ssize(s); i++) {
+            u8 c = s[i];
             if (c>=0x80 && c<0xc0) continue;  // inside a code point
             if (f->stop && stopat(sp, f, i)) break;
             if (f->raw ? c=='<' : f->table ? c=='<' || c=='`' : 0) break;
@@ -2510,17 +2510,17 @@ static b32 parsespans(MdSpans *sp, MdFrame *f)
 
             // Fast path for most bytes: an alphanumeric or space that is
             // neither a span start nor followed by a quote (see spanstart)
-            u8 n = i+1<s.len ? s.data[i+1] : 0;
+            u8 n = i+1<std::ssize(s) ? (u8)s[i+1] : 0;
             if (n!='"' && n!='\'' && ((u32)(c|0x20)-'a'<26 || (u32)c-'0'<10 ||
                     (c==' ' && n!=' ' && n!='<' && n!='>'))) {
                 continue;
             }
             if (spanstart(s, i)) break;
         }
-        if (i >= s.len) {
+        if (i >= std::ssize(s)) {
             if (!f->stop) {
-                addtext(sp, cuthead(s, sp->pos));
-                sp->pos = s.len;
+                addtext(sp, s.substr(sp->pos));
+                sp->pos = std::ssize(s);
             }
             break;
         }
@@ -2544,21 +2544,21 @@ static b32 parsespans(MdSpans *sp, MdFrame *f)
 
 // TABLE_PIPE_CHECK on one line: a leading pipe, or one after a character
 // other than a backslash
-static b32 pipecheck(Str line)
+static b32 pipecheck(std::string_view line)
 {
     if (at(line, 0) == '|') return 1;
-    for (iz j = 1; j < line.len; j++) {
-        if (line.data[j]=='|' && line.data[j-1]!='\\') return 1;
+    for (iz j = 1; j < std::ssize(line); j++) {
+        if (line[j]=='|' && line[j-1]!='\\') return 1;
     }
     return 0;
 }
 
 // TABLE_SEP_LINE (c is '-') or TABLE_FSEP_LINE (c is '=')
-static b32 sepline(Str line, u8 c)
+static b32 sepline(std::string_view line, u8 c)
 {
     b32 found = 0;
-    for (iz j = 0; j < line.len; j++) {
-        u8 d = line.data[j];
+    for (iz j = 0; j < std::ssize(line); j++) {
+        u8 d = line[j];
         found |= d == c;
         if (d!=c && d!='+' && d!='|' && d!=':' && !blank(d)) return 0;
     }
@@ -2568,25 +2568,25 @@ static b32 sepline(Str line, u8 c)
 // Ruby's str.split("\n"), which drops trailing empty pieces
 struct MdLines {
     iz  n;
-    Str first;
-    Str last;
+    std::string_view first;
+    std::string_view last;
 };
 
-static MdLines splitlines(Str v)
+static MdLines splitlines(std::string_view v)
 {
     MdLines r = {};
-    for (; v.len && v.data[v.len-1]=='\n'; v.len--) {}
-    if (!v.len) return r;
+    while (v.ends_with('\n')) v.remove_suffix(1);
+    if (v.empty()) return r;
     r.n = 1;
     iz firstnl = -1, lastnl = -1;
-    for (iz i = 0; i < v.len; i++) {
-        if (v.data[i] != '\n') continue;
+    for (iz i = 0; i < std::ssize(v); i++) {
+        if (v[i] != '\n') continue;
         r.n++;
         firstnl = firstnl<0 ? i : firstnl;
         lastnl  = i;
     }
-    r.first = firstnl<0 ? v : takehead(v, firstnl);
-    r.last  = cuthead(v, lastnl+1);
+    r.first = firstnl<0 ? v : v.substr(0, firstnl);
+    r.last  = v.substr(lastnl+1);
     return r;
 }
 
@@ -2597,7 +2597,7 @@ struct MdPipes {
     b32 done;
 };
 
-static void pipesegment(MdPipes *p, Str value, b32 code)
+static void pipesegment(MdPipes *p, std::string_view value, b32 code)
 {
     if (p->done) return;
     MdLines l = splitlines(value);
@@ -2614,18 +2614,12 @@ static void pipesegment(MdPipes *p, Str value, b32 code)
     }
 }
 
-static b32 tablepipes(Md *m, Str text, Arena scratch)
+static b32 tablepipes(Md *m, std::string_view text)
 {
-    Arena misc = scratch;
-    misc.beg = scratch.beg + (scratch.end - scratch.beg)/2;
-    scratch.end = misc.beg;
-
     MdSpans sp = {};
     sp.m    = m;
-    sp.a    = &scratch;
-    sp.misc = &misc;
     sp.s    = text;
-    sp.fuel = 64*text.len + 65536;
+    sp.fuel = 64*std::ssize(text) + 65536;
     MdFrame root = {};
     root.type  = -1;
     root.table = 1;
@@ -2634,17 +2628,17 @@ static b32 tablepipes(Md *m, Str text, Arena scratch)
     // Adjacent text, including CDATA, is one child
     MdPipes p     = {};
     i32     depth = 0;
-    Buf     run(&misc, 256);
-    for (iz i = 0; i < sp.nodes.len; i++) {
-        MdSpan *n = sp.nodes.data + i;
+    std::string     run;
+    for (iz i = 0; i < std::ssize(sp.nodes); i++) {
+        MdSpan *n = sp.nodes.data() + i;
         if (n->type == S_WARN) continue;  // not in kramdown's tree
         if (!depth && (n->type==S_TEXT || n->type==S_CDATA)) {
-            print(&run, n->text);
+            run += n->text;
             continue;
         }
-        if (run.len) {
-            pipesegment(&p, finish(&run), 0);
-            run.len = 0;
+        if (std::ssize(run)) {
+            pipesegment(&p, run, 0);
+            run.clear();
         }
         switch (n->type) {
         case S_CODE:    if (!depth) pipesegment(&p, n->text, 1); break;
@@ -2653,17 +2647,17 @@ static b32 tablepipes(Md *m, Str text, Arena scratch)
         case S_TAGEND:  depth--; break;
         }
     }
-    pipesegment(&p, finish(&run), 0);
+    pipesegment(&p, run, 0);
     return p.pipe;
 }
 
 // Would kramdown parse a table at pos? It must also follow a block
 // boundary, which the caller checks.
-static b32 istable(Md *m, Str s, iz pos)
+static b32 istable(Md *m, std::string_view s, iz pos)
 {
     // TABLE_START: ^ {0,3}(?=\S) then a line with a pipe
     iz i = skipspaces(s, pos, 3);
-    if (i>=s.len || whitespace(s.data[i]) || !pipecheck(slice(s, i, lineend(s, i)))) {
+    if (i>=std::ssize(s) || whitespace((u8)s[i]) || !pipecheck(slice(s, i, lineend(s, i)))) {
         return 0;
     }
 
@@ -2676,10 +2670,10 @@ static b32 istable(Md *m, Str s, iz pos)
     if (sepline(slice(s, k, lineend(s, k)), '-')) {
         k = nextline(s, k);
     }
-    for (; k < s.len; k = nextline(s, k)) {
+    for (; k < std::ssize(s); k = nextline(s, k)) {
         iz  eol  = lineend(s, k);
-        Str line = slice(s, k, eol);
-        if (eol>=s.len || !pipecheck(line)) break;
+        std::string_view line = slice(s, k, eol);
+        if (eol>=std::ssize(s) || !pipecheck(line)) break;
         if (sepline(line, '-')) {
             if (!rows) {
                 // ignored
@@ -2699,32 +2693,31 @@ static b32 istable(Md *m, Str s, iz pos)
         }
     }
     body |= rows>0 && !footer;
-    return beforeboundary(s, k) && body && tablepipes(m, slice(s, pos, k-1), *m->a);
+    return beforeboundary(s, k) && body && tablepipes(m, slice(s, pos, k-1));
 }
 
 
 // Rendering
 
 struct MdOut {
-    Md    *m;
-    Buf   *b;
-    Arena  temp;  // per text block
+    Md          *m;
+    std::string *b;
 };
 
 // The text of a header's children (gfm.rb update_raw_text)
-static void headertext(Buf *b, MdSpan *v, iz n)
+static void headertext(std::string *b, MdSpan *v, iz n)
 {
     for (iz i = 0; i < n; i++) {
         switch (v[i].type) {
         case S_TEXT:
-        case S_CODE:  print(b, v[i].text); break;
+        case S_CODE:  *b += v[i].text; break;
         case S_CDATA: printhtml(b, v[i].text); break;
         case S_CHAR:  putcp(b, v[i].aux); break;
         case S_ENTITY:
             if (v[i].aux > 0) {
                 putcp(b, v[i].aux);
             } else {
-                print(b, v[i].text);
+                *b += v[i].text;
             }
             break;
         case S_SYM:
@@ -2735,26 +2728,26 @@ static void headertext(Buf *b, MdSpan *v, iz n)
     }
 }
 
-static void headerattr(MdOut *o, MdBlock *h, MdSpan *v, iz n, Arena scratch)
+static void headerattr(MdOut *o, MdBlock *h, MdSpan *v, iz n)
 {
-    Buf *b = o->b;
-    if (h->id.len) {
-        print(b, " id=\"");
+    std::string *b = o->b;
+    if (std::ssize(h->id)) {
+        *b += " id=\"";
         printesc(b, h->id, 1);
-        putbyte(b, '"');
+        *b += '"';
         return;
     }
 
-    Buf raw(&scratch, 256);
+    std::string raw;
     headertext(&raw, v, n);
-    Str text = finish(&raw);
-    Buf slug(&scratch, text.len+16);
-    for (iz i = 0; i < text.len;) {
+    std::string_view text = raw;
+    std::string slug;
+    for (iz i = 0; i < std::ssize(text);) {
         iz  k;
         i32 c = downcase(cpat(text, i, &k));
         i  += k;
         if (c==' ' || c=='\t') {
-            putbyte(&slug, '-');
+            slug += '-';
         } else if (c == 0x130) {
             putcp(&slug, 'i');
             putcp(&slug, 0x307);
@@ -2762,53 +2755,49 @@ static void headerattr(MdOut *o, MdBlock *h, MdSpan *v, iz n, Arena scratch)
             putcp(&slug, c);
         }
     }
-    Str id = finish(&slug);
-    i32 *count = upsert(&o->m->ids, id, 0);
-    if (!count) {
-        count = upsert(&o->m->ids, clone(o->m->a, id), o->m->a);
-    }
-    i32 dup = (*count)++;
-    if (!id.len && !dup) return;
-    print(b, " id=\"");
+    std::string_view id = slug;
+    i32 dup = o->m->ids.try_emplace(std::string(id), 0).first->second++;
+    if (id.empty() && !dup) return;
+    *b += " id=\"";
     printesc(b, id, 1);
     if (dup) {
-        putbyte(b, '-');
-        print(b, (i64)dup);
+        *b += '-';
+        *b += std::to_string(dup);
     }
-    putbyte(b, '"');
+    *b += '"';
 }
 
-static void spanwarnings(MdOut *o, MdBlock *blk, Str text, MdSpan *v, iz n)
+static void spanwarnings(MdOut *o, MdBlock *blk, std::string_view text, MdSpan *v, iz n)
 {
     iz  line    = -1;
-    u8 *scanned = text.data;  // newlines counted up to here, usually in order
+    char const *scanned = text.data();  // newlines counted up to here, usually in order
     iz  nls     = 0;
     for (iz i = 0; i < n; i++) {
-        Str where = {};
-        Str msg   = {};
+        std::string_view where = {};
+        std::string_view msg   = {};
         if (v[i].type == S_WARN) {
             where = v[i].attr;
             msg   = v[i].text;
         } else if (v[i].type == S_TEXT) {
-            Str t = v[i].text;
+            std::string_view t = v[i].text;
             iz  k = 0;
-            for (; k+1<t.len; k++) {
-                if (t.data[k]=='{' && (t.data[k+1]=='{' || t.data[k+1]=='%')) break;
+            for (; k+1<std::ssize(t); k++) {
+                if (t[k]=='{' && (t[k+1]=='{' || t[k+1]=='%')) break;
             }
-            if (k+1 >= t.len) continue;
-            where = cuthead(t, k);
+            if (k+1 >= std::ssize(t)) continue;
+            where = t.substr(k);
             msg   = "Liquid syntax is not supported";
         } else {
             continue;
         }
         if (line < 0) line = srcline(blk->src, blk->off);
         iz nl = 0;
-        if (where.data>=text.data && where.data<=text.data+text.len) {
-            if (where.data < scanned) {
-                scanned = text.data;
+        if (where.data()>=text.data() && where.data()<=text.data()+std::ssize(text)) {
+            if (where.data() < scanned) {
+                scanned = text.data();
                 nls     = 0;
             }
-            for (; scanned < where.data; scanned++) nls += *scanned=='\n';
+            for (; scanned < where.data(); scanned++) nls += *scanned=='\n';
             nl = nls;
         }
         mdwarn(o->m, line+nl, msg);
@@ -2821,33 +2810,26 @@ static void spanwarnings(MdOut *o, MdBlock *blk, Str text, MdSpan *v, iz n)
 // is dropped, as for the last child of a block element.
 static void renderspans(MdOut *o, MdBlock *blk, b32 header, b32 lastbr)
 {
-    Arena   t = o->temp;
-    Arena   misc = t;
-    misc.beg = t.beg + (t.end - t.beg)/2;
-    t.end    = misc.beg;
-
     MdSpans sp = {};
     sp.m    = o->m;
-    sp.a    = &t;
-    sp.misc = &misc;
     sp.s    = blk->text;
-    sp.fuel = 64*blk->text.len + 65536;  // real text needs about 1x
+    sp.fuel = 64*std::ssize(blk->text) + 65536;  // real text needs about 1x
     MdFrame root = {};
     root.type = -1;
     parsespans(&sp, &root);
     if (sp.fuel < 0) {
-        Str msg = "pathological nesting, rendered as text";
+        std::string_view msg = "pathological nesting, rendered as text";
         mdwarn(o->m, srcline(blk->src, blk->off), msg);
     }
 
-    Buf    *b = o->b;
-    MdSpan *v = sp.nodes.data;
-    iz      n = sp.nodes.len;
+    std::string    *b = o->b;
+    MdSpan *v = sp.nodes.data();
+    iz      n = std::ssize(sp.nodes);
     if (header) {
-        print(b, "<h");
-        print(b, (i64)blk->level);
-        headerattr(o, blk, v, n, misc);
-        putbyte(b, '>');
+        *b += "<h";
+        *b += std::to_string(blk->level);
+        headerattr(o, blk, v, n);
+        *b += '>';
     }
     spanwarnings(o, blk, blk->text, v, n);
 
@@ -2857,102 +2839,102 @@ static void renderspans(MdOut *o, MdBlock *blk, b32 header, b32 lastbr)
         MdSpan *s = v + i;
         switch (s->type) {
         case S_TEXT: {
-            Str text = s->text;
+            std::string_view text = s->text;
             if (header || html) {
                 printesc(b, text, 0);
                 break;
             }
             iz last = 0;
-            for (iz k = 0; k < text.len; k++) {
-                if (text.data[k] != '\\') continue;
-                b32 nl = k+1<text.len ? text.data[k+1]=='\n' :
+            for (iz k = 0; k < std::ssize(text); k++) {
+                if (text[k] != '\\') continue;
+                b32 nl = k+1<std::ssize(text) ? text[k+1]=='\n' :
                          i+1<n && v[i+1].type==S_TEXT && at(v[i+1].text, 0)=='\n';
                 if (!nl) continue;
                 printesc(b, slice(text, last, k), 0);
                 last = k + 1;
                 // No break for a trailing "\\\n" ending the block
-                b32 end = lastbr && !depth && (k+2==text.len ? i+1==n :
-                          k+1==text.len && i+2==n && v[i+1].text.len==1);
-                if (!end) print(b, "<br />");
+                b32 end = lastbr && !depth && (k+2==std::ssize(text) ? i+1==n :
+                          k+1==std::ssize(text) && i+2==n && std::ssize(v[i+1].text)==1);
+                if (!end) *b += "<br />";
             }
-            printesc(b, cuthead(text, last), 0);
+            printesc(b, text.substr(last), 0);
         } break;
         case S_CODE:
-            print(b, "<code>");
+            *b += "<code>";
             printhtml(b, s->text);
-            print(b, "</code>");
+            *b += "</code>";
             break;
-        case S_BR:      print(b, "<br />"); break;
+        case S_BR:      *b += "<br />"; break;
         case S_CHAR:    putcp(b, s->aux); break;
         case S_SYM:
             putcp(b, s->aux==LAQUO ? LAQUO : NBSP);
             putcp(b, s->aux==LAQUO ? NBSP : RAQUO);
             break;
         case S_ENTITY:
-            if (s->text.len) {
-                print(b, s->text);
+            if (std::ssize(s->text)) {
+                *b += s->text;
             } else {
                 putcp(b, s->aux);
             }
             break;
-        case S_COMMENT: print(b, s->text); break;
+        case S_COMMENT: *b += s->text; break;
         case S_CDATA:   printhtml(b, s->text); break;
         case S_WARN:    break;
-        case S_EM:      depth++; print(b, "<em>"); break;
-        case S_EMEND:   depth--; print(b, "</em>"); break;
-        case S_STRONG:  depth++; print(b, "<strong>"); break;
-        case S_STRONGEND: depth--; print(b, "</strong>"); break;
+        case S_EM:      depth++; *b += "<em>"; break;
+        case S_EMEND:   depth--; *b += "</em>"; break;
+        case S_STRONG:  depth++; *b += "<strong>"; break;
+        case S_STRONGEND: depth--; *b += "</strong>"; break;
         case S_A:
             depth++;
-            print(b, "<a href=\"");
-            if (s->aux & MAILTO) print(b, "mailto:");
+            *b += "<a href=\"";
+            if (s->aux & MAILTO) *b += "mailto:";
             printesc(b, s->text, 1);
-            if (s->attr.data) {
-                print(b, "\" title=\"");
+            if (s->attr.data()) {
+                *b += "\" title=\"";
                 printesc(b, s->attr, 1);
             }
-            print(b, "\">");
+            *b += "\">";
             break;
-        case S_AEND:    depth--; print(b, "</a>"); break;
+        case S_AEND:    depth--; *b += "</a>"; break;
         case S_IMG:
-            print(b, "<img src=\"");
+            *b += "<img src=\"";
             printesc(b, s->text, 1);
-            print(b, "\" alt=\"");
+            *b += "\" alt=\"";
             printesc(b, s->alt, 1);
-            if (s->attr.data) {
-                print(b, "\" title=\"");
+            if (s->attr.data()) {
+                *b += "\" title=\"";
                 printesc(b, s->attr, 1);
             }
-            print(b, "\" />");
+            *b += "\" />";
             break;
-        case S_DEL:     depth++; html++; print(b, "<del>"); break;
-        case S_DELEND:  depth--; html--; print(b, "</del>"); break;
+        case S_DEL:     depth++; html++; *b += "<del>"; break;
+        case S_DELEND:  depth--; html--; *b += "</del>"; break;
         case S_TAG:
-            putbyte(b, '<');
+            *b += '<';
             printname(b, s->text, s->aux & TAG_KNOWN);
             printattrs(b, s->attr, s->aux & TAG_KNOWN, 1);
             if (s->aux & TAG_VOID) {
-                print(b, " />");
+                *b += " />";
             } else {
                 depth++;
                 html++;
-                putbyte(b, '>');
+                *b += '>';
             }
             break;
         case S_TAGEND:
             depth--;
             html--;
-            print(b, "</");
+            *b += "</";
             printname(b, s->text, s->aux & TAG_KNOWN);
-            putbyte(b, '>');
+            *b += '>';
             break;
         }
     }
 
     if (header) {
-        print(b, "</h");
-        print(b, (i64)blk->level);
-        print(b, ">\n");
+        *b += "</h";
+        *b += std::to_string(blk->level);
+        *b += ">\n";
     }
 }
 
@@ -2987,19 +2969,19 @@ static MdBlock *firstchild(MdBlock *blk)
 // is dropped depends on its position there: last, and not in the root.
 static void renderblock(MdOut *o, MdBlock *blk, iz indent, b32 last)
 {
-    Buf *b = o->b;
+    std::string *b = o->b;
     switch (blk->type) {
     case B_BLANK:
-        putbyte(b, '\n');
+        *b += '\n';
         break;
     case B_P:
         if (blk->transparent) {
             renderspans(o, blk, 0, 1);
         } else {
             putspaces(b, indent);
-            print(b, "<p>");
+            *b += "<p>";
             renderspans(o, blk, 0, 1);
-            print(b, "</p>\n");
+            *b += "</p>\n";
         }
         break;
     case B_TEXT:
@@ -3011,91 +2993,90 @@ static void renderblock(MdOut *o, MdBlock *blk, iz indent, b32 last)
         break;
     case B_CODE:
         putspaces(b, indent);
-        print(b, "<pre class=\"highlight\"><code>");
-        if (blk->lang.len) {
-            if (!highlight(b, blk->lang, blk->text, o->temp)) {
+        *b += "<pre class=\"highlight\"><code>";
+        if (std::ssize(blk->lang)) {
+            if (!highlight(b, blk->lang, blk->text)) {
                 mdwarn(o->m, srcline(blk->src, blk->off), "unknown code language");
             }
         } else {
             printhtml(b, blk->text);
         }
-        if (!endswith(blk->text, "\n")) putbyte(b, '\n');
-        print(b, "</code></pre>\n");
+        if (!blk->text.ends_with("\n")) *b += '\n';
+        *b += "</code></pre>\n";
         break;
     case B_QUOTE:
     case B_UL:
     case B_OL: {
-        Str name = blk->type==B_QUOTE ? Str("blockquote") :
-                   blk->type==B_UL    ? Str("ul") : Str("ol");
+        std::string_view name = blk->type==B_QUOTE ? std::string_view("blockquote") :
+                   blk->type==B_UL    ? std::string_view("ul") : std::string_view("ol");
         putspaces(b, indent);
-        putbyte(b, '<');
-        print(b, name);
-        print(b, ">\n");
+        *b += '<';
+        *b += name;
+        *b += ">\n";
         renderchildren(o, blk, indent+2);
         putspaces(b, indent);
-        print(b, "</");
-        print(b, name);
-        print(b, ">\n");
+        *b += "</";
+        *b += name;
+        *b += ">\n";
     } break;
     case B_LI: {
         MdBlock *first = firstchild(blk);
         b32 tight = !first || (first->type==B_P && first->transparent);
         putspaces(b, indent);
-        print(b, "<li>");
-        if (!tight) putbyte(b, '\n');
-        iz start = b->len;
+        *b += "<li>";
+        if (!tight) *b += '\n';
+        iz start = std::ssize(*b);
         renderchildren(o, blk, indent+2);
-        if (!tight || (b->len>start && b->data[b->len-1]=='\n')) {
+        if (!tight || (std::ssize(*b)>start && b->back()=='\n')) {
             putspaces(b, indent);
         }
-        print(b, "</li>\n");
+        *b += "</li>\n";
     } break;
     case B_HR:
         putspaces(b, indent);
-        print(b, "<hr />\n");
+        *b += "<hr />\n";
         break;
     case B_HTML:
     case B_COMMENT:
         putspaces(b, indent);
-        print(b, blk->text);
-        putbyte(b, '\n');
+        *b += blk->text;
+        *b += '\n';
         break;
     }
 }
 
-// Render Markdown source into perm. The name and first line number are
+// Render Markdown source to HTML. The name and first line number are
 // used for diagnostics, which are appended to log.
-static Markdown markdown(Str src, Str name, iz line, Arena *perm, Arena scratch, Log *log)
+static Markdown markdown(std::string_view src, std::string_view name, iz line, Log *log)
 {
     Markdown r = {};
     Md       m = {};
-    m.a    = &scratch;
     m.log  = log;
     m.name = name;
 
     // Like kramdown: "\r\n" and a lone "\r" are newlines, and the text
     // ends with a newline.
     b32 cr = 0;
-    for (iz i = 0; i < src.len; i++) {
-        cr |= src.data[i] == '\r';  // no early exit, so it vectorizes
+    for (iz i = 0; i < std::ssize(src); i++) {
+        cr |= src[i] == '\r';  // no early exit, so it vectorizes
     }
-    if (cr || !endswith(src, "\n")) {
-        Str t = {allocbytes(&scratch, src.len+1), 0};
-        for (iz i = 0; i < src.len; i++) {
-            u8 c = src.data[i];
+    std::string t;  // the normalized source, if src needs it
+    if (cr || !src.ends_with("\n")) {
+        for (iz i = 0; i < std::ssize(src); i++) {
+            char c = src[i];
             if (c == '\r') {
                 c  = '\n';
                 i += at(src, i+1) == '\n';
             }
-            t.data[t.len++] = c;
+            t += c;
         }
-        if (!endswith(t, "\n")) {
-            t.data[t.len++] = '\n';
+        if (!t.ends_with('\n')) {
+            t += '\n';
         }
         src = t;
     }
     MdSrc   *root = newsrc(&m, src, 0, 0);
-    MdBlock *doc  = alloc<MdBlock>(&scratch);
+    MdBlock *doc  = &m.blocks.emplace_back();
     root->line0 = line;
     doc->type   = B_ROOT;
     parseblocks(&m, doc, root);
@@ -3107,16 +3088,13 @@ static Markdown markdown(Str src, Str name, iz line, Arena *perm, Arena scratch,
         split = c->type==B_COMMENT && c->text=="<!--more-->" ? c->off : -1;
     }
     split = split>=0 ? split : search(src, 0, "\n\n");
-    split = split>=0 ? split : src.len;
+    split = split>=0 ? split : std::ssize(src);
 
-    // Persistent allocations (header ids) below, per-block scratch above
     MdOut o = {};
     o.m    = &m;
-    o.temp = scratch;
-    o.temp.beg = scratch.beg + (scratch.end - scratch.beg)/2;
-    scratch.end = o.temp.beg;
 
-    Buf b(perm, src.len + src.len/2 + 256);
+    std::string b;
+    b.reserve(src.size() + src.size()/2 + 256);  // HTML is about 1.5x
     o.b = &b;
     b32 lastblank = 0;
     iz  mark      = 0;
@@ -3125,12 +3103,9 @@ static Markdown markdown(Str src, Str name, iz line, Arena *perm, Arena scratch,
         if (c->type==B_BLANK && lastblank) continue;
         lastblank = c->type == B_BLANK;
         renderblock(&o, c, 0, 0);
-        if (c->off < split) mark = b.len;
+        if (c->off < split) mark = std::ssize(b);
     }
-    r.html    = finish(&b);
+    r.html    = std::move(b);
     r.excerpt = mark;
-    if ((byte *)(b.data+b.cap) == perm->beg) {
-        perm->beg = (byte *)(b.data+b.len);  // return the unused capacity
-    }
     return r;
 }

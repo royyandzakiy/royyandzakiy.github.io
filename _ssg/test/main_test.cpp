@@ -1,38 +1,35 @@
 // Unit tests: a platform layer with stubbed I/O
 // $ cmake --build build && ./build/ssg_test
 // This is free and unencumbered software released into the public domain.
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
 #include "engine/ssg.cpp"
 
 struct Os {};
-static Str     os_read(Os *, Arena *, Str) { return {}; }
-static b32     os_write(Os *, Arena, Str, Str) { return 0; }
-static b32     os_mkdirs(Os *, Arena, Str) { return 0; }
-static Dirent *os_list(Os *, Arena *, Str) { return 0; }
-static i32     os_copy(Os *, Arena, Str, Str) { return COPY_FAILED; }
-static i64     os_now(Os *) { return 0; }
-static i64     os_clock(Os *) { return 0; }
-static b32     os_print(Os *, i32 fd, Str s)
+static std::optional<std::string> os_read(Os *, std::string_view) { return {}; }
+static b32 os_write(Os *, std::string_view, std::string_view) { return 0; }
+static b32 os_mkdirs(Os *, std::string_view) { return 0; }
+static std::vector<Dirent> os_list(Os *, std::string_view) { return {}; }
+static i32 os_copy(Os *, std::string_view, std::string_view) { return COPY_FAILED; }
+static i64 os_now(Os *) { return 0; }
+static i64 os_clock(Os *) { return 0; }
+static b32 os_print(Os *, i32 fd, std::string_view s)
 {
-    return fwrite(s.data, 1, (uz)s.len, fd==1 ? stdout : stderr) == (uz)s.len;
+    return std::fwrite(s.data(), 1, s.size(), fd==1 ? stdout : stderr) == s.size();
 }
-[[noreturn]] static void os_oom() { __builtin_trap(); }
-static void    os_sleep(Os *, i32) {}
+static void os_sleep(Os *, i32) {}
 
 struct Test {
-    Arena perm;
-    i32   run;
-    i32   failed;
+    i32 run;
+    i32 failed;
 };
 
-static void printstr(FILE *f, Str s)
+static void printstr(FILE *f, std::string_view s)
 {
-    fwrite(s.data, 1, (uz)s.len, f);
+    fwrite(s.data(), 1, s.size(), f);
 }
 
 // Compare strings, printing both on mismatch.
-static b32 expect(Test *t, Str name, Str got, Str want)
+static b32 expect(Test *t, std::string_view name, std::string_view got, std::string_view want)
 {
     t->run++;
     if (got == want) {
@@ -56,10 +53,7 @@ static b32 expect(Test *t, Str name, Str got, Str want)
 
 int main()
 {
-    iz    cap = (iz)1<<28;
-    byte *mem = (byte *)malloc((uz)cap);
-    Test  t   = {};
-    t.perm = {mem, mem+cap};
+    Test t = {};
 
     test_site(&t);
     test_newpost(&t);

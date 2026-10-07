@@ -7,7 +7,6 @@
 // This is free and unencumbered software released into the public domain.
 #include <chrono>
 #include <cstdio>
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <thread>
@@ -17,19 +16,19 @@ namespace fs = std::filesystem;
 
 struct Os {};
 
-static fs::path topath(Str s)
+static fs::path topath(std::string_view s)
 {
-    return std::u8string_view{(char8_t const *)s.data, (uz)s.len};
+    return std::u8string_view{(char8_t const *)s.data(), s.size()};
 }
 
-static Str os_read(Os *, Arena *a, Str path)
+static std::optional<std::string> os_read(Os *, std::string_view path)
 {
     fs::path        p = topath(path);
     std::error_code ec;
     if (!fs::is_regular_file(p, ec)) {
         return {};
     }
-    iz size = (iz)fs::file_size(p, ec);
+    uz size = fs::file_size(p, ec);
     if (ec) {
         return {};
     }
@@ -37,39 +36,38 @@ static Str os_read(Os *, Arena *a, Str path)
     if (!f) {
         return {};
     }
-    Str r  = {};
-    r.data = allocbytes(a, size);
-    f.read((char *)r.data, size);
-    if (f.gcount() != size) {
+    std::string data(size, '\0');
+    f.read(data.data(), (std::streamsize)size);
+    if ((uz)f.gcount() != size) {
         return {};
     }
-    r.len = size;
-    return r;
+    return data;
 }
 
-static b32 os_write(Os *, Arena, Str path, Str data)
+static b32 os_write(Os *, std::string_view path, std::string_view data)
 {
     std::ofstream f(topath(path), std::ios::binary|std::ios::trunc);
-    f.write(data.cdata, data.len);
+    f.write(data.data(), std::ssize(data));
     f.close();
     return !f.fail();
 }
 
-static b32 os_mkdirs(Os *, Arena, Str path)
+static b32 os_mkdirs(Os *, std::string_view path)
 {
     std::error_code ec;
     fs::create_directories(topath(path), ec);
     return !ec;
 }
 
-static Dirent *os_list(Os *, Arena *a, Str path)
+// Sorted by name, so builds visit files in the same order everywhere.
+static std::vector<Dirent> os_list(Os *, std::string_view path)
 {
-    std::error_code         ec;
-    fs::directory_iterator  it(topath(path), ec);
+    std::vector<Dirent>    r;
+    std::error_code        ec;
+    fs::directory_iterator it(topath(path), ec);
     if (ec) {
-        return 0;
+        return r;
     }
-    Dirent *head = 0;
     for (; it != fs::directory_iterator{}; it.increment(ec)) {
         fs::file_status st = it->symlink_status(ec);
         if (ec || (!fs::is_directory(st) && !fs::is_regular_file(st))) {
@@ -82,18 +80,16 @@ static Dirent *os_list(Os *, Arena *a, Str path)
             continue;
         }
         std::u8string name = it->path().filename().u8string();
-        Dirent *d = alloc<Dirent>(a);
-        d->name  = clone(a, {(u8 *)name.data(), (iz)name.size()});
-        d->size  = size;
-        d->mtime = mtime;
-        d->isdir = isdir;
-        d->next  = head;
-        head = d;
+        r.push_back({std::string(name.begin(), name.end()), size, mtime, isdir});
     }
-    return ec ? 0 : head;
+    if (ec) {
+        return {};
+    }
+    std::ranges::sort(r, {}, &Dirent::name);
+    return r;
 }
 
-static i32 os_copy(Os *, Arena, Str src, Str dst)
+static i32 os_copy(Os *, std::string_view src, std::string_view dst)
 {
     fs::path        s = topath(src);
     fs::path        d = topath(dst);
@@ -112,12 +108,6 @@ static i32 os_copy(Os *, Arena, Str src, Str dst)
     return ec ? COPY_FAILED : COPY_DONE;
 }
 
-[[noreturn]] static void os_oom()
-{
-    std::fputs("ssg: out of memory\n", stderr);
-    std::_Exit(2);
-}
-
 static i64 os_now(Os *)
 {
     auto t = std::chrono::system_clock::now().time_since_epoch();
@@ -130,10 +120,10 @@ static i64 os_clock(Os *)
     return std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 }
 
-static b32 os_print(Os *, i32 fd, Str s)
+static b32 os_print(Os *, i32 fd, std::string_view s)
 {
     std::FILE *f = fd==1 ? stdout : stderr;
-    b32 ok = std::fwrite(s.data, 1, (uz)s.len, f) == (uz)s.len;
+    b32 ok = std::fwrite(s.data(), 1, s.size(), f) == s.size();
     return ok && !std::fflush(f);
 }
 
@@ -144,20 +134,7 @@ static void os_sleep(Os *, i32 ms)
 
 int main(int argc, char **argv)
 {
-    // Untouched pages are not backed by memory, as with mmap.
-    iz    cap = (iz)1<<28;
-    byte *mem = (byte *)std::malloc((uz)cap);
-    if (!mem) {
-        return 2;
-    }
-    Arena a = {mem, mem+cap};
-
-    Str *args = alloc<Str>(&a, argc);
-    for (i32 i = 0; i < argc; i++) {
-        args[i].data = (u8 *)argv[i];
-        while (args[i].data[args[i].len]) args[i].len++;
-    }
-
+    std::vector<std::string_view> args(argv, argv+argc);
     Os os;
-    return ssg_main(&os, a, args, argc);
+    return ssg_main(&os, args);
 }
