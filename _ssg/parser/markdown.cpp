@@ -16,8 +16,8 @@
 // This is free and unencumbered software released into the public domain.
 
 struct Markdown {
-    std::string_view html;
-    iz  excerpt;  // length of the excerpt prefix of html
+    std::string html;
+    iz          excerpt;  // length of the excerpt prefix of html
 };
 
 
@@ -615,15 +615,25 @@ struct MdDef {
     std::string_view title;  // null when absent
 };
 
+// A document being parsed. It owns its nodes and the text built while
+// parsing; deques, so the views and pointers into them stay valid.
 struct Md {
-    Arena      *a;
-    Log        *log;
-    std::string_view         name;
-    std::unordered_map<std::string_view, MdDef> defs;
-    std::unordered_map<std::string_view, i32>   ids;  // header ids used
-    i32         depth;  // block nesting
-    b32         deep;   // reported nesting beyond MAXDEPTH
+    Log                                *log;
+    std::string_view                    name;
+    std::deque<MdBlock>                 blocks;
+    std::deque<MdSrc>                   srcs;
+    std::deque<std::string>             texts;
+    std::unordered_map<std::string, MdDef> defs;  // by normalized label
+    std::unordered_map<std::string, i32>   ids;   // header ids used
+    i32                                 depth;   // block nesting
+    b32                                 deep;    // reported nesting beyond MAXDEPTH
 };
+
+// Keep text built while parsing for as long as the document.
+static std::string_view keep(Md *m, std::string s)
+{
+    return m->texts.emplace_back(std::move(s));
+}
 
 // Nesting beyond this is treated as text, bounding recursion on
 // pathological input like 10,000 unclosed <span> tags. Posts nest a few
@@ -651,7 +661,7 @@ static void mdwarn(Md *m, iz line, std::string_view msg)
 
 static MdBlock *addblock(Md *m, MdBlock *tree, i32 type, MdSrc *src, iz off)
 {
-    MdBlock *b = alloc<MdBlock>(m->a);
+    MdBlock *b = &m->blocks.emplace_back();
     b->type = type;
     b->src  = src;
     b->off  = off;
@@ -666,7 +676,7 @@ static MdBlock *addblock(Md *m, MdBlock *tree, i32 type, MdSrc *src, iz off)
 
 static MdSrc *newsrc(Md *m, std::string_view s, MdSrc *parent, iz poff)
 {
-    MdSrc *src  = alloc<MdSrc>(m->a);
+    MdSrc *src  = &m->srcs.emplace_back();
     src->s      = s;
     src->parent = parent;
     src->poff   = poff;
@@ -874,7 +884,7 @@ static b32 indented(Md *m, MdBlock *tree, MdSrc *src)
         }
     }
     MdBlock *b = addblock(m, tree, B_CODE, src, pos);
-    b->text  = clone(m->a, code);
+    b->text  = keep(m, std::move(code));
     src->pos = end;
     return 1;
 }
@@ -982,7 +992,7 @@ static b32 blockquote(Md *m, MdBlock *tree, MdSrc *src)
 
     MdBlock *b = addblock(m, tree, B_QUOTE, src, pos);
     src->pos = end;
-    parseblocks(m, b, newsrc(m, clone(m->a, text), src, pos));
+    parseblocks(m, b, newsrc(m, keep(m, std::move(text)), src, pos));
     return 1;
 }
 
@@ -1192,7 +1202,7 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
                 chunk.append((uz)pieces[k].spaces, ' ');
                 chunk += pieces[k].text;
             }
-            parseblocks(m, li, newsrc(m, clone(m->a, chunk), src, pieces[start].off));
+            parseblocks(m, li, newsrc(m, keep(m, std::move(chunk)), src, pieces[start].off));
         } while (i<std::ssize(pieces) && pieces[i].kind==PIECE_CHUNK);
     }
 
@@ -1211,7 +1221,7 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
                 (!second || second->type!=B_BLANK || (islast && !second->next && !eob)) &&
                 (!islast || nitems==1 || anyloose)) {
             if (second && second->type!=B_BLANK) {
-                first->text = concat(m->a, first->text, "\n");
+                first->text = keep(m, std::string(first->text) + "\n");
             }
             first->transparent = 1;
         }
@@ -1389,7 +1399,7 @@ static b32 blockhtml(Md *m, MdBlock *tree, MdSrc *src)
         error(m->log, m->name, srcline(src, pos), msg);
     }
     MdBlock *b = addblock(m, tree, B_HTML, src, pos);
-    b->text  = clone(m->a, out);
+    b->text  = keep(m, std::move(out));
     src->pos = r.pos;
     return 1;
 }
@@ -1512,7 +1522,7 @@ static iz defrest(std::string_view s, iz k, std::string_view *title)
 }
 
 // Normalize a link label: \s+ to one space, then lowercase
-static std::string_view normlabel(Arena *a, std::string_view label)
+static std::string normlabel(std::string_view label)
 {
     std::string key;
     for (iz k = 0; k < std::ssize(label);) {
@@ -1527,7 +1537,7 @@ static std::string_view normlabel(Arena *a, std::string_view label)
         putcp(&key, c==0x130 ? 'i' : c);
         if (c == 0x130) putcp(&key, 0x307);
     }
-    return clone(a, key);
+    return key;
 }
 
 // LINK_DEFINITION_START: the URL is the shortest that lets the rest of
@@ -1566,7 +1576,7 @@ static b32 linkdef(Md *m, MdBlock *tree, MdSrc *src)
     }
     if (end < 0) return 0;
 
-    MdDef *d = &m->defs[normlabel(m->a, label)];
+    MdDef *d = &m->defs[normlabel(label)];
     d->url   = url;
     d->title = title;
     addblock(m, tree, B_EOB, src, pos);
@@ -1622,8 +1632,7 @@ static b32 paragraph(Md *m, MdBlock *tree, MdSrc *src)
     if (last && last->type==B_P) {
         // Continues a paragraph that a failed block parser interrupted
         std::string_view joiner = pos>=3 && slice(s, pos-3, pos)=="  \n" ? std::string_view("  \n") : std::string_view("\n");
-        // concat() copies only when it cannot extend in place
-        last->text = concat(m->a, concat(m->a, last->text, joiner), text);
+        last->text = keep(m, std::format("{}{}{}", last->text, joiner, text));
     } else {
         MdBlock *b = addblock(m, tree, B_P, src, pos);
         b->text = trimleft(text);
@@ -1713,9 +1722,7 @@ struct MdFrame {
 };
 
 struct MdSpans {
-    Md            *m;
-    Arena         *a;     // nodes only
-    Arena         *misc;  // everything else
+    Md            *m;     // owns text built while parsing spans
     std::string_view            s;
     iz             pos;
     std::vector<MdSpan>  nodes;
@@ -2034,9 +2041,9 @@ static void spanhtml(MdSpans *sp, MdFrame *f)
 }
 
 // Remove backslashes from kramdown's (non-GFM) ESCAPED_CHARS
-static std::string_view unescape(Arena *a, std::string_view s)
+static std::string unescape(std::string_view s)
 {
-    if (search(s, 0, "\\") < 0) return s;
+    if (search(s, 0, "\\") < 0) return std::string(s);
     std::string r;
     for (iz i = 0; i < std::ssize(s); i++) {
         char c = s[i];
@@ -2045,7 +2052,7 @@ static std::string_view unescape(Arena *a, std::string_view s)
         }
         r += c;
     }
-    return clone(a, r);
+    return r;
 }
 
 // Complete a link or image whose open node is at mark (add_link)
@@ -2090,7 +2097,7 @@ static void parselink(MdSpans *sp, MdFrame *f)
     std::string_view alt       = {};
     b32 undefined = 0;
     if (found) {
-        alt = unescape(sp->misc, slice(s, curpos, sp->pos));
+        alt = keep(sp->m, unescape(slice(s, curpos, sp->pos)));
         sp->pos++;  // ]
     }
 
@@ -2106,7 +2113,7 @@ static void parselink(MdSpans *sp, MdFrame *f)
             sp->pos = j + 1;
             id = j>i+1 ? slice(s, i+1, j) : alt;
         }
-        auto d = sp->m->defs.find(normlabel(sp->misc, id));
+        auto d = sp->m->defs.find(normlabel(id));
         if (d != sp->m->defs.end()) {
             addlink(sp, f, mark, d->second.url, d->second.title, alt);
             return;
@@ -2607,16 +2614,10 @@ static void pipesegment(MdPipes *p, std::string_view value, b32 code)
     }
 }
 
-static b32 tablepipes(Md *m, std::string_view text, Arena scratch)
+static b32 tablepipes(Md *m, std::string_view text)
 {
-    Arena misc = scratch;
-    misc.beg = scratch.beg + (scratch.end - scratch.beg)/2;
-    scratch.end = misc.beg;
-
     MdSpans sp = {};
     sp.m    = m;
-    sp.a    = &scratch;
-    sp.misc = &misc;
     sp.s    = text;
     sp.fuel = 64*std::ssize(text) + 65536;
     MdFrame root = {};
@@ -2692,16 +2693,15 @@ static b32 istable(Md *m, std::string_view s, iz pos)
         }
     }
     body |= rows>0 && !footer;
-    return beforeboundary(s, k) && body && tablepipes(m, slice(s, pos, k-1), *m->a);
+    return beforeboundary(s, k) && body && tablepipes(m, slice(s, pos, k-1));
 }
 
 
 // Rendering
 
 struct MdOut {
-    Md    *m;
-    std::string   *b;
-    Arena  temp;  // per text block
+    Md          *m;
+    std::string *b;
 };
 
 // The text of a header's children (gfm.rb update_raw_text)
@@ -2728,7 +2728,7 @@ static void headertext(std::string *b, MdSpan *v, iz n)
     }
 }
 
-static void headerattr(MdOut *o, MdBlock *h, MdSpan *v, iz n, Arena scratch)
+static void headerattr(MdOut *o, MdBlock *h, MdSpan *v, iz n)
 {
     std::string *b = o->b;
     if (std::ssize(h->id)) {
@@ -2756,11 +2756,7 @@ static void headerattr(MdOut *o, MdBlock *h, MdSpan *v, iz n, Arena scratch)
         }
     }
     std::string_view id = slug;
-    auto count = o->m->ids.find(id);
-    if (count == o->m->ids.end()) {
-        count = o->m->ids.emplace(clone(o->m->a, id), 0).first;  // id is scratch
-    }
-    i32 dup = count->second++;
+    i32 dup = o->m->ids.try_emplace(std::string(id), 0).first->second++;
     if (id.empty() && !dup) return;
     *b += " id=\"";
     printesc(b, id, 1);
@@ -2814,15 +2810,8 @@ static void spanwarnings(MdOut *o, MdBlock *blk, std::string_view text, MdSpan *
 // is dropped, as for the last child of a block element.
 static void renderspans(MdOut *o, MdBlock *blk, b32 header, b32 lastbr)
 {
-    Arena   t = o->temp;
-    Arena   misc = t;
-    misc.beg = t.beg + (t.end - t.beg)/2;
-    t.end    = misc.beg;
-
     MdSpans sp = {};
     sp.m    = o->m;
-    sp.a    = &t;
-    sp.misc = &misc;
     sp.s    = blk->text;
     sp.fuel = 64*std::ssize(blk->text) + 65536;  // real text needs about 1x
     MdFrame root = {};
@@ -2839,7 +2828,7 @@ static void renderspans(MdOut *o, MdBlock *blk, b32 header, b32 lastbr)
     if (header) {
         *b += "<h";
         *b += std::to_string(blk->level);
-        headerattr(o, blk, v, n, misc);
+        headerattr(o, blk, v, n);
         *b += '>';
     }
     spanwarnings(o, blk, blk->text, v, n);
@@ -3006,7 +2995,7 @@ static void renderblock(MdOut *o, MdBlock *blk, iz indent, b32 last)
         putspaces(b, indent);
         *b += "<pre class=\"highlight\"><code>";
         if (std::ssize(blk->lang)) {
-            if (!highlight(b, blk->lang, blk->text, o->temp)) {
+            if (!highlight(b, blk->lang, blk->text)) {
                 mdwarn(o->m, srcline(blk->src, blk->off), "unknown code language");
             }
         } else {
@@ -3056,13 +3045,12 @@ static void renderblock(MdOut *o, MdBlock *blk, iz indent, b32 last)
     }
 }
 
-// Render Markdown source into perm. The name and first line number are
+// Render Markdown source to HTML. The name and first line number are
 // used for diagnostics, which are appended to log.
-static Markdown markdown(std::string_view src, std::string_view name, iz line, Arena *perm, Arena scratch, Log *log)
+static Markdown markdown(std::string_view src, std::string_view name, iz line, Log *log)
 {
     Markdown r = {};
     Md       m = {};
-    m.a    = &scratch;
     m.log  = log;
     m.name = name;
 
@@ -3072,8 +3060,8 @@ static Markdown markdown(std::string_view src, std::string_view name, iz line, A
     for (iz i = 0; i < std::ssize(src); i++) {
         cr |= src[i] == '\r';  // no early exit, so it vectorizes
     }
+    std::string t;  // the normalized source, if src needs it
     if (cr || !src.ends_with("\n")) {
-        std::string t;
         for (iz i = 0; i < std::ssize(src); i++) {
             char c = src[i];
             if (c == '\r') {
@@ -3085,10 +3073,10 @@ static Markdown markdown(std::string_view src, std::string_view name, iz line, A
         if (!t.ends_with('\n')) {
             t += '\n';
         }
-        src = clone(&scratch, t);
+        src = t;
     }
     MdSrc   *root = newsrc(&m, src, 0, 0);
-    MdBlock *doc  = alloc<MdBlock>(&scratch);
+    MdBlock *doc  = &m.blocks.emplace_back();
     root->line0 = line;
     doc->type   = B_ROOT;
     parseblocks(&m, doc, root);
@@ -3102,14 +3090,11 @@ static Markdown markdown(std::string_view src, std::string_view name, iz line, A
     split = split>=0 ? split : search(src, 0, "\n\n");
     split = split>=0 ? split : std::ssize(src);
 
-    // Persistent allocations (header ids) below, per-block scratch above
     MdOut o = {};
     o.m    = &m;
-    o.temp = scratch;
-    o.temp.beg = scratch.beg + (scratch.end - scratch.beg)/2;
-    scratch.end = o.temp.beg;
 
     std::string b;
+    b.reserve(src.size() + src.size()/2 + 256);  // HTML is about 1.5x
     o.b = &b;
     b32 lastblank = 0;
     iz  mark      = 0;
@@ -3120,7 +3105,7 @@ static Markdown markdown(std::string_view src, std::string_view name, iz line, A
         renderblock(&o, c, 0, 0);
         if (c->off < split) mark = std::ssize(b);
     }
-    r.html    = clone(perm, b);
+    r.html    = std::move(b);
     r.excerpt = mark;
     return r;
 }

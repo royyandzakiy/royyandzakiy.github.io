@@ -1,11 +1,11 @@
 // Syntax highlighter tests
 
-static std::string_view hlrender(Arena *perm, std::string_view lang, std::string_view code, Arena scratch, b32 *known = 0)
+static std::string hlrender(std::string_view lang, std::string_view code, b32 *known = 0)
 {
     std::string b;
-    b32 ok = highlight(&b, lang, code, scratch);
+    b32 ok = highlight(&b, lang, code);
     if (known) *known = ok;
-    return clone(perm, b);
+    return b;
 }
 
 // Class of the first span wrapping exactly tok (escaped), or "" if none.
@@ -52,10 +52,6 @@ static std::string_view hltags[] = {
 
 static void test_highlight(Test *t)
 {
-    Arena perm    = t->perm;
-    Arena scratch = perm;
-    perm.end    -= 1<<20;
-    scratch.beg  = perm.end;
 
     // Token classes: {language, code, token as escaped HTML, class}
     struct { std::string_view lang, code, tok, cls; } cases[] = {
@@ -298,9 +294,8 @@ static void test_highlight(Test *t)
         {"bat", "@echo off\nrem comment\ncc %* %1 %PATH%", "%PATH%", "v"},
     };
     for (iz i = 0; i < std::ssize(cases); i++) {
-        Arena a    = perm;
-        std::string_view   html = hlrender(&a, cases[i].lang, cases[i].code, scratch);
-        std::string_view   name = concat(&a, concat(&a, cases[i].lang, ": "), cases[i].tok);
+        std::string   html = hlrender(cases[i].lang, cases[i].code);
+        std::string   name = std::format("{}: {}", cases[i].lang, cases[i].tok);
         if (!expect(t, name, hlclassof(html, cases[i].tok), cases[i].cls)) {
             fprintf(stderr, "  in:   [");
             printstr(stderr, html);
@@ -310,38 +305,36 @@ static void test_highlight(Test *t)
 
     // Exact output, unknown languages, and no language
     {
-        Arena a     = perm;
         b32   known = 0;
-        std::string_view   html  = hlrender(&a, "c", "a<b && c>d", scratch, &known);
+        std::string   html  = hlrender("c", "a<b && c>d", &known);
         expect(t, "hl.escape", html, "a&lt;b &amp;&amp; c&gt;d");
         expect(t, "hl.known", known ? std::string_view("yes") : std::string_view("no"), "yes");
-        html = hlrender(&a, "c", "x = 'a'; // <b>", scratch);
+        html = hlrender("c", "x = 'a'; // <b>");
         expect(t, "hl.exact", html,
                "x = <span class=\"s\">'a'</span>; "
                "<span class=\"c\">// &lt;b&gt;</span>");
-        html = hlrender(&a, "bf", "<+>", scratch, &known);
+        html = hlrender("bf", "<+>", &known);
         expect(t, "hl.unknown", html, "&lt;+&gt;");
         expect(t, "hl.unknown.ret", known ? std::string_view("yes") : std::string_view("no"), "no");
-        html = hlrender(&a, "", "<+>", scratch, &known);
+        html = hlrender("", "<+>", &known);
         expect(t, "hl.nolang", html, "&lt;+&gt;");
         expect(t, "hl.nolang.ret", known ? std::string_view("yes") : std::string_view("no"), "yes");
-        html = hlrender(&a, "sh", "x=\"$(cmd \"$y\")\"", scratch);
+        html = hlrender("sh", "x=\"$(cmd \"$y\")\"");
         expect(t, "hl.nested", html,
                "<span class=\"v\">x</span>=<span class=\"s\">\""
                "<span class=\"v\">$(</span>cmd <span class=\"s\">\""
                "<span class=\"v\">$y</span>\"</span><span class=\"v\">)</span>"
                "\"</span>");
-        html = hlrender(&a, "c++", "template<typename T>\nT *f(T x);", scratch);
+        html = hlrender("c++", "template<typename T>\nT *f(T x);");
         expect(t, "hl.known", hlcount(html, "<span class=\"t\">T</span>") == 3 ? std::string_view("ok") : html, "ok");
-        html = hlrender(&a, "c", "typedef long size;\nsize n;", scratch);
+        html = hlrender("c", "typedef long size;\nsize n;");
         expect(t, "hl.typedef", hlcount(html, "<span class=\"t\">size</span>") == 2 ? std::string_view("ok") : html, "ok");
     }
 
     // Every tag used by the blog is known
     for (iz i = 0; i < std::ssize(hltags); i++) {
-        Arena a     = perm;
         b32   known = 0;
-        hlrender(&a, hltags[i], "x", scratch, &known);
+        hlrender(hltags[i], "x", &known);
         expect(t, hltags[i], known ? std::string_view("known") : std::string_view("unknown"), "known");
     }
 
@@ -378,7 +371,7 @@ static void test_highlight(Test *t)
         static u8 alphabet[] =
             "\"'`/\\*#;%$@(){}[]<>&:=.-+!?,|~^ \t\n\n0x1aeZ_Lr\xce\xbb";
         u64 rng  = 1;
-        std::string_view fail = {};
+        std::string fail;
         for (i32 n = 0; n < 300 && fail.empty(); n++) {
             char buf[64];
             rng = rng*0x3243f6a8885a308d + 1;
@@ -389,10 +382,9 @@ static void test_highlight(Test *t)
             }
             std::string_view code = {buf, (uz)len};
             for (iz i = 0; i < std::ssize(hltags); i++) {
-                Arena a    = perm;
-                std::string_view   html = hlrender(&a, hltags[i], code, scratch);
+                std::string   html = hlrender(hltags[i], code);
                 if (!hlroundtrip(html, code)) {
-                    fail = concat(&perm, concat(&perm, hltags[i], ": "), code);
+                    fail = std::format("{}: {}", hltags[i], code);
                     break;
                 }
             }

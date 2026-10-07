@@ -10,7 +10,7 @@ static MdVector mdvectors[] = {
 };
 
 // Highlighting is not part of the vectors: drop spans inside code blocks.
-static std::string_view unhighlight(Arena *a, std::string_view s)
+static std::string unhighlight(std::string_view s)
 {
     std::string b;
     b32 code = 0;
@@ -30,46 +30,35 @@ static std::string_view unhighlight(Arena *a, std::string_view s)
         }
         b += s[i++];
     }
-    return clone(a, b);
+    return b;
 }
 
 static void test_markdown(Test *t)
 {
     for (iz i = 0; i < std::ssize(mdvectors); i++) {
-        // The log grows in the same arena object as the output
-        Arena perm    = t->perm;
-        perm.end      = perm.beg + (perm.end - perm.beg)/2;
-        Arena scratch = t->perm;
-        scratch.beg   = perm.end;
         Log log = {};
-        log.buf.clear();
-        Markdown md = markdown(mdvectors[i].in, "vector", 1, &perm, scratch, &log);
+        Markdown md = markdown(mdvectors[i].in, "vector", 1, &log);
 
         std::string name;
         name += "markdown vector ";
         name += std::to_string(i);
         name += ": ";
         name += mdvectors[i].in;
-        expect(t, name, unhighlight(&perm, md.html), mdvectors[i].want);
+        expect(t, name, unhighlight(md.html), mdvectors[i].want);
     }
 
     // Excerpts end at a top-level <!--more-->, else at the first blank line
-    Arena a = t->perm;
     Log log = {};
-    log.buf.clear();
-    Arena scratch = a;
-    scratch.beg += (a.end - a.beg)/2;
-    a.end = scratch.beg;
-    Markdown md = markdown("A\nB\n\nC\n", "", 1, &a, scratch, &log);
+    Markdown md = markdown("A\nB\n\nC\n", "", 1, &log);
     expect(t, "excerpt blank", md.html.substr(0, md.excerpt), "<p>A\nB</p>\n");
-    md = markdown("A\n\nB\n\n<!--more-->\n\nC\n", "", 1, &a, scratch, &log);
+    md = markdown("A\n\nB\n\n<!--more-->\n\nC\n", "", 1, &log);
     expect(t, "excerpt more", md.html.substr(0, md.excerpt), "<p>A</p>\n\n<p>B</p>\n\n");
-    md = markdown("A\n", "", 1, &a, scratch, &log);
+    md = markdown("A\n", "", 1, &log);
     expect(t, "excerpt whole", md.html.substr(0, md.excerpt), "<p>A</p>\n");
-    md = markdown("A `<!--more-->`\n\nB\n\n<!--more-->\n", "", 1, &a, scratch, &log);
+    md = markdown("A `<!--more-->`\n\nB\n\n<!--more-->\n", "", 1, &log);
     expect(t, "excerpt code", md.html.substr(0, md.excerpt),
            "<p>A <code>&lt;!--more--&gt;</code></p>\n\n<p>B</p>\n\n");
-    md = markdown("> A\n>\n> <!--more-->\n\nB\n", "", 1, &a, scratch, &log);
+    md = markdown("> A\n>\n> <!--more-->\n\nB\n", "", 1, &log);
     expect(t, "excerpt nested", md.html.substr(0, md.excerpt),
            "<blockquote>\n  <p>A</p>\n\n  <!--more-->\n</blockquote>\n");
 
@@ -90,13 +79,8 @@ static void test_markdown(Test *t)
         {"<div><p markdown=\"1\">a</p></div>\n", "the markdown attribute is not supported"},
     };
     for (iz i = 0; i < std::ssize(warnings); i++) {
-        Arena perm    = t->perm;
-        perm.end      = perm.beg + (perm.end - perm.beg)/2;
-        Arena scratch = t->perm;
-        scratch.beg   = perm.end;
         Log log = {};
-        log.buf.clear();
-        markdown(warnings[i].in, "w", 1, &perm, scratch, &log);
+        markdown(warnings[i].in, "w", 1, &log);
         std::string_view got  = log.buf;
         std::string_view want = warnings[i].want;
         if (std::ssize(want) && got.contains(want)) {
@@ -109,17 +93,12 @@ static void test_markdown(Test *t)
     }
 
     // Deep nesting renders as text, bounding recursion
-    Arena perm    = t->perm;
-    perm.end      = perm.beg + (perm.end - perm.beg)/2;
-    scratch       = t->perm;
-    scratch.beg   = perm.end;
     log     = {};
-    log.buf.clear();
     std::string deep;
     for (i32 i = 0; i < 2*MAXDEPTH; i++) {
         deep += "> <span>";
     }
-    markdown(deep, "w", 1, &perm, scratch, &log);
+    markdown(deep, "w", 1, &log);
     std::string_view got  = log.buf;
     std::string_view want = "pathological nesting";
     expect(t, "markdown deep nesting", got.contains(want) ? want : got, want);

@@ -115,7 +115,7 @@ static void homepage(std::string *b, Site *site, iz limit)
 {
     layouthead(b, site_title);
     for (iz i = 0; i < std::ssize(site->posts) && i < limit; i++) {
-        Post *p = site->posts[i];
+        Post *p = site->posts[i].get();
         *b += "<article class=\"many\">\n";
         postheader(b, p);
         *b += "  <blockquote class=\"excerpt\" cite=\"";
@@ -152,7 +152,7 @@ static void archivepage(std::string *b, Site *site)
     *b += std::to_string(std::ssize(site->posts));
     *b += "</span> articles.\n  </p>\n  <ul class=\"post-list\">\n";
     for (iz i = 0; i < std::ssize(site->posts); i++) {
-        postitem(b, site->posts[i]);
+        postitem(b, site->posts[i].get());
     }
     *b += "  </ul>\n</article>\n";
     layouttail(b);
@@ -165,7 +165,7 @@ static void homelist(std::string *b, Site *site)
     *b += "<article class=\"index\">\n  <h2>Posts</h2>\n"
              "  <ul class=\"post-list\">\n";
     for (iz i = 0; i < std::ssize(site->posts); i++) {
-        postitem(b, site->posts[i]);
+        postitem(b, site->posts[i].get());
     }
     *b += "  </ul>\n</article>\n";
     layouttail(b);
@@ -266,7 +266,7 @@ static void atomfeed(std::string *b, Site *site)
     *b += "</id>\n\n";
     atomauthor(b, site_url, "/");
     for (iz i = 0; i < std::ssize(site->posts) && i < 8; i++) {
-        atomentry(b, site->posts[i]);
+        atomentry(b, site->posts[i].get());
     }
     *b += "\n</feed>\n";
 }
@@ -317,7 +317,7 @@ static void rssfeed(std::string *b, Site *site)
     printrfc822(b, site->now);
     *b += "</lastBuildDate>\n\n";
     for (iz i = 0; i < std::ssize(site->posts) && i < 8; i++) {
-        Post *p = site->posts[i];
+        Post *p = site->posts[i].get();
         *b += "    <item>\n      <title>";
         printhtml(b, p->title);
         *b += "</title>\n      <link>";

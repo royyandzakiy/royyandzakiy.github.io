@@ -1744,9 +1744,8 @@ static b32 hlroundtrip(std::string_view html, std::string_view code)
 // Write code to b, HTML-escaped, with tokens wrapped in <span class="X">.
 // Returns false if the language is unknown, in which case the code is
 // written escaped without highlighting. No language is not unknown.
-static b32 highlight(std::string *b, std::string_view lang, std::string_view code, Arena scratch)
+static b32 highlight(std::string *b, std::string_view lang, std::string_view code)
 {
-    (void)scratch;  // lexers run in constant space
     HlLang l = hllang(lang);
     if (!l.lex) {
         printhtml(b, code);

@@ -1,30 +1,29 @@
 // Site model tests: dates, encoders, front matter, UUIDs
-static std::string_view render(Arena *a, void (*fn)(std::string *, i64), i64 v)
+static std::string render(void (*fn)(std::string *, i64), i64 v)
 {
     std::string b;
     fn(&b, v);
-    return clone(a, b);
+    return b;
 }
 
-static std::string_view render(Arena *a, void (*fn)(std::string *, std::string_view), std::string_view s)
+static std::string render(void (*fn)(std::string *, std::string_view), std::string_view s)
 {
     std::string b;
     fn(&b, s);
-    return clone(a, b);
+    return b;
 }
 
 static void test_site(Test *t)
 {
-    Arena a = t->perm;
 
     // Dates, checked against Jekyll's output
     i64 t1 = parsetimestamp("2026-09-20T01:49:36Z");
-    expect(t, "iso",     render(&a, printiso, t1), "2026-09-20T01:49:36Z");
-    expect(t, "rfc822",  render(&a, printrfc822, t1), "Sun, 20 Sep 2026 01:49:36 GMT");
-    expect(t, "long",    render(&a, printlongdate, parseday("2026-01-01")), "January 01, 2026");
-    expect(t, "ymd",     render(&a, printymd, parseday("2007-09-01")), "2007-09-01");
-    expect(t, "rfc822b", render(&a, printrfc822, parseday("1970-01-01")), "Thu, 01 Jan 1970 00:00:00 GMT");
-    expect(t, "rfc822c", render(&a, printrfc822, parseday("2000-02-29")), "Tue, 29 Feb 2000 00:00:00 GMT");
+    expect(t, "iso",     render(printiso, t1), "2026-09-20T01:49:36Z");
+    expect(t, "rfc822",  render(printrfc822, t1), "Sun, 20 Sep 2026 01:49:36 GMT");
+    expect(t, "long",    render(printlongdate, parseday("2026-01-01")), "January 01, 2026");
+    expect(t, "ymd",     render(printymd, parseday("2007-09-01")), "2007-09-01");
+    expect(t, "rfc822b", render(printrfc822, parseday("1970-01-01")), "Thu, 01 Jan 1970 00:00:00 GMT");
+    expect(t, "rfc822c", render(printrfc822, parseday("2000-02-29")), "Tue, 29 Feb 2000 00:00:00 GMT");
     expect(t, "badts",   parsetimestamp("2026-09-20 01:49:36") < 0 ? std::string_view("bad") : std::string_view("ok"), "bad");
 
     // Filters, checked against Jekyll's output
@@ -52,28 +51,28 @@ static void test_site(Test *t)
          "2026+has+been+the+most+pivotal+year+in+my+career%E2%80%A6+and+it%27s+only+March"},
     };
     for (iz i = 0; i < std::ssize(cases); i++) {
-        expect(t, "uri_escape", render(&a, printuriescape, cases[i].title), cases[i].uri);
-        expect(t, "url_encode", render(&a, printurlencode, cases[i].title), cases[i].url);
+        expect(t, "uri_escape", render(printuriescape, cases[i].title), cases[i].uri);
+        expect(t, "url_encode", render(printurlencode, cases[i].title), cases[i].url);
     }
 
     // Front matter
     FrontMatter fm = parsefrontmatter(
         "---\ntitle: 'My take on \"where''s all the code\"'\nlayout: post\n"
         "date: 2022-05-22T22:59:04Z\ntags: [c, cpp]\n"
-        "uuid: 3c5b2b52-5e2f-4d57-8f3b-5b7b5a8f5e1d\n---\n\nBody\n", &a);
+        "uuid: 3c5b2b52-5e2f-4d57-8f3b-5b7b5a8f5e1d\n---\n\nBody\n");
     expect(t, "fm.ok",    fm.ok ? std::string_view("ok") : fm.err, "ok");
-    expect(t, "fm.title", fm.title, "My take on \"where's all the code\"");
+    expect(t, "fm.title", fm.title.value_or("<none>"), "My take on \"where's all the code\"");
     expect(t, "fm.tags",  std::ssize(fm.tags)==2 ? fm.tags[1] : std::string_view{}, "cpp");
     expect(t, "fm.body",  fm.body, "Body\n");
-    fm = parsefrontmatter("---\ntitle: \"A \\\"quoted\\\" title\"\ntags: []\n---\nx", &a);
-    expect(t, "fm.dq",    fm.title, "A \"quoted\" title");
+    fm = parsefrontmatter("---\ntitle: \"A \\\"quoted\\\" title\"\ntags: []\n---\nx");
+    expect(t, "fm.dq",    fm.title.value_or("<none>"), "A \"quoted\" title");
     expect(t, "fm.empty", std::ssize(fm.tags) ? std::string_view("tags") : std::string_view("none"), "none");
-    fm = parsefrontmatter("---\ntitle: x\nbogus: y\n---\n", &a);
+    fm = parsefrontmatter("---\ntitle: x\nbogus: y\n---\n");
     expect(t, "fm.bad",   fm.ok ? std::string_view("ok") : std::string_view("err"), "err");
 
     // Derived tag UUIDs are well-formed and stable
-    std::string_view u = deriveuuid(&a, "newtag");
+    std::string u = deriveuuid("newtag");
     expect(t, "uuid.valid", validuuid(u) ? std::string_view("ok") : u, "ok");
     expect(t, "uuid.ver",   (u.substr(14)).substr(0, 1), "8");
-    expect(t, "uuid.same",  deriveuuid(&a, "newtag"), u);
+    expect(t, "uuid.same",  deriveuuid("newtag"), u);
 }
