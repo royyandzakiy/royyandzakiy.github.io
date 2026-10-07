@@ -1,6 +1,6 @@
 // ssg: static site generator for royyandzakiy.com
 //
-// Unity build: a platform layer (platform/main_*.cpp, test/main_test.cpp)
+// Unity build: a platform layer (platform/main.cpp, test/main_test.cpp)
 // includes this file and implements the os_* API in core/os.cpp.
 //
 // This is free and unencumbered software released into the public domain.
