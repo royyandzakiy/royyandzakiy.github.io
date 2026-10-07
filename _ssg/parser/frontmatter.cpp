@@ -2,43 +2,43 @@
 // This is free and unencumbered software released into the public domain.
 
 struct FrontMatter {
-    Str        title;
-    Str        layout;
-    Str        date;
-    Str        uuid;
-    Slice<Str> tags;
-    Str        body;     // content after the front matter
+    std::string_view        title;
+    std::string_view        layout;
+    std::string_view        date;
+    std::string_view        uuid;
+    Slice<std::string_view> tags;
+    std::string_view        body;     // content after the front matter
     iz         bodyline; // line number where body begins
     b32        ok;
-    Str        err;
+    std::string_view        err;
     iz         errline;
 };
 
 // Parse a YAML scalar value: plain, 'single' ('' escapes), "double"
 // (only \" and \\ escapes). Returns a null string on syntax error.
-static Str yamlscalar(Str v, Arena *perm)
+static std::string_view yamlscalar(std::string_view v, Arena *perm)
 {
     v = trim(v);
-    if (!v.len || (v[0] != '\'' && v[0] != '"')) {
-        return v.len ? v : Str{(u8 *)"", 0};
+    if (v.empty() || (v[0] != '\'' && v[0] != '"')) {
+        return std::ssize(v) ? v : std::string_view{"", 0};
     }
     u8  q = v[0];
-    Buf b(perm, v.len);
-    for (iz i = 1; i < v.len; i++) {
+    Buf b(perm, std::ssize(v));
+    for (iz i = 1; i < std::ssize(v); i++) {
         u8 c = v[i];
         if (c == q) {
-            if (q=='\'' && i+1<v.len && v[i+1]=='\'') {
+            if (q=='\'' && i+1<std::ssize(v) && v[i+1]=='\'') {
                 putbyte(&b, '\'');
                 i++;
                 continue;
             }
-            if (i != v.len-1) {
+            if (i != std::ssize(v)-1) {
                 return {};  // trailing junk after closing quote
             }
-            Str r = finish(&b);
-            return r.len ? r : Str{(u8 *)"", 0};
+            std::string_view r = finish(&b);
+            return std::ssize(r) ? r : std::string_view{"", 0};
         } else if (q=='"' && c=='\\') {
-            if (i+1 >= v.len || (v[i+1] != '"' && v[i+1] != '\\')) {
+            if (i+1 >= std::ssize(v) || (v[i+1] != '"' && v[i+1] != '\\')) {
                 return {};  // unsupported escape
             }
             putbyte(&b, v[++i]);
@@ -54,36 +54,36 @@ static b32 tagchar(u8 c)
     return (c>='a' && c<='z') || digit(c);
 }
 
-static FrontMatter parsefrontmatter(Str src, Arena *perm)
+static FrontMatter parsefrontmatter(std::string_view src, Arena *perm)
 {
     FrontMatter r = {};
-    if (!startswith(src, "---\n")) {
+    if (!src.starts_with("---\n")) {
         r.err = "missing front matter";
         return r;
     }
-    Str rest = cuthead(src, 4);
+    std::string_view rest = src.substr(4);
     iz  line = 1;
     for (;;) {
         line++;
-        if (!rest.len) {
+        if (rest.empty()) {
             r.err = "unterminated front matter";
             r.errline = line;
             return r;
         }
         Cut c = cut(rest, '\n');
         rest = c.tail;
-        Str ln = trimright(c.head);
+        std::string_view ln = trimright(c.head);
         if (ln == "---" || ln == "...") {
             break;
         }
-        if (!ln.len) {
+        if (ln.empty()) {
             continue;
         }
 
         Cut kv = cut(ln, ':');
-        Str key = kv.head;
-        Str val = trim(kv.tail);
-        if (!kv.ok || !key.len || whitespace(key[0])) {
+        std::string_view key = kv.head;
+        std::string_view val = trim(kv.tail);
+        if (!kv.ok || key.empty() || whitespace(key[0])) {
             r.err = "expected 'key: value'";
             r.errline = line;
             return r;
@@ -91,7 +91,7 @@ static FrontMatter parsefrontmatter(Str src, Arena *perm)
 
         if (key == "title") {
             r.title = yamlscalar(val, perm);
-            if (!r.title.data) {
+            if (!r.title.data()) {
                 r.err = "invalid title string";
                 r.errline = line;
                 return r;
@@ -105,17 +105,17 @@ static FrontMatter parsefrontmatter(Str src, Arena *perm)
         } else if (key == "excerpt_separator") {
             // Ignored: <!--more--> is always the separator
         } else if (key == "tags") {
-            if (val.len<2 || val[0]!='[' || val[val.len-1]!=']') {
+            if (std::ssize(val)<2 || val[0]!='[' || val[std::ssize(val)-1]!=']') {
                 r.err = "tags must be an inline list: [a, b]";
                 r.errline = line;
                 return r;
             }
-            Str list = trim(takehead(cuthead(val, 1), val.len-2));
-            for (Cut t = {{}, list, list.len>0}; t.ok;) {
+            std::string_view list = trim((val.substr(1)).substr(0, std::ssize(val)-2));
+            for (Cut t = {{}, list, std::ssize(list)>0}; t.ok;) {
                 t = cut(t.tail, ',');
-                Str tag = trim(t.head);
-                b32 valid = tag.len > 0;
-                for (iz i = 0; i < tag.len; i++) {
+                std::string_view tag = trim(t.head);
+                b32 valid = std::ssize(tag) > 0;
+                for (iz i = 0; i < std::ssize(tag); i++) {
                     valid &= tagchar(tag[i]);
                 }
                 if (!valid) {
@@ -136,7 +136,7 @@ static FrontMatter parsefrontmatter(Str src, Arena *perm)
     // part of the body.
     for (;;) {
         Cut c = cut(rest, '\n');
-        if (!c.ok || trim(c.head).len) {
+        if (!c.ok || std::ssize(trim(c.head))) {
             break;
         }
         rest = c.tail;

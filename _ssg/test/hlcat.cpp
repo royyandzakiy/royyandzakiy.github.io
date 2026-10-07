@@ -8,9 +8,9 @@
 #include "core/base.cpp"
 #include "parser/highlight.cpp"
 
-static b32 writeall(std::FILE *f, Str s)
+static b32 writeall(std::FILE *f, std::string_view s)
 {
-    return std::fwrite(s.data, 1, (uz)s.len, f) == (uz)s.len;
+    return std::fwrite(s.data(), 1, s.size(), f) == s.size();
 }
 
 [[noreturn]] static void os_oom()
@@ -25,8 +25,7 @@ int main(int argc, char **argv)
         writeall(stderr, "usage: hlcat LANG <file\n");
         return 2;
     }
-    Str lang = {(u8 *)argv[1], 0};
-    while (lang.data[lang.len]) lang.len++;
+    std::string_view lang = argv[1];
 
     iz    cap = (iz)1<<28;
     byte *mem = (byte *)std::malloc((uz)cap);
@@ -36,12 +35,11 @@ int main(int argc, char **argv)
     Arena perm    = {mem, mem+cap/2};
     Arena scratch = {mem+cap/2, mem+cap};
 
-    Str code = {};
-    code.data = allocbytes(&perm, cap/4);
-    code.len  = (iz)std::fread(code.data, 1, (uz)(cap/4), stdin);
-    perm.beg = (byte *)(code.data + code.len);
+    char *data = allocbytes(&perm, cap/4);
+    std::string_view code = {data, std::fread(data, 1, (uz)(cap/4), stdin)};
+    perm.beg = data + code.size();
 
-    Buf b(&perm, code.len*2 + 64);
+    Buf b(&perm, std::ssize(code)*2 + 64);
     b32 known = highlight(&b, lang, code, scratch);
     if (!writeall(stdout, finish(&b))) {
         return 2;

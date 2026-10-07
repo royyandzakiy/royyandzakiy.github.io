@@ -2,10 +2,10 @@
 // This is free and unencumbered software released into the public domain.
 
 struct Options {
-    Str src;
-    Str out;
-    Str mdfile;
-    Str newpost;
+    std::string_view src;
+    std::string_view out;
+    std::string_view mdfile;
+    std::string_view newpost;
     i64 now;
     b32 fixedtime;
     b32 excerpts;
@@ -13,11 +13,11 @@ struct Options {
     b32 watch;
 };
 
-static i64 parseint(Str s)
+static i64 parseint(std::string_view s)
 {
     i64 r = 0;
-    b32 neg = s.len && s[0]=='-';
-    for (iz i = neg; i < s.len && digit(s[i]); i++) {
+    b32 neg = std::ssize(s) && s[0]=='-';
+    for (iz i = neg; i < std::ssize(s) && digit(s[i]); i++) {
         r = r*10 + (s[i] - '0');
     }
     return neg ? -r : r;
@@ -34,9 +34,9 @@ static chr::sys_seconds systime(i64 t)
 }
 
 // Parse fixed-width digits, or -1 on error.
-static i32 parsedigits(Str s, iz off, iz len)
+static i32 parsedigits(std::string_view s, iz off, iz len)
 {
-    if (off+len > s.len) {
+    if (off+len > std::ssize(s)) {
         return -1;
     }
     i32 r = 0;
@@ -48,7 +48,7 @@ static i32 parsedigits(Str s, iz off, iz len)
 }
 
 // Parse "YYYY-MM-DD" at the start of s into a time, or -1.
-static i64 parseday(Str s)
+static i64 parseday(std::string_view s)
 {
     i32 y = parsedigits(s, 0, 4);
     i32 m = parsedigits(s, 5, 2);
@@ -62,9 +62,9 @@ static i64 parseday(Str s)
 }
 
 // Parse "YYYY-MM-DDTHH:MM:SSZ" into a time, or -1.
-static i64 parsetimestamp(Str s)
+static i64 parsetimestamp(std::string_view s)
 {
-    if (s.len != 20 || s[10]!='T' || s[13]!=':' || s[16]!=':' || s[19]!='Z') {
+    if (std::ssize(s) != 20 || s[10]!='T' || s[13]!=':' || s[16]!=':' || s[19]!='Z') {
         return -1;
     }
     i64 day = parseday(s);
@@ -111,13 +111,13 @@ static void percent(Buf *b, u8 c)
 
 // Addressable::URI.normalize_component: keep unreserved and reserved.
 // Output is escaped for use inside an HTML attribute.
-static void printuriescape(Buf *b, Str s)
+static void printuriescape(Buf *b, std::string_view s)
 {
-    for (iz i = 0; i < s.len; i++) {
+    for (iz i = 0; i < std::ssize(s); i++) {
         u8 c = s[i];
         if (c == '&') {
             print(b, "&amp;");
-        } else if (alnum(c) || (c && c<0x80 && find(Str("-._~:/?#[]@!$'()*+,;="), Str{&c, 1})>=0)) {
+        } else if (alnum(c) || (c && c<0x80 && std::string_view("-._~:/?#[]@!$'()*+,;=").contains((char)c))) {
             putbyte(b, c);
         } else {
             percent(b, c);
@@ -126,9 +126,9 @@ static void printuriescape(Buf *b, Str s)
 }
 
 // CGI.escape: keep A-Za-z0-9 _.-~, space as +.
-static void printurlencode(Buf *b, Str s)
+static void printurlencode(Buf *b, std::string_view s)
 {
-    for (iz i = 0; i < s.len; i++) {
+    for (iz i = 0; i < std::ssize(s); i++) {
         u8 c = s[i];
         if (alnum(c) || c=='_' || c=='.' || c=='-' || c=='~') {
             putbyte(b, c);
@@ -144,8 +144,8 @@ static void printurlencode(Buf *b, Str s)
 // Tag feed UUIDs. Tags not listed get a UUID derived from their name.
 
 struct TagUuid {
-    Str name;
-    Str uuid;
+    std::string_view name;
+    std::string_view uuid;
 };
 
 static TagUuid taguuids[] = {
@@ -201,7 +201,7 @@ static TagUuid taguuids[] = {
 };
 
 // A deterministic version 8 (custom) UUID derived from a name.
-static Str deriveuuid(Arena *perm, Str name)
+static std::string_view deriveuuid(Arena *perm, std::string_view name)
 {
     u64 hi = hash(name);
     u64 lo = hash(concat(perm, name, "\n"));
@@ -220,12 +220,12 @@ static Str deriveuuid(Arena *perm, Str name)
     return finish(&b);
 }
 
-static b32 validuuid(Str s)
+static b32 validuuid(std::string_view s)
 {
-    if (s.len != 36) {
+    if (std::ssize(s) != 36) {
         return 0;
     }
-    for (iz i = 0; i < s.len; i++) {
+    for (iz i = 0; i < std::ssize(s); i++) {
         u8  c    = s[i];
         b32 dash = i==8 || i==13 || i==18 || i==23;
         if (dash ? c!='-' : !(digit(c) || (c>='a' && c<='f'))) {
@@ -239,40 +239,40 @@ static b32 validuuid(Str s)
 // Site model
 
 struct Post {
-    Str        src;      // path relative to the source root
-    Str        title;
-    Str        uuid;
-    Slice<Str> tags;
+    std::string_view        src;      // path relative to the source root
+    std::string_view        title;
+    std::string_view        uuid;
+    Slice<std::string_view> tags;
     i64        time;
-    Str        url;      // /YYYY-MM-DD/slug/
-    Str        body;     // Markdown
+    std::string_view        url;      // /YYYY-MM-DD/slug/
+    std::string_view        body;     // Markdown
     iz         bodyline;
-    Str        html;
+    std::string_view        html;
     iz         excerpt;  // length of the excerpt prefix of html
     Post      *older;
     Post      *newer;
 };
 
 struct Tag {
-    Str           name;
-    Str           uuid;
+    std::string_view           name;
+    std::string_view           uuid;
     Slice<Post *> posts;  // newest first
 };
 
 struct Page {
-    Str src;    // e.g. about/index.md
-    Str out;    // e.g. about/index.html
-    Str title;
-    Str body;
+    std::string_view src;    // e.g. about/index.md
+    std::string_view out;    // e.g. about/index.html
+    std::string_view title;
+    std::string_view body;
     iz  bodyline;
-    Str html;
+    std::string_view html;
 };
 
 struct Site {
     Slice<Post *> posts;    // newest first
     Slice<Tag *>  tags;     // sorted by name
     Slice<Page *> pages;
-    Slice<Str>    statics;  // relative paths
+    Slice<std::string_view>    statics;  // relative paths
     i64           now;
 };
 
@@ -287,32 +287,34 @@ struct Ctx {
     i32       skipped;
 };
 
-static Str join(Arena *a, Str dir, Str name)
+static std::string_view join(Arena *a, std::string_view dir, std::string_view name)
 {
-    if (!dir.len || dir == ".") {
+    if (dir.empty() || dir == ".") {
         return name;
     }
-    Str r = concat(a, dir, "/");
+    std::string_view r = concat(a, dir, "/");
     return concat(a, r, name);
 }
 
-static Str srcpath(Ctx *c, Arena *a, Str rel)
+static std::string_view srcpath(Ctx *c, Arena *a, std::string_view rel)
 {
     return join(a, c->opt->src, rel);
 }
 
-// Normalize CRLF line endings in place.
-static Str normalize(Str s)
+// Normalize CRLF line endings.
+static std::string_view normalize(Arena *a, std::string_view s)
 {
-    iz n = 0;
-    for (iz i = 0; i < s.len; i++) {
-        if (s[i]=='\r' && i+1<s.len && s[i+1]=='\n') {
+    if (!s.contains("\r\n")) {
+        return s;
+    }
+    std::string r;
+    for (iz i = 0; i < std::ssize(s); i++) {
+        if (s[i]=='\r' && i+1<std::ssize(s) && s[i+1]=='\n') {
             continue;
         }
-        s.data[n++] = s[i];
+        r += s[i];
     }
-    s.len = n;
-    return s;
+    return clone(a, r);
 }
 
 static bool postless(Post *a, Post *b)
@@ -329,26 +331,26 @@ static bool tagless(Tag *a, Tag *b)
     return a->name < b->name;
 }
 
-static Post *loadpost(Ctx *c, Str name, Arena scratch)
+static Post *loadpost(Ctx *c, std::string_view name, Arena scratch)
 {
     Arena *perm = c->perm;
     Log   *log  = c->log;
-    Str    rel  = join(perm, "_posts", name);
+    std::string_view    rel  = join(perm, "_posts", name);
 
     // YYYY-MM-DD-slug.(markdown|md)
     i64 day = parseday(name);
-    b32 md  = endswith(name, ".markdown") || endswith(name, ".md");
-    if (day<0 || name.len<12 || name[10]!='-' || !md) {
+    b32 md  = name.ends_with(".markdown") || name.ends_with(".md");
+    if (day<0 || std::ssize(name)<12 || name[10]!='-' || !md) {
         error(log, rel, 0, "post names must be YYYY-MM-DD-slug.markdown");
         return 0;
     }
 
-    Str src = os_read(c->os, perm, srcpath(c, &scratch, rel));
-    if (!src.data) {
+    std::string_view src = os_read(c->os, perm, srcpath(c, &scratch, rel));
+    if (!src.data()) {
         error(log, rel, 0, "could not read file");
         return 0;
     }
-    src = normalize(src);
+    src = normalize(perm, src);
 
     FrontMatter fm = parsefrontmatter(src, perm);
     if (!fm.ok) {
@@ -365,17 +367,17 @@ static Post *loadpost(Ctx *c, Str name, Arena scratch)
     p->bodyline = fm.bodyline;
     p->time     = day;
 
-    if (!p->title.data) {
+    if (!p->title.data()) {
         error(log, rel, 0, "missing title");
         return 0;
     }
-    if (fm.layout.len && fm.layout != "post") {
+    if (std::ssize(fm.layout) && fm.layout != "post") {
         warn(log, rel, 0, "ignoring layout other than 'post'");
     }
     if (!validuuid(p->uuid)) {
         error(log, rel, 0, "missing or invalid uuid");
     }
-    if (fm.date.len) {
+    if (std::ssize(fm.date)) {
         i64 t = parsetimestamp(fm.date);
         if (t < 0) {
             error(log, rel, 0, "date must be YYYY-MM-DDTHH:MM:SSZ");
@@ -387,11 +389,11 @@ static Post *loadpost(Ctx *c, Str name, Arena scratch)
     }
 
     // /YYYY-MM-DD/slug/, the old Jekyll permalinks, from the file name
-    Str slug = cuthead(name, 11);
-    slug = cuttail(slug, endswith(slug, ".md") ? 3 : 9);
+    std::string_view slug = name.substr(11);
+    slug = slug.substr(0, slug.size()-(slug.ends_with(".md") ? 3 : 9));
     Buf url(perm, 20);
     putbyte(&url, '/');
-    print(&url, takehead(name, 10));
+    print(&url, name.substr(0, 10));
     putbyte(&url, '/');
     print(&url, slug);
     putbyte(&url, '/');
@@ -404,9 +406,9 @@ static void loadposts(Ctx *c, Site *site, Arena scratch)
     Arena   *perm  = c->perm;
     Map<Post *> *urls = 0;
 
-    Str dir = srcpath(c, perm, "_posts");
+    std::string_view dir = srcpath(c, perm, "_posts");
     for (Dirent *e = os_list(c->os, perm, dir); e; e = e->next) {
-        if (e->isdir || !e->name.len || e->name[0]=='.' || endswith(e->name, "~")) {
+        if (e->isdir || e->name.empty() || e->name[0]=='.' || e->name.ends_with("~")) {
             continue;
         }
         Post *p = loadpost(c, e->name, scratch);
@@ -447,7 +449,7 @@ static void loadposts(Ctx *c, Site *site, Arena scratch)
                         (*t)->uuid = taguuids[k].uuid;
                     }
                 }
-                if (!(*t)->uuid.len) {
+                if (!std::ssize((*t)->uuid)) {
                     (*t)->uuid = deriveuuid(perm, (*t)->name);
                 }
                 site->tags = push(perm, site->tags, *t);
@@ -463,22 +465,22 @@ static void loadposts(Ctx *c, Site *site, Arena scratch)
     std::stable_sort(site->tags.data, site->tags.data+site->tags.len, tagless);
 }
 
-static b32 skipname(Str name)
+static b32 skipname(std::string_view name)
 {
-    return !name.len || name[0]=='.' || name[0]=='_' || name[0]=='#' ||
-           name[0]=='~' || endswith(name, "~");
+    return name.empty() || name[0]=='.' || name[0]=='_' || name[0]=='#' ||
+           name[0]=='~' || name.ends_with("~");
 }
 
 // Paths at the top of the source tree that are never published.
-static Str excluded[] = {"CLAUDE.md"};
+static std::string_view excluded[] = {"CLAUDE.md"};
 
 // Is the entry in directory rel (empty at the top) not published?
-static b32 skipentry(Str rel, Str name)
+static b32 skipentry(std::string_view rel, std::string_view name)
 {
     if (skipname(name)) {
         return 1;
     }
-    for (iz i = 0; !rel.len && i < std::ssize(excluded); i++) {
+    for (iz i = 0; rel.empty() && i < std::ssize(excluded); i++) {
         if (excluded[i] == name) {
             return 1;
         }
@@ -486,16 +488,16 @@ static b32 skipentry(Str rel, Str name)
     return 0;
 }
 
-static void walk(Ctx *c, Site *site, Str rel, Str outdir, Arena scratch)
+static void walk(Ctx *c, Site *site, std::string_view rel, std::string_view outdir, Arena scratch)
 {
     Arena *perm = c->perm;
-    Str    dir  = rel.len ? srcpath(c, perm, rel) : c->opt->src;
+    std::string_view    dir  = std::ssize(rel) ? srcpath(c, perm, rel) : c->opt->src;
     for (Dirent *e = os_list(c->os, perm, dir); e; e = e->next) {
         if (skipentry(rel, e->name)) {
             continue;
         }
 
-        Str child = join(perm, rel, e->name);
+        std::string_view child = join(perm, rel, e->name);
         if (e->isdir) {
             if (child == outdir) {
                 continue;  // output directory inside the source tree
@@ -504,15 +506,15 @@ static void walk(Ctx *c, Site *site, Str rel, Str outdir, Arena scratch)
             continue;
         }
 
-        if (endswith(child, ".md")) {
+        if (child.ends_with(".md")) {
             Arena tmp = scratch;
-            Str src = os_read(c->os, perm, srcpath(c, &tmp, child));
-            if (!src.data) {
+            std::string_view src = os_read(c->os, perm, srcpath(c, &tmp, child));
+            if (!src.data()) {
                 error(c->log, child, 0, "could not read file");
                 continue;
             }
-            src = normalize(src);
-            if (startswith(src, "---\n")) {
+            src = normalize(perm, src);
+            if (src.starts_with("---\n")) {
                 FrontMatter fm = parsefrontmatter(src, perm);
                 if (!fm.ok) {
                     error(c->log, child, fm.errline, fm.err);
@@ -520,7 +522,7 @@ static void walk(Ctx *c, Site *site, Str rel, Str outdir, Arena scratch)
                 }
                 Page *p = alloc<Page>(perm);
                 p->src      = child;
-                p->out      = concat(perm, cuttail(child, 3), ".html");
+                p->out      = concat(perm, child.substr(0, child.size()-3), ".html");
                 p->title    = fm.title;
                 p->body     = fm.body;
                 p->bodyline = fm.bodyline;
@@ -534,25 +536,26 @@ static void walk(Ctx *c, Site *site, Str rel, Str outdir, Arena scratch)
 
 // Output directory relative to the source directory, when inside it.
 // Backslashes are separators too, for Windows.
-static Str relativeout(Options *opt, Arena *perm)
+static std::string_view relativeout(Options *opt, Arena *perm)
 {
-    Str out = clone(perm, opt->out);
-    Str src = clone(perm, opt->src);
-    for (iz i = 0; i < out.len; i++) out[i] = out[i]=='\\' ? '/' : out[i];
-    for (iz i = 0; i < src.len; i++) src[i] = src[i]=='\\' ? '/' : src[i];
-    while (startswith(out, "./")) out = cuthead(out, 2);
-    while (endswith(out, "/"))    out = cuttail(out, 1);
+    std::string o(opt->out), s(opt->src);
+    std::ranges::replace(o, '\\', '/');
+    std::ranges::replace(s, '\\', '/');
+    std::string_view out = clone(perm, o);
+    std::string_view src = clone(perm, s);
+    while (out.starts_with("./")) out = out.substr(2);
+    while (out.ends_with("/"))    out = out.substr(0, out.size()-1);
     if (src == ".") {
         return out;
     }
-    while (endswith(src, "/")) src = cuttail(src, 1);
-    if (startswith(out, src) && out.len>src.len && out[src.len]=='/') {
-        return cuthead(out, src.len+1);
+    while (src.ends_with("/")) src = src.substr(0, src.size()-1);
+    if (out.starts_with(src) && std::ssize(out)>std::ssize(src) && out[std::ssize(src)]=='/') {
+        return out.substr(std::ssize(src)+1);
     }
     return {};
 }
 
-static void emit(Ctx *c, Str rel, Str data, Arena scratch)
+static void emit(Ctx *c, std::string_view rel, std::string_view data, Arena scratch)
 {
     b32 *seen = upsert(&c->outputs, rel, c->perm);
     if (*seen) {
@@ -561,10 +564,10 @@ static void emit(Ctx *c, Str rel, Str data, Arena scratch)
     }
     *seen = 1;
 
-    Str path = join(&scratch, c->opt->out, rel);
-    iz  slash = path.len;
+    std::string_view path = join(&scratch, c->opt->out, rel);
+    iz  slash = std::ssize(path);
     while (slash > 0 && path[slash-1] != '/') slash--;
-    if (slash > 1 && !os_mkdirs(c->os, scratch, takehead(path, slash-1))) {
+    if (slash > 1 && !os_mkdirs(c->os, scratch, path.substr(0, slash-1))) {
         error(c->log, path, 0, "could not create directory");
         return;
     }
@@ -575,16 +578,16 @@ static void emit(Ctx *c, Str rel, Str data, Arena scratch)
     c->written++;
 }
 
-static void copystatic(Ctx *c, Str rel, Arena scratch)
+static void copystatic(Ctx *c, std::string_view rel, Arena scratch)
 {
     if (upsert(&c->outputs, rel, 0)) {
         return;  // replaced by a generated file
     }
-    Str src = srcpath(c, &scratch, rel);
-    Str dst = join(&scratch, c->opt->out, rel);
-    iz  slash = dst.len;
+    std::string_view src = srcpath(c, &scratch, rel);
+    std::string_view dst = join(&scratch, c->opt->out, rel);
+    iz  slash = std::ssize(dst);
     while (slash > 0 && dst[slash-1] != '/') slash--;
-    if (slash > 1 && !os_mkdirs(c->os, scratch, takehead(dst, slash-1))) {
+    if (slash > 1 && !os_mkdirs(c->os, scratch, dst.substr(0, slash-1))) {
         error(c->log, dst, 0, "could not create directory");
         return;
     }

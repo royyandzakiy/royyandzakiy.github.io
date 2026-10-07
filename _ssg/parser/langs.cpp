@@ -7,7 +7,7 @@
 
 // C and C++
 
-static Str ckeywords[] = {
+static std::string_view ckeywords[] = {
     "NULL", "_Alignas", "_Alignof", "_Atomic", "_Generic", "_Noreturn",
     "_Pragma", "_Static_assert", "_Thread_local", "__asm", "__asm__",
     "__attribute", "__attribute__", "__cdecl", "__declspec",
@@ -21,7 +21,7 @@ static Str ckeywords[] = {
     "while",
 };
 
-static Str cppkeywords[] = {
+static std::string_view cppkeywords[] = {
     "NULL", "_Alignas", "_Alignof", "_Atomic", "_Generic", "_Noreturn",
     "_Pragma", "_Static_assert", "_Thread_local", "__asm", "__asm__",
     "__attribute", "__attribute__", "__cdecl", "__declspec",
@@ -42,7 +42,7 @@ static Str cppkeywords[] = {
 
 // Besides these, names ending in _t, and capitalized names like Arena
 // (not followed by a parenthesis), are types.
-static Str ctypes[] = {
+static std::string_view ctypes[] = {
     "BOOL", "BYTE", "CHAR", "DWORD", "FILE", "HANDLE", "HINSTANCE",
     "HMODULE", "HWND", "LONG", "LPARAM", "LPCSTR", "LPCWSTR", "LPSTR",
     "LPVOID", "LPWSTR", "LRESULT", "PVOID", "UINT", "ULONG", "WCHAR",
@@ -53,11 +53,11 @@ static Str ctypes[] = {
     "uptr", "usize", "uz", "va_list", "void",
 };
 
-static Str ctdefs[]   = {"enum", "struct", "union"};
-static Str cpptdefs[] = {"class", "enum", "struct", "typename", "union"};
-static Str cprefixes[] = {"L", "U", "u", "u8"};
+static std::string_view ctdefs[]   = {"enum", "struct", "union"};
+static std::string_view cpptdefs[] = {"class", "enum", "struct", "typename", "union"};
+static std::string_view cprefixes[] = {"L", "U", "u", "u8"};
 
-static Str glslkeywords[] = {
+static std::string_view glslkeywords[] = {
     "attribute", "break", "case", "centroid", "const", "continue",
     "default", "discard", "do", "else", "false", "flat", "for", "highp",
     "if", "in", "inout", "invariant", "layout", "lowp", "mediump",
@@ -65,7 +65,7 @@ static Str glslkeywords[] = {
     "switch", "true", "uniform", "varying", "while",
 };
 
-static Str glsltypes[] = {
+static std::string_view glsltypes[] = {
     "bool", "bvec2", "bvec3", "bvec4", "double", "dvec2", "dvec3", "dvec4",
     "float", "int", "ivec2", "ivec3", "ivec4", "mat2", "mat2x2", "mat2x3",
     "mat2x4", "mat3", "mat3x2", "mat3x3", "mat3x4", "mat4", "mat4x2",
@@ -76,7 +76,7 @@ static Str glsltypes[] = {
 
 // Java, JavaScript, Go
 
-static Str javakeywords[] = {
+static std::string_view javakeywords[] = {
     "abstract", "assert", "break", "case", "catch", "class", "const",
     "continue", "default", "do", "else", "enum", "extends", "false",
     "final", "finally", "for", "goto", "if", "implements", "import",
@@ -87,15 +87,15 @@ static Str javakeywords[] = {
     "yield",
 };
 
-static Str javatypes[] = {
+static std::string_view javatypes[] = {
     "boolean", "byte", "char", "double", "float", "int", "long", "short",
     "void",
 };
 
-static Str javadefs[]  = {"class", "enum", "interface", "record"};
-static Str javatdefs[] = {"new"};
+static std::string_view javadefs[]  = {"class", "enum", "interface", "record"};
+static std::string_view javatdefs[] = {"new"};
 
-static Str jskeywords[] = {
+static std::string_view jskeywords[] = {
     "async", "await", "break", "case", "catch", "class", "const",
     "continue", "debugger", "default", "delete", "do", "else", "export",
     "extends", "false", "finally", "for", "function", "if", "import", "in",
@@ -104,32 +104,32 @@ static Str jskeywords[] = {
     "void", "while", "with", "yield",
 };
 
-static Str jsdefs[] = {"class", "function"};
+static std::string_view jsdefs[] = {"class", "function"};
 
-static Str gokeywords[] = {
+static std::string_view gokeywords[] = {
     "break", "case", "chan", "const", "continue", "default", "defer",
     "else", "fallthrough", "false", "for", "func", "go", "goto", "if",
     "import", "interface", "iota", "map", "nil", "package", "range",
     "return", "select", "struct", "switch", "true", "type", "var",
 };
 
-static Str gotypes[] = {
+static std::string_view gotypes[] = {
     "any", "bool", "byte", "complex128", "complex64", "error", "float32",
     "float64", "int", "int16", "int32", "int64", "int8", "rune", "string",
     "uint", "uint16", "uint32", "uint64", "uint8", "uintptr",
 };
 
-static Str godefs[] = {"func", "type"};
+static std::string_view godefs[] = {"func", "type"};
 
 // Keywords that are operands, after which "/" divides rather than
 // begins a regular expression.
-static Str valuekeywords[] = {
+static std::string_view valuekeywords[] = {
     "false", "nil", "null", "self", "super", "this", "true", "undefined",
 };
 
 // Scripting languages
 
-static Str pykeywords[] = {
+static std::string_view pykeywords[] = {
     "False", "None", "True", "and", "as", "assert", "async", "await",
     "break", "class", "continue", "def", "del", "elif", "else", "except",
     "finally", "for", "from", "global", "if", "import", "in", "is",
@@ -137,26 +137,26 @@ static Str pykeywords[] = {
     "while", "with", "yield",
 };
 
-static Str pytypes[] = {
+static std::string_view pytypes[] = {
     "bool", "bytearray", "bytes", "complex", "dict", "float", "frozenset",
     "int", "list", "object", "set", "str", "tuple", "type",
 };
 
-static Str pydefs[] = {"class", "def"};
+static std::string_view pydefs[] = {"class", "def"};
 
-static Str pyprefixes[] = {
+static std::string_view pyprefixes[] = {
     "B", "F", "R", "U", "b", "br", "f", "fr", "r", "rb", "rf", "u",
 };
 
-static Str luakeywords[] = {
+static std::string_view luakeywords[] = {
     "and", "break", "do", "else", "elseif", "end", "false", "for",
     "function", "goto", "if", "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
 };
 
-static Str luadefs[] = {"function"};
+static std::string_view luadefs[] = {"function"};
 
-static Str phpkeywords[] = {
+static std::string_view phpkeywords[] = {
     "abstract", "and", "array", "as", "break", "callable", "case", "catch",
     "class", "clone", "const", "continue", "declare", "default", "do",
     "echo", "else", "elseif", "empty", "enddeclare", "endfor", "endforeach",
@@ -169,18 +169,18 @@ static Str phpkeywords[] = {
     "trait", "true", "try", "unset", "use", "var", "while", "xor", "yield",
 };
 
-static Str phpdefs[] = {"class", "function"};
+static std::string_view phpdefs[] = {"class", "function"};
 
-static Str perlkeywords[] = {
+static std::string_view perlkeywords[] = {
     "and", "cmp", "continue", "do", "else", "elsif", "eq", "for", "foreach",
     "ge", "gt", "if", "last", "le", "local", "lt", "my", "ne", "next", "no",
     "not", "or", "our", "package", "redo", "require", "return", "sub",
     "unless", "until", "use", "while", "xor",
 };
 
-static Str perldefs[] = {"sub"};
+static std::string_view perldefs[] = {"sub"};
 
-static Str rubykeywords[] = {
+static std::string_view rubykeywords[] = {
     "BEGIN", "END", "alias", "and", "begin", "break", "case", "class",
     "def", "do", "else", "elsif", "end", "ensure", "false", "for", "if",
     "in", "module", "next", "nil", "not", "or", "redo", "rescue", "retry",
@@ -188,9 +188,9 @@ static Str rubykeywords[] = {
     "when", "while", "yield",
 };
 
-static Str rubydefs[] = {"class", "def", "module"};
+static std::string_view rubydefs[] = {"class", "def", "module"};
 
-static Str juliakeywords[] = {
+static std::string_view juliakeywords[] = {
     "abstract", "baremodule", "begin", "break", "catch", "const",
     "continue", "do", "else", "elseif", "end", "export", "false", "finally",
     "for", "function", "global", "if", "import", "in", "isa", "let",
@@ -198,9 +198,9 @@ static Str juliakeywords[] = {
     "return", "struct", "true", "try", "using", "where", "while",
 };
 
-static Str juliadefs[] = {"function", "macro", "module", "struct"};
+static std::string_view juliadefs[] = {"function", "macro", "module", "struct"};
 
-static Str matlabkeywords[] = {
+static std::string_view matlabkeywords[] = {
     "break", "case", "catch", "classdef", "continue", "do", "else",
     "elseif", "end", "end_try_catch", "end_unwind_protect", "endfor",
     "endfunction", "endif", "endswitch", "endwhile", "for", "function",
@@ -208,9 +208,9 @@ static Str matlabkeywords[] = {
     "try", "until", "unwind_protect", "unwind_protect_cleanup", "while",
 };
 
-static Str matlabdefs[] = {"function"};
+static std::string_view matlabdefs[] = {"function"};
 
-static Str sqlkeywords[] = {
+static std::string_view sqlkeywords[] = {
     "add", "all", "alter", "and", "as", "asc", "begin", "between", "by",
     "case", "cast", "check", "collate", "column", "commit", "constraint",
     "create", "cross", "default", "delete", "desc", "distinct", "drop",
@@ -223,12 +223,12 @@ static Str sqlkeywords[] = {
     "when", "where", "with", "without",
 };
 
-static Str sqltypes[] = {
+static std::string_view sqltypes[] = {
     "blob", "boolean", "char", "datetime", "decimal", "double", "float",
     "int", "integer", "numeric", "real", "text", "varchar",
 };
 
-static Str basickeywords[] = {
+static std::string_view basickeywords[] = {
     "and", "as", "call", "case", "close", "cls", "common", "const", "data",
     "declare", "def", "dim", "do", "else", "elseif", "end", "exit", "for",
     "function", "gosub", "goto", "if", "input", "is", "let", "locate",
@@ -238,10 +238,10 @@ static Str basickeywords[] = {
     "while", "xor",
 };
 
-static Str basictypes[] = {"double", "integer", "long", "single", "string"};
-static Str basicdefs[]  = {"function", "sub", "type"};
+static std::string_view basictypes[] = {"double", "integer", "long", "single", "string"};
+static std::string_view basicdefs[]  = {"function", "sub", "type"};
 
-static Str gnuplotkeywords[] = {
+static std::string_view gnuplotkeywords[] = {
     "axes", "border", "boxes", "circles", "every", "fill", "for", "in",
     "lines", "linespoints", "linestyle", "linetype", "linewidth", "lt",
     "lw", "noborder", "notitle", "output", "palette", "plot", "points",
@@ -250,7 +250,7 @@ static Str gnuplotkeywords[] = {
     "with", "xlabel", "xrange", "ylabel", "yrange",
 };
 
-static Str vimkeywords[] = {
+static std::string_view vimkeywords[] = {
     "au", "augroup", "autocmd", "call", "cexpr", "colorscheme", "command",
     "echo", "edit", "else", "elseif", "endfor", "endfunction", "endif",
     "endwhile", "exe", "execute", "filetype", "for", "function", "if",
@@ -259,11 +259,11 @@ static Str vimkeywords[] = {
     "update", "vmap", "vnoremap", "while",
 };
 
-static Str jsonkeywords[] = {"false", "null", "true"};
+static std::string_view jsonkeywords[] = {"false", "null", "true"};
 
 // Lisp family: special forms and macros at the head of a form
 
-static Str lispheads[] = {
+static std::string_view lispheads[] = {
     "and", "begin", "block", "case", "case-lambda", "catch", "cl-block",
     "cl-case", "cl-destructuring-bind", "cl-do", "cl-dolist", "cl-dotimes",
     "cl-ecase", "cl-etypecase", "cl-flet", "cl-labels", "cl-letf",
@@ -282,7 +282,7 @@ static Str lispheads[] = {
 };
 
 // Heads that define a name, which is highlighted as a definition
-static Str lispdefs[] = {
+static std::string_view lispdefs[] = {
     "cl-defgeneric", "cl-defmacro", "cl-defmethod", "cl-defstruct",
     "cl-defsubst", "cl-defun", "def", "defadvice", "defalias", "defclass",
     "defconst", "defcustom", "defface", "defgeneric", "defgroup", "define",
@@ -292,14 +292,14 @@ static Str lispdefs[] = {
     "deftest", "deftype", "defun", "defvar", "defvar-local", "ert-deftest",
 };
 
-static Str watdefs[]  = {"func", "global", "module"};
-static Str wattypes[] = {
+static std::string_view watdefs[]  = {"func", "global", "module"};
+static std::string_view wattypes[] = {
     "anyfunc", "externref", "f32", "f64", "funcref", "i32", "i64", "v128",
 };
 
 // Assembly
 
-static Str nasmdirectives[] = {
+static std::string_view nasmdirectives[] = {
     "absolute", "align", "alignb", "bits", "common", "cpu", "db", "dd",
     "default", "do", "dq", "dt", "dw", "dy", "dz", "endstruc", "equ",
     "export", "extern", "global", "iend", "incbin", "istruc", "org", "resb",
@@ -307,18 +307,18 @@ static Str nasmdirectives[] = {
     "segment", "struc", "times", "use16", "use32", "use64",
 };
 
-static Str nasmsizes[] = {
+static std::string_view nasmsizes[] = {
     "abs", "byte", "dword", "far", "near", "oword", "ptr", "qword", "rel",
     "short", "strict", "tword", "word", "yword", "zword",
 };
 
 // Instruction prefixes, followed by another mnemonic
-static Str asmprefixes[] = {
+static std::string_view asmprefixes[] = {
     "lock", "rep", "repe", "repne", "repnz", "repz",
 };
 
 // Numbered registers (r8d, xmm0, ...) are recognized separately
-static Str x86regs[] = {
+static std::string_view x86regs[] = {
     "ah", "al", "ax", "bh", "bl", "bp", "bpl", "bx", "ch", "cl", "cs", "cx",
     "dh", "di", "dil", "dl", "ds", "dx", "eax", "ebp", "ebx", "ecx", "edi",
     "edx", "eip", "es", "esi", "esp", "fs", "gs", "ip", "rax", "rbp", "rbx",
@@ -326,11 +326,11 @@ static Str x86regs[] = {
     "ss",
 };
 
-static Str a64regs[] = {"fp", "lr", "pc", "sp", "wsp", "wzr", "xzr"};
+static std::string_view a64regs[] = {"fp", "lr", "pc", "sp", "wsp", "wzr", "xzr"};
 
 // Shell, make, batch
 
-static Str shkeywords[] = {
+static std::string_view shkeywords[] = {
     "alias", "case", "cd", "declare", "do", "done", "echo", "elif", "else",
     "esac", "eval", "exec", "exit", "export", "fi", "for", "function", "if",
     "in", "local", "printf", "read", "readonly", "return", "select", "set",
@@ -338,13 +338,13 @@ static Str shkeywords[] = {
     "until", "while",
 };
 
-static Str makedirectives[] = {
+static std::string_view makedirectives[] = {
     "-include", "define", "else", "endef", "endif", "export", "ifdef",
     "ifeq", "ifndef", "ifneq", "include", "override", "sinclude",
     "undefine", "unexport", "vpath",
 };
 
-static Str batkeywords[] = {
+static std::string_view batkeywords[] = {
     "call", "cd", "copy", "defined", "del", "do", "echo", "else",
     "endlocal", "equ", "errorlevel", "exist", "exit", "for", "geq", "goto",
     "gtr", "if", "in", "leq", "lss", "md", "mkdir", "move", "neq", "not",
@@ -352,6 +352,6 @@ static Str batkeywords[] = {
     "shift", "start", "title", "type",
 };
 
-static Str yamlkeywords[] = {"false", "null", "true"};
+static std::string_view yamlkeywords[] = {"false", "null", "true"};
 
-static Str basicrem[] = {"rem"};  // also for batch files
+static std::string_view basicrem[] = {"rem"};  // also for batch files

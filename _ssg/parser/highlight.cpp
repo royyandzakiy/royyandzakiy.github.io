@@ -31,11 +31,11 @@ enum {
     HL_HEADING,
 };
 
-static Str hlclasses[] = {"", "c", "k", "t", "s", "m", "p", "v", "f", "gi", "gd", "gh"};
+static std::string_view hlclasses[] = {"", "c", "k", "t", "s", "m", "p", "v", "f", "gi", "gd", "gh"};
 
 struct Hl {
     Buf *b;
-    Str  s;     // the code
+    std::string_view  s;     // the code
     iz   i;     // scan position
     iz   done;  // code before this position has been written
 };
@@ -43,7 +43,7 @@ struct Hl {
 // Write the pending plain text before the scan position.
 static void hlflush(Hl *x)
 {
-    printhtml(x->b, span(x->s.data+x->done, x->s.data+x->i));
+    printhtml(x->b, std::string_view(x->s.data()+x->done, x->s.data()+x->i));
     x->done = x->i;
 }
 
@@ -64,7 +64,7 @@ static void hlclose(Hl *x)
 // Emit the code from the scan position to end as one token.
 static void hltoken(Hl *x, i32 cls, iz end)
 {
-    assert(end >= x->i && end <= x->s.len);
+    assert(end >= x->i && end <= std::ssize(x->s));
     if (cls!=HL_PLAIN && end>x->i) {
         hlopen(x, cls);
         x->i = end;
@@ -76,15 +76,15 @@ static void hltoken(Hl *x, i32 cls, iz end)
 
 // Scanning helpers
 
-static u8 hlat(Str s, iz i)  // zero outside the string
+static u8 hlat(std::string_view s, iz i)  // zero outside the string
 {
-    return i>=0 && i<s.len ? s.data[i] : 0;
+    return i>=0 && i<std::ssize(s) ? (u8)s[i] : 0;
 }
 
-static b32 hlin(u8 c, Str set)
+static b32 hlin(u8 c, std::string_view set)
 {
-    for (iz i = 0; i < set.len; i++) {
-        if (c && c==set.data[i]) return 1;
+    for (iz i = 0; i < std::ssize(set); i++) {
+        if (c && c==(u8)set[i]) return 1;
     }
     return 0;
 }
@@ -104,51 +104,51 @@ static b32 hlhex(u8 c)
     return digit(c) || (lowercase(c)>='a' && lowercase(c)<='f');
 }
 
-static iz hlidend(Str s, iz i)
+static iz hlidend(std::string_view s, iz i)
 {
-    for (; i<s.len && hlidchar(s.data[i]); i++) {}
+    for (; i<std::ssize(s) && hlidchar((u8)s[i]); i++) {}
     return i;
 }
 
-static iz hleol(Str s, iz i)
+static iz hleol(std::string_view s, iz i)
 {
-    for (; i<s.len && s.data[i]!='\n'; i++) {}
+    for (; i<std::ssize(s) && s[i]!='\n'; i++) {}
     return i;
 }
 
-static iz hlblank(Str s, iz i)  // skip spaces and tabs
+static iz hlblank(std::string_view s, iz i)  // skip spaces and tabs
 {
-    for (; i<s.len && (s.data[i]==' ' || s.data[i]=='\t'); i++) {}
+    for (; i<std::ssize(s) && (s[i]==' ' || s[i]=='\t'); i++) {}
     return i;
 }
 
-static b32 hlhas(Str s, iz i, Str pat)
+static b32 hlhas(std::string_view s, iz i, std::string_view pat)
 {
-    return pat.len && i+pat.len<=s.len && takehead(cuthead(s, i), pat.len)==pat;
+    return std::ssize(pat) && i+std::ssize(pat)<=std::ssize(s) && (s.substr(i)).substr(0, std::ssize(pat))==pat;
 }
 
 // End of the UTF-8 sequence starting at s[i].
-static iz hlcharend(Str s, iz i)
+static iz hlcharend(std::string_view s, iz i)
 {
-    u8 c = s.data[i];
+    u8 c = s[i];
     iz n = c>=0xf0 ? 4 : c>=0xe0 ? 3 : c>=0xc0 ? 2 : 1;
-    return i+n<s.len ? i+n : s.len;
+    return i+n<std::ssize(s) ? i+n : std::ssize(s);
 }
 
 // End of a number starting with a digit, or a period and digit:
 // decimal, hex, floats with exponents, and any alphanumeric suffix.
-static iz hlnumber(Str s, iz i)
+static iz hlnumber(std::string_view s, iz i)
 {
-    b32 hex = s.data[i]=='0' && lowercase(hlat(s, i+1))=='x';
+    b32 hex = s[i]=='0' && lowercase(hlat(s, i+1))=='x';
     iz  j   = i;
-    for (; j < s.len; j++) {
-        u8 c = s.data[j];
+    for (; j < std::ssize(s); j++) {
+        u8 c = s[j];
         if (alnum(c) || c=='_') {
             continue;
         } else if (c=='.' && digit(hlat(s, j+1))) {
             continue;
         } else if ((c=='+' || c=='-') && j>i) {
-            u8 e = lowercase(s.data[j-1]);
+            u8 e = lowercase((u8)s[j-1]);
             if (hex ? e=='p' : e=='e') continue;
         }
         break;
@@ -157,13 +157,13 @@ static iz hlnumber(Str s, iz i)
 }
 
 struct HlWords {
-    Str *data;
+    std::string_view *data;
     iz   len;
 };
 
 #define HLWORDS(a)  HlWords{a, std::ssize(a)}
 
-static b32 hlmember(HlWords w, Str s)
+static b32 hlmember(HlWords w, std::string_view s)
 {
     for (iz lo = 0, hi = w.len; lo < hi;) {
         iz  mid = lo + (hi - lo)/2;
@@ -180,18 +180,18 @@ static b32 hlmember(HlWords w, Str s)
 }
 
 // Like hlmember, but optionally ignoring ASCII case (lowercase table).
-static b32 hlword(HlWords w, Str s, b32 fold)
+static b32 hlword(HlWords w, std::string_view s, b32 fold)
 {
-    u8 tmp[32];
+    char tmp[32];
     if (!fold) {
         return hlmember(w, s);
-    } else if (s.len > std::ssize(tmp)) {
+    } else if (std::ssize(s) > std::ssize(tmp)) {
         return 0;
     }
-    for (iz i = 0; i < s.len; i++) {
-        tmp[i] = lowercase(s[i]);
+    for (iz i = 0; i < std::ssize(s); i++) {
+        tmp[i] = (char)lowercase(s[i]);
     }
-    return hlmember(w, {tmp, s.len});
+    return hlmember(w, {tmp, s.size()});
 }
 
 #include "langs.cpp"
@@ -229,11 +229,11 @@ enum {
 
 struct HlLang {
     void   (*lex)(Hl *, HlLang *);
-    Str     comment;    // line comments
-    Str     comment2;
-    Str     open;       // block comments
-    Str     close;
-    Str     quotes;     // string delimiters
+    std::string_view     comment;    // line comments
+    std::string_view     comment2;
+    std::string_view     open;       // block comments
+    std::string_view     close;
+    std::string_view     quotes;     // string delimiters
     u8      escape;     // escape character in strings, or zero
     i32     flags;
     HlWords keywords;
@@ -248,23 +248,23 @@ struct HlLang {
 
 // End of the string literal starting at s[i]. Only backquoted strings
 // may span lines unless the newline is escaped.
-static iz hlstring(Str s, iz i, HlLang *l)
+static iz hlstring(std::string_view s, iz i, HlLang *l)
 {
-    u8  q     = s.data[i];
+    u8  q     = s[i];
     u8  esc   = l->escape;
     b32 multi = q == '`';
     if ((l->flags & LEX_TRIPLE) && hlat(s, i+1)==q && hlat(s, i+2)==q) {
-        for (iz j = i+3; j < s.len; j++) {
-            if (esc && s.data[j]==esc) {
+        for (iz j = i+3; j < std::ssize(s); j++) {
+            if (esc && (u8)s[j]==esc) {
                 j++;
-            } else if (s.data[j]==q && hlat(s, j+1)==q && hlat(s, j+2)==q) {
+            } else if ((u8)s[j]==q && hlat(s, j+1)==q && hlat(s, j+2)==q) {
                 return j + 3;
             }
         }
-        return s.len;
+        return std::ssize(s);
     }
-    for (iz j = i+1; j < s.len; j++) {
-        u8 c = s.data[j];
+    for (iz j = i+1; j < std::ssize(s); j++) {
+        u8 c = s[j];
         if (esc && c==esc) {
             j++;
         } else if (c == q) {
@@ -276,36 +276,36 @@ static iz hlstring(Str s, iz i, HlLang *l)
             return j;
         }
     }
-    return s.len;
+    return std::ssize(s);
 }
 
 // Capitalized with a lowercase letter, like Arena or Lisp_Object, but not
 // a prefixed constant like SYS_write.
-static b32 hlcamel(Str w)
+static b32 hlcamel(std::string_view w)
 {
-    if (!w.len || w[0]<'A' || w[0]>'Z') {
+    if (w.empty() || w[0]<'A' || w[0]>'Z') {
         return 0;
     }
     iz  i     = 1;
     b32 lower = 0;
-    for (; i<w.len && w[i]!='_'; i++) {
+    for (; i<std::ssize(w) && w[i]!='_'; i++) {
         lower |= w[i]>='a' && w[i]<='z';
     }
-    if (!lower && i+1<w.len && w[i+1]>='a' && w[i+1]<='z') {
+    if (!lower && i+1<std::ssize(w) && w[i+1]>='a' && w[i+1]<='z') {
         return 0;
     }
-    for (; i < w.len; i++) {
+    for (; i < std::ssize(w); i++) {
         lower |= w[i]>='a' && w[i]<='z';
     }
     return lower;
 }
 
 // End of the regular expression literal at s[i], or zero if none.
-static iz hlregex(Str s, iz i)
+static iz hlregex(std::string_view s, iz i)
 {
     b32 inclass = 0;
-    for (iz j = i+1; j < s.len; j++) {
-        u8 c = s.data[j];
+    for (iz j = i+1; j < std::ssize(s); j++) {
+        u8 c = s[j];
         if (c == '\n') {
             return 0;
         } else if (c == '\\') {
@@ -315,7 +315,7 @@ static iz hlregex(Str s, iz i)
         } else if (c == ']') {
             inclass = 0;
         } else if (c=='/' && !inclass) {
-            for (j++; j<s.len && letter(s.data[j]); j++) {}  // flags
+            for (j++; j<std::ssize(s) && letter((u8)s[j]); j++) {}  // flags
             return j;
         }
     }
@@ -324,7 +324,7 @@ static iz hlregex(Str s, iz i)
 
 static void lexgeneric(Hl *x, HlLang *l)
 {
-    Str s     = x->s;
+    std::string_view s     = x->s;
     i32 flags = l->flags;
     b32 fold  = flags & LEX_CASEFOLD;
     b32 bol   = 1;         // nothing but whitespace so far on this line
@@ -336,12 +336,12 @@ static void lexgeneric(Hl *x, HlLang *l)
     i32 next  = HL_PLAIN;  // class for a name following a def or tdef
     i32 tdef  = -1;        // brace depth of a typedef in progress
     iz  defat = -1;        // position of a name after "function out ="
-    Str known[16];         // type names declared so far
+    std::string_view known[16];         // type names declared so far
     i32 nknown = 0;
 
-    while (x->i < s.len) {
+    while (x->i < std::ssize(s)) {
         iz i = x->i;
-        u8 c = s.data[i];
+        u8 c = s[i];
 
         if (c == '\n') {
             if (pp && hlat(s, i-1)!='\\') {
@@ -363,9 +363,8 @@ static void lexgeneric(Hl *x, HlLang *l)
         next = HL_PLAIN;
 
         if (hlhas(s, i, l->open)) {
-            iz end = find(cuthead(s, i+l->open.len), l->close);
-            end = end<0 ? s.len : i+l->open.len+end+l->close.len;
-            hltoken(x, HL_COMMENT, end);
+            uz end = s.find(l->close, i+l->open.size());
+            hltoken(x, HL_COMMENT, end==s.npos ? std::ssize(s) : (iz)(end+l->close.size()));
             continue;
         }
 
@@ -378,14 +377,14 @@ static void lexgeneric(Hl *x, HlLang *l)
         if ((flags & LEX_CPP) && c=='#' && first) {
             iz  beg = hlblank(s, i+1);
             iz  end = hlidend(s, beg);
-            Str dir = span(s.data+beg, s.data+end);
+            std::string_view dir = std::string_view(s.data()+beg, s.data()+end);
             hltoken(x, HL_PREPROC, end);
             pp   = 1;
             prev = 0;
             if (dir=="include" || dir=="import") {
                 iz j = hlblank(s, end);
                 iz k = j;
-                for (; k<s.len && s.data[k]!='>' && s.data[k]!='\n'; k++) {}
+                for (; k<std::ssize(s) && s[k]!='>' && s[k]!='\n'; k++) {}
                 if (hlat(s, j)=='<' && hlat(s, k)=='>') {
                     x->i = j;
                     hltoken(x, HL_STRING, k+1);
@@ -398,7 +397,7 @@ static void lexgeneric(Hl *x, HlLang *l)
 
         if ((flags & LEX_AT) && c=='@' && hlidstart(hlat(s, i+1))) {
             iz end = hlidend(s, i+1);
-            if (!hlword(l->keywords, span(s.data+i+1, s.data+end), fold)) {
+            if (!hlword(l->keywords, std::string_view(s.data()+i+1, s.data()+end), fold)) {
                 while (hlat(s, end)=='.' && hlidstart(hlat(s, end+1))) {
                     end = hlidend(s, end+1);
                 }
@@ -436,7 +435,7 @@ static void lexgeneric(Hl *x, HlLang *l)
 
         if ((flags & LEX_VIM) && c=='<' && letter(hlat(s, i+1))) {
             iz end = i + 1;
-            for (; end<s.len && (alnum(s.data[end]) || s.data[end]=='-'); end++) {}
+            for (; end<std::ssize(s) && (alnum((u8)s[end]) || s[end]=='-'); end++) {}
             if (hlat(s, end) == '>') {
                 hltoken(x, HL_VAR, end+1);
                 continue;
@@ -469,7 +468,7 @@ static void lexgeneric(Hl *x, HlLang *l)
         if ((flags & LEX_BASIC) && c=='&' && lowercase(hlat(s, i+1))=='h' &&
                 hlhex(hlat(s, i+2))) {
             iz end = i + 2;
-            for (; end<s.len && hlhex(s.data[end]); end++) {}
+            for (; end<std::ssize(s) && hlhex((u8)s[end]); end++) {}
             hltoken(x, HL_NUMBER, end + (hlat(s, end)=='&'));
             value = 1;
             continue;
@@ -477,8 +476,8 @@ static void lexgeneric(Hl *x, HlLang *l)
 
         if (hlidstart(c) || ((flags & LEX_IDDOLLAR) && c=='$')) {
             iz end = i;
-            for (; end < s.len; end++) {
-                u8  d    = s.data[end];
+            for (; end < std::ssize(s); end++) {
+                u8  d    = s[end];
                 b32 more = (d=='$' && (flags & LEX_IDDOLLAR)) ||
                            (d=='-' && (flags & LEX_VIM));  // utf-8
                 if (!hlidchar(d) && !more) break;
@@ -486,7 +485,7 @@ static void lexgeneric(Hl *x, HlLang *l)
             if ((flags & LEX_BASIC) && hlin(hlat(s, end), "$%&!#")) {
                 end++;
             }
-            Str word = span(s.data+i, s.data+end);
+            std::string_view word = std::string_view(s.data()+i, s.data()+end);
 
             if (hlin(hlat(s, end), l->quotes) && hlmember(l->prefixes, word)) {
                 hltoken(x, HL_STRING, hlstring(s, end, l));
@@ -519,7 +518,7 @@ static void lexgeneric(Hl *x, HlLang *l)
                     if ((flags & LEX_OUTPUTS) && first) {
                         // function [a, b] = name(...)
                         iz eq = end;
-                        for (; eq<s.len && !hlin(s.data[eq], "=(\n"); eq++) {}
+                        for (; eq<std::ssize(s) && !hlin((u8)s[eq], "=(\n"); eq++) {}
                         if (hlat(s, eq) == '=') {
                             next  = HL_PLAIN;
                             defat = hlblank(s, eq+1);
@@ -534,7 +533,7 @@ static void lexgeneric(Hl *x, HlLang *l)
                 // plain
             } else if (isknown || hlword(l->types, word, fold)) {
                 cls = HL_TYPE;
-            } else if ((flags & LEX_TSUFFIX) && word.len>2 && endswith(word, "_t")) {
+            } else if ((flags & LEX_TSUFFIX) && std::ssize(word)>2 && word.ends_with("_t")) {
                 cls = HL_TYPE;
             } else if ((flags & LEX_CAMEL) && !call && hlcamel(word)) {
                 cls = HL_TYPE;
@@ -613,59 +612,59 @@ static b32 hllispdelim(u8 c)
     return whitespace(c) || hlin(c, "()[]{}\";'`,");
 }
 
-static iz hllispsym(Str s, iz i)  // end of the symbol at s[i]
+static iz hllispsym(std::string_view s, iz i)  // end of the symbol at s[i]
 {
-    for (; i<s.len && !hllispdelim(s.data[i]); i++) {
-        i += s.data[i] == '\\';  // escaped character
+    for (; i<std::ssize(s) && !hllispdelim((u8)s[i]); i++) {
+        i += s[i] == '\\';  // escaped character
     }
-    return i<s.len ? i : s.len;
+    return i<std::ssize(s) ? i : std::ssize(s);
 }
 
-static iz hllispstr(Str s, iz i)  // end of the string at s[i]
+static iz hllispstr(std::string_view s, iz i)  // end of the string at s[i]
 {
-    for (iz j = i+1; j < s.len; j++) {
-        if (s.data[j] == '\\') {
+    for (iz j = i+1; j < std::ssize(s); j++) {
+        if (s[j] == '\\') {
             j++;
-        } else if (s.data[j] == '"') {
+        } else if (s[j] == '"') {
             return j + 1;
         }
     }
-    return s.len;
+    return std::ssize(s);
 }
 
-static b32 hllispnum(Str w)
+static b32 hllispnum(std::string_view w)
 {
     iz i = 0;
     iz n = 0;  // digits
-    i += w.len && (w[0]=='+' || w[0]=='-');
-    for (; i<w.len && digit(w[i]); i++, n++) {}
-    if (i<w.len && w[i]=='.') {
-        for (i++; i<w.len && digit(w[i]); i++, n++) {}
+    i += std::ssize(w) && (w[0]=='+' || w[0]=='-');
+    for (; i<std::ssize(w) && digit(w[i]); i++, n++) {}
+    if (i<std::ssize(w) && w[i]=='.') {
+        for (i++; i<std::ssize(w) && digit(w[i]); i++, n++) {}
     }
-    if (n && i<w.len && lowercase(w[i])=='e') {
+    if (n && i<std::ssize(w) && lowercase(w[i])=='e') {
         i++;
-        i += i<w.len && (w[i]=='+' || w[i]=='-');
+        i += i<std::ssize(w) && (w[i]=='+' || w[i]=='-');
         iz e = i;
-        for (; i<w.len && digit(w[i]); i++) {}
+        for (; i<std::ssize(w) && digit(w[i]); i++) {}
         n *= i > e;
-    } else if (n && i<w.len && w[i]=='/') {  // ratio
+    } else if (n && i<std::ssize(w) && w[i]=='/') {  // ratio
         iz d = ++i;
-        for (; i<w.len && digit(w[i]); i++) {}
+        for (; i<std::ssize(w) && digit(w[i]); i++) {}
         n *= i > d;
     }
-    return n && i==w.len;
+    return n && i==std::ssize(w);
 }
 
 static void lexlisp(Hl *x, HlLang *l)
 {
-    Str s    = x->s;
+    std::string_view s    = x->s;
     b32 wat  = l->flags & LEX_WAT;
     b32 head = 0;         // next symbol is the head of a form
     i32 next = HL_PLAIN;  // class for the next symbol
 
-    while (x->i < s.len) {
+    while (x->i < std::ssize(s)) {
         iz i = x->i;
-        u8 c = s.data[i];
+        u8 c = s[i];
         if (whitespace(c)) {
             x->i++;
             continue;
@@ -681,11 +680,11 @@ static void lexlisp(Hl *x, HlLang *l)
         } else if (wat && c=='(' && hlat(s, i+1)==';') {  // (; nesting ;)
             iz  j    = i;
             i32 nest = 0;
-            while (j < s.len) {
-                if (s.data[j]=='(' && hlat(s, j+1)==';') {
+            while (j < std::ssize(s)) {
+                if (s[j]=='(' && hlat(s, j+1)==';') {
                     nest++;
                     j += 2;
-                } else if (s.data[j]==';' && hlat(s, j+1)==')') {
+                } else if (s[j]==';' && hlat(s, j+1)==')') {
                     j += 2;
                     if (!--nest) break;
                 } else {
@@ -714,20 +713,20 @@ static void lexlisp(Hl *x, HlLang *l)
         } else if (c == '#') {
             u8  d   = hlat(s, i+1);
             iz  end = hllispsym(s, i+1);
-            Str w   = span(s.data+i+1, s.data+end);
+            std::string_view w   = std::string_view(s.data()+i+1, s.data()+end);
             if (d=='\'' || d==':') {  // #'function #:uninterned
                 end = hllispsym(s, i+2);
                 hltoken(x, end>i+2 ? HL_VAR : HL_PLAIN, end);
             } else if (d == '\\') {  // #\c
-                end = i+2<s.len ? hllispsym(s, hlcharend(s, i+2)) : s.len;
+                end = i+2<std::ssize(s) ? hllispsym(s, hlcharend(s, i+2)) : std::ssize(s);
                 hltoken(x, HL_STRING, end);
             } else if (d == '"') {  // #"regex"
                 hltoken(x, HL_STRING, hllispstr(s, i+1));
             } else if (w=="t" || w=="f" || w=="true" || w=="false") {
                 hltoken(x, HL_KEYWORD, end);
-            } else if (w.len>1 && hlin(lowercase(d), "box")) {
+            } else if (std::ssize(w)>1 && hlin(lowercase(d), "box")) {
                 b32 ok = 1;
-                for (iz k = 1; k < w.len; k++) {
+                for (iz k = 1; k < std::ssize(w); k++) {
                     ok &= hlhex(w[k]) || (k==1 && (w[k]=='-' || w[k]=='+'));
                 }
                 hltoken(x, ok ? HL_NUMBER : HL_PLAIN, ok ? end : i+1);
@@ -735,9 +734,9 @@ static void lexlisp(Hl *x, HlLang *l)
                 x->i++;
             }
 
-        } else if ((l->flags & LEX_ELISP) && c=='?' && i+1<s.len) {  // ?c
+        } else if ((l->flags & LEX_ELISP) && c=='?' && i+1<std::ssize(s)) {  // ?c
             iz j = i + 1;
-            j += s.data[j]=='\\' && j+1<s.len;
+            j += s[j]=='\\' && j+1<std::ssize(s);
             hltoken(x, HL_STRING, hlcharend(s, j));
 
         } else if (hlin(c, ")[]{}")) {
@@ -746,7 +745,7 @@ static void lexlisp(Hl *x, HlLang *l)
         } else {
             iz  end = hllispsym(s, i);
             end += end == i;  // lone backslash
-            Str w   = span(s.data+i, s.data+end);
+            std::string_view w   = std::string_view(s.data()+i, s.data()+end);
             i32 cls = HL_PLAIN;
             if (hllispnum(w)) {
                 cls = HL_NUMBER;
@@ -765,7 +764,7 @@ static void lexlisp(Hl *x, HlLang *l)
                 cls = hlmember(HLWORDS(wattypes), w) ? HL_TYPE : HL_PLAIN;
             } else if (w=="t" || w=="nil" || w=="true" || w=="false") {
                 cls = HL_KEYWORD;
-            } else if (c=='&' && w.len>1) {
+            } else if (c=='&' && std::ssize(w)>1) {
                 cls = HL_KEYWORD;  // &optional
             }
             hltoken(x, cls, end);
@@ -781,36 +780,36 @@ static b32 hlasmchar(u8 c)
     return hlidchar(c) || c=='.' || c=='@' || c=='?';
 }
 
-static b32 hlx86reg(Str w)  // lowercase
+static b32 hlx86reg(std::string_view w)  // lowercase
 {
-    static Str numbered[] = {"xmm", "ymm", "zmm", "mm", "st", "cr", "dr", "k", "r"};
+    static std::string_view numbered[] = {"xmm", "ymm", "zmm", "mm", "st", "cr", "dr", "k", "r"};
     if (hlmember(HLWORDS(x86regs), w)) {
         return 1;
     }
     for (iz p = 0; p < std::ssize(numbered); p++) {
-        if (!startswith(w, numbered[p])) {
+        if (!w.starts_with(numbered[p])) {
             continue;
         }
-        Str rest = cuthead(w, numbered[p].len);
+        std::string_view rest = w.substr(std::ssize(numbered[p]));
         iz  n    = 0;
-        for (; n<rest.len && n<3 && digit(rest[n]); n++) {}
-        rest = cuthead(rest, n);
-        b32 size = numbered[p]=="r" && rest.len==1 && hlin(rest[0], "bwdl");  // r8d
-        if (n && n<3 && (!rest.len || size)) {
+        for (; n<std::ssize(rest) && n<3 && digit(rest[n]); n++) {}
+        rest = rest.substr(n);
+        b32 size = numbered[p]=="r" && std::ssize(rest)==1 && hlin(rest[0], "bwdl");  // r8d
+        if (n && n<3 && (rest.empty() || size)) {
             return 1;
         }
     }
     return 0;
 }
 
-static b32 hla64reg(Str w)  // lowercase
+static b32 hla64reg(std::string_view w)  // lowercase
 {
     if (hlmember(HLWORDS(a64regs), w)) {
         return 1;
-    } else if (w.len<2 || w.len>3 || !hlin(w[0], "xwvqdshb")) {
+    } else if (std::ssize(w)<2 || std::ssize(w)>3 || !hlin(w[0], "xwvqdshb")) {
         return 0;
     }
-    for (iz i = 1; i < w.len; i++) {
+    for (iz i = 1; i < std::ssize(w); i++) {
         if (!digit(w[i])) return 0;
     }
     return 1;
@@ -818,16 +817,16 @@ static b32 hla64reg(Str w)  // lowercase
 
 static void lexasm(Hl *x, HlLang *l)
 {
-    Str s    = x->s;
+    std::string_view s    = x->s;
     b32 nasm = l->flags & LEX_NASM;
     b32 att  = l->flags & LEX_ATT;
     b32 arm  = l->flags & LEX_ARM;
     b32 stmt = 1;         // expecting a label or mnemonic
     i32 next = HL_PLAIN;  // class for the next name
 
-    while (x->i < s.len) {
+    while (x->i < std::ssize(s)) {
         iz i = x->i;
-        u8 c = s.data[i];
+        u8 c = s[i];
         if (c == '\n') {
             stmt = hlat(s, i-1) != '\\';
             next = HL_PLAIN;
@@ -848,8 +847,8 @@ static void lexasm(Hl *x, HlLang *l)
             hltoken(x, HL_COMMENT, hleol(s, i));
 
         } else if (c=='/' && hlat(s, i+1)=='*' && !nasm) {
-            iz end = find(cuthead(s, i+2), "*/");
-            hltoken(x, HL_COMMENT, end<0 ? s.len : i+2+end+2);
+            uz end = s.find("*/", i+2);
+            hltoken(x, HL_COMMENT, end==s.npos ? std::ssize(s) : (iz)end+2);
 
         } else if (c == ';') {  // GNU as statement separator
             stmt = 1;
@@ -857,19 +856,19 @@ static void lexasm(Hl *x, HlLang *l)
 
         } else if (c=='\'' && !nasm) {  // GNU as character: 'c or 'c'
             iz end = i + 1 + (hlat(s, i+1)=='\\');
-            end = end<s.len && s.data[end]!='\n' ? hlcharend(s, end) : end;
+            end = end<std::ssize(s) && s[end]!='\n' ? hlcharend(s, end) : end;
             hltoken(x, HL_STRING, end + (hlat(s, end)=='\''));
 
         } else if (c=='"' || c=='\'' || (c=='`' && nasm)) {
             iz end = i + 1;
-            for (; end<s.len && s.data[end]!=c && s.data[end]!='\n'; end++) {
-                end += s.data[end]=='\\' && end+1<s.len && s.data[end+1]!='\n';
+            for (; end<std::ssize(s) && (u8)s[end]!=c && s[end]!='\n'; end++) {
+                end += s[end]=='\\' && end+1<std::ssize(s) && s[end+1]!='\n';
             }
             hltoken(x, HL_STRING, end + (hlat(s, end)==c));
 
         } else if (c=='%' && hlidstart(hlat(s, i+1)) && (att || start)) {
             iz  end = hlidend(s, i+1);
-            Str dir = span(s.data+i+1, s.data+end);
+            std::string_view dir = std::string_view(s.data()+i+1, s.data()+end);
             b32 def = dir=="define" || dir=="xdefine" || dir=="assign" || dir=="macro";
             if (nasm && def) {
                 next = HL_FUNC;
@@ -884,9 +883,9 @@ static void lexasm(Hl *x, HlLang *l)
         } else if (digit(c)) {
             iz  end = hlnumber(s, i);
             iz  n   = i;
-            for (; n<end && digit(s.data[n]); n++) {}
+            for (; n<end && digit((u8)s[n]); n++) {}
             b32 label = !nasm && start && hlat(s, end)==':' && n==end;
-            b32 ref   = !nasm && n==end-1 && hlin(s.data[n], "bf");  // 1f, 0b
+            b32 ref   = !nasm && n==end-1 && hlin((u8)s[n], "bf");  // 1f, 0b
             hltoken(x, label||ref ? HL_FUNC : HL_NUMBER, end);
             if (label) {
                 x->i++;  // colon
@@ -895,15 +894,15 @@ static void lexasm(Hl *x, HlLang *l)
 
         } else if (hlasmchar(c) && !digit(c)) {
             iz end = i;
-            for (; end < s.len; end++) {
-                u8 d = s.data[end];
+            for (; end < std::ssize(s); end++) {
+                u8 d = s[end];
                 if (!hlasmchar(d) && !(nasm && d=='$')) break;
             }
-            Str w = span(s.data+i, s.data+end);
-            u8  tmp[32];
-            Str lw = {tmp, w.len<std::ssize(tmp) ? w.len : 0};
-            for (iz k = 0; k < lw.len; k++) {
-                tmp[k] = lowercase(w[k]);
+            std::string_view w = std::string_view(s.data()+i, s.data()+end);
+            char tmp[32];
+            std::string_view lw = {tmp, w.size()<sizeof(tmp) ? w.size() : 0};
+            for (iz k = 0; k < std::ssize(lw); k++) {
+                tmp[k] = (char)lowercase(w[k]);
             }
 
             i32 cls = HL_PLAIN;
@@ -948,20 +947,20 @@ static void hlshcode(Hl *x, i32 depth, b32 nested);
 // A $ expansion at the scan position.
 static void hlshdollar(Hl *x, i32 depth)
 {
-    Str s = x->s;
+    std::string_view s = x->s;
     iz  i = x->i;
     u8  d = hlat(s, i+1);
     if (d == '{') {
         iz  end  = i + 1;
         i32 nest = 0;
-        for (; end < s.len; end++) {
-            nest += s.data[end]=='{';
-            if (s.data[end]=='}' && !--nest) {
+        for (; end < std::ssize(s); end++) {
+            nest += s[end]=='{';
+            if (s[end]=='}' && !--nest) {
                 end++;
                 break;
             }
         }
-        hltoken(x, HL_VAR, end<s.len ? end : s.len);
+        hltoken(x, HL_VAR, end<std::ssize(s) ? end : std::ssize(s));
     } else if (d=='(' && depth<HL_SHDEPTH) {
         hltoken(x, HL_VAR, i+2);
         hlshcode(x, depth+1, 1);
@@ -979,12 +978,12 @@ static void hlshdollar(Hl *x, i32 depth)
 
 static void hlshquote(Hl *x, i32 depth)  // "double-quoted string"
 {
-    Str s = x->s;
+    std::string_view s = x->s;
     hlopen(x, HL_STRING);
-    for (x->i++; x->i < s.len;) {
-        u8 c = s.data[x->i];
+    for (x->i++; x->i < std::ssize(s);) {
+        u8 c = s[x->i];
         if (c == '\\') {
-            x->i += 1 + (x->i+1 < s.len);
+            x->i += 1 + (x->i+1 < std::ssize(s));
         } else if (c == '"') {
             x->i++;
             break;
@@ -1000,19 +999,19 @@ static void hlshquote(Hl *x, i32 depth)  // "double-quoted string"
 // Lex shell code, returning early at an unmatched ")" when nested.
 static void hlshcode(Hl *x, i32 depth, b32 nested)
 {
-    Str s      = x->s;
+    std::string_view s      = x->s;
     i32 parens = 0;
-    while (x->i < s.len) {
+    while (x->i < std::ssize(s)) {
         iz i = x->i;
-        u8 c = s.data[i];
-        if (c=='#' && (!i || whitespace(s.data[i-1]) || hlin(s.data[i-1], ";|&("))) {
+        u8 c = s[i];
+        if (c=='#' && (!i || whitespace((u8)s[i-1]) || hlin((u8)s[i-1], ";|&("))) {
             hltoken(x, HL_COMMENT, hleol(s, i));
         } else if (c == '\\') {
-            x->i += 1 + (i+1 < s.len);
+            x->i += 1 + (i+1 < std::ssize(s));
         } else if (c=='\'' || c=='`') {
             iz end = i + 1;
-            for (; end<s.len && s.data[end]!=c; end++) {}
-            hltoken(x, HL_STRING, end + (end<s.len));
+            for (; end<std::ssize(s) && (u8)s[end]!=c; end++) {}
+            hltoken(x, HL_STRING, end + (end<std::ssize(s)));
         } else if (c == '"') {
             hlshquote(x, depth);
         } else if (c == '$') {
@@ -1028,11 +1027,11 @@ static void hlshcode(Hl *x, i32 depth, b32 nested)
             x->i++;
         } else if (hlshword(c)) {
             iz end = i;
-            for (; end<s.len && hlshword(s.data[end]); end++) {}
+            for (; end<std::ssize(s) && hlshword((u8)s[end]); end++) {}
             iz name = hlidend(s, i);
             if (hlidstart(c) && hlat(s, name)=='=') {
                 hltoken(x, HL_VAR, name);  // NAME=value
-            } else if (hlmember(HLWORDS(shkeywords), span(s.data+i, s.data+end))) {
+            } else if (hlmember(HLWORDS(shkeywords), std::string_view(s.data()+i, s.data()+end))) {
                 hltoken(x, HL_KEYWORD, end);
             }
             x->i = end;
@@ -1051,15 +1050,15 @@ static void lexsh(Hl *x, HlLang *)
 // Make: variables, rules, recipes (tab or space indented)
 
 // End of the $ reference at s[i], like $@ or $(CC), not beyond end.
-static iz hlmakeref(Str s, iz i, iz end)
+static iz hlmakeref(std::string_view s, iz i, iz end)
 {
     u8 open  = hlat(s, i+1);
     u8 close = open=='(' ? ')' : '}';
     iz j     = i + 2;
     if (open=='(' || open=='{') {
         i32 nest = 1;
-        for (; j<end && (s.data[j]!=close || --nest); j++) {
-            nest += s.data[j] == open;
+        for (; j<end && ((u8)s[j]!=close || --nest); j++) {
+            nest += (u8)s[j] == open;
         }
         j++;
     }
@@ -1069,17 +1068,17 @@ static iz hlmakeref(Str s, iz i, iz end)
 // References, comments, and quoted strings up to end.
 static void hlmakevalue(Hl *x, iz end)
 {
-    Str s = x->s;
+    std::string_view s = x->s;
     while (x->i < end) {
         iz i = x->i;
-        u8 c = s.data[i];
+        u8 c = s[i];
         if (c == '$') {
             hltoken(x, HL_VAR, hlmakeref(s, i, end));
-        } else if (c=='#' && (i==0 || whitespace(s.data[i-1]))) {
+        } else if (c=='#' && (i==0 || whitespace((u8)s[i-1]))) {
             hltoken(x, HL_COMMENT, end);
         } else if (c=='"' || c=='\'') {
             iz j = i + 1;
-            for (; j<end && s.data[j]!=c; j++) {}
+            for (; j<end && (u8)s[j]!=c; j++) {}
             hltoken(x, HL_STRING, j<end ? j+1 : end);
         } else {
             x->i++;
@@ -1090,12 +1089,12 @@ static void hlmakevalue(Hl *x, iz end)
 // A line outside of recipes. Returns true if it is a rule.
 static b32 hlmakeline(Hl *x, iz eol, b32 rule)
 {
-    Str s    = x->s;
+    std::string_view s    = x->s;
     iz  beg  = hlblank(s, x->i);
     iz  word = beg;
-    for (; word<eol && !whitespace(s.data[word]); word++) {}
+    for (; word<eol && !whitespace((u8)s[word]); word++) {}
     x->i = beg;
-    if (hlmember(HLWORDS(makedirectives), span(s.data+beg, s.data+word))) {
+    if (hlmember(HLWORDS(makedirectives), std::string_view(s.data()+beg, s.data()+word))) {
         hltoken(x, HL_KEYWORD, word);
         hlmakevalue(x, eol);
         return rule;
@@ -1105,7 +1104,7 @@ static b32 hlmakeline(Hl *x, iz eol, b32 rule)
     iz  sep  = beg;
     i32 nest = 0;
     for (; sep < eol; sep++) {
-        u8 c = s.data[sep];
+        u8 c = s[sep];
         if (c=='$' && hlin(hlat(s, sep+1), "({")) {
             nest++;
             sep++;
@@ -1115,15 +1114,15 @@ static b32 hlmakeline(Hl *x, iz eol, b32 rule)
             break;
         }
     }
-    if (sep==eol || s.data[sep]=='#') {
+    if (sep==eol || s[sep]=='#') {
         hlmakevalue(x, eol);
         return rule;
     }
 
-    u8  c      = s.data[sep];
+    u8  c      = s[sep];
     b32 assign = c=='=' || hlat(s, sep+1)=='=' || hlhas(s, sep, "::=");
-    iz  name   = sep - (c=='=' && sep>beg && hlin(s.data[sep-1], "+?!"));
-    for (; name>beg && whitespace(s.data[name-1]); name--) {}
+    iz  name   = sep - (c=='=' && sep>beg && hlin((u8)s[sep-1], "+?!"));
+    for (; name>beg && whitespace((u8)s[name-1]); name--) {}
     if (assign) {
         hltoken(x, HL_VAR, name);
         hlmakevalue(x, eol);
@@ -1132,7 +1131,7 @@ static b32 hlmakeline(Hl *x, iz eol, b32 rule)
 
     while (x->i < name) {  // targets, like .POSIX or foo-$(V).tar
         iz i = x->i;
-        u8 c = s.data[i];
+        u8 c = s[i];
         if (whitespace(c)) {
             x->i++;
             continue;
@@ -1141,8 +1140,8 @@ static b32 hlmakeline(Hl *x, iz eol, b32 rule)
             continue;
         }
         iz  end     = i;
-        b32 special = c=='.' && (i==beg || whitespace(s.data[i-1]));
-        for (; end<name && !whitespace(s.data[end]) && s.data[end]!='$'; end++) {}
+        b32 special = c=='.' && (i==beg || whitespace((u8)s[i-1]));
+        for (; end<name && !whitespace((u8)s[end]) && s[end]!='$'; end++) {}
         hltoken(x, special ? HL_PREPROC : HL_FUNC, end);
     }
     x->i = sep;
@@ -1152,24 +1151,24 @@ static b32 hlmakeline(Hl *x, iz eol, b32 rule)
 
 static void lexmake(Hl *x, HlLang *)
 {
-    Str s    = x->s;
+    std::string_view s    = x->s;
     b32 rule = 0;  // indented lines are recipes
     b32 cont = 0;  // this line continues the previous
-    while (x->i < s.len) {
+    while (x->i < std::ssize(s)) {
         iz  bol  = x->i;
         iz  eol  = hleol(s, bol);
-        Str line = span(s.data+bol, s.data+eol);
-        Str text = trimleft(line);
-        b32 more = line.len && line[line.len-1]=='\\';
-        if (cont || (text.len && text.data!=line.data && (rule || line[0]=='\t'))) {
+        std::string_view line = std::string_view(s.data()+bol, s.data()+eol);
+        std::string_view text = trimleft(line);
+        b32 more = std::ssize(line) && line[std::ssize(line)-1]=='\\';
+        if (cont || (std::ssize(text) && text.data()!=line.data() && (rule || line[0]=='\t'))) {
             hlmakevalue(x, eol);  // recipe or continuation
-        } else if (text.len && text[0]=='#') {
-            x->i = text.data - s.data;
+        } else if (std::ssize(text) && text[0]=='#') {
+            x->i = text.data() - s.data();
             hltoken(x, HL_COMMENT, eol);
-        } else if (text.len) {
+        } else if (std::ssize(text)) {
             rule = hlmakeline(x, eol, rule);
         }
-        x->i = eol + (eol < s.len);
+        x->i = eol + (eol < std::ssize(s));
         cont = more;
     }
 }
@@ -1179,53 +1178,53 @@ static void lexmake(Hl *x, HlLang *)
 
 static void lexdiff(Hl *x, HlLang *)
 {
-    Str s      = x->s;
+    std::string_view s      = x->s;
     b32 header = 0;  // between "diff" and the first hunk
     b32 files  = 0;  // previous line was a "---" file header
-    while (x->i < s.len) {
+    while (x->i < std::ssize(s)) {
         iz  bol  = x->i;
         iz  eol  = hleol(s, bol);
-        Str line = span(s.data+bol, s.data+eol);
-        Str next = eol<s.len ? span(s.data+eol+1, s.data+hleol(s, eol+1)) : Str{};
-        b32 top  = startswith(line, "--- ") && startswith(next, "+++ ");
+        std::string_view line = std::string_view(s.data()+bol, s.data()+eol);
+        std::string_view next = eol<std::ssize(s) ? std::string_view(s.data()+eol+1, s.data()+hleol(s, eol+1)) : std::string_view{};
+        b32 top  = line.starts_with("--- ") && next.starts_with("+++ ");
         i32 cls  = HL_PLAIN;
-        header |= startswith(line, "diff ");
-        header &= !startswith(line, "@@");
-        if (header || top || (files && startswith(line, "+++ "))) {
+        header |= line.starts_with("diff ");
+        header &= !line.starts_with("@@");
+        if (header || top || (files && line.starts_with("+++ "))) {
             cls = HL_HEADING;
-        } else if (startswith(line, "@@")) {
+        } else if (line.starts_with("@@")) {
             cls = HL_PREPROC;
-        } else if (line.len && line[0]=='+') {
+        } else if (std::ssize(line) && line[0]=='+') {
             cls = HL_INSERTED;
-        } else if (line.len && line[0]=='-') {
+        } else if (std::ssize(line) && line[0]=='-') {
             cls = HL_DELETED;
-        } else if (line.len && line[0]=='\\') {
+        } else if (std::ssize(line) && line[0]=='\\') {
             cls = HL_COMMENT;
         }
         files = top;
         hltoken(x, cls, eol);
-        x->i += eol < s.len;
+        x->i += eol < std::ssize(s);
     }
 }
 
 static void lexini(Hl *x, HlLang *)
 {
-    Str s = x->s;
-    while (x->i < s.len) {
+    std::string_view s = x->s;
+    while (x->i < std::ssize(s)) {
         iz eol = hleol(s, x->i);
         x->i = hlblank(s, x->i);
         u8 c = hlat(s, x->i);
         if (c == '[') {
             iz end = x->i;
-            for (; end<eol && s.data[end]!=']'; end++) {}
+            for (; end<eol && s[end]!=']'; end++) {}
             hltoken(x, HL_KEYWORD, end + (end<eol));
         } else if (c==';' || c=='#') {
             hltoken(x, HL_COMMENT, eol);
         } else {
             iz eq = x->i;
-            for (; eq<eol && s.data[eq]!='='; eq++) {}
+            for (; eq<eol && s[eq]!='='; eq++) {}
             iz key = eq;
-            for (; key>x->i && whitespace(s.data[key-1]); key--) {}
+            for (; key>x->i && whitespace((u8)s[key-1]); key--) {}
             if (eq < eol) {
                 hltoken(x, HL_VAR, key);
                 x->i = hlblank(s, eq+1);
@@ -1234,19 +1233,19 @@ static void lexini(Hl *x, HlLang *)
                 }
             }
         }
-        x->i = eol + (eol < s.len);
+        x->i = eol + (eol < std::ssize(s));
     }
 }
 
 // pkg-config: "name=value" variables and "Field: value" keywords
 static void lexpc(Hl *x, HlLang *)
 {
-    Str s = x->s;
-    while (x->i < s.len) {
+    std::string_view s = x->s;
+    while (x->i < std::ssize(s)) {
         iz eol = hleol(s, x->i);
         x->i = hlblank(s, x->i);
         iz end = x->i;
-        for (; end<eol && (hlidchar(s.data[end]) || hlin(s.data[end], ".-")); end++) {}
+        for (; end<eol && (hlidchar((u8)s[end]) || hlin((u8)s[end], ".-")); end++) {}
         u8 sep = hlat(s, hlblank(s, end));  // "name = value" is allowed
         if (hlat(s, x->i) == '#') {
             hltoken(x, HL_COMMENT, eol);
@@ -1257,59 +1256,59 @@ static void lexpc(Hl *x, HlLang *)
             iz i = x->i;
             if (hlhas(s, i, "${")) {
                 iz j = i;
-                for (; j<eol && s.data[j]!='}'; j++) {}
+                for (; j<eol && s[j]!='}'; j++) {}
                 hltoken(x, HL_VAR, j + (j<eol));
-            } else if (s.data[i] == '"') {
+            } else if (s[i] == '"') {
                 iz j = i + 1;
-                for (; j<eol && s.data[j]!='"'; j++) {}
+                for (; j<eol && s[j]!='"'; j++) {}
                 hltoken(x, HL_STRING, j + (j<eol));
             } else {
                 x->i++;
             }
         }
-        x->i = eol + (eol < s.len);
+        x->i = eol + (eol < std::ssize(s));
     }
 }
 
 // Wavefront OBJ: a keyword then numbers per line
 static void lexobj(Hl *x, HlLang *)
 {
-    Str s = x->s;
-    while (x->i < s.len) {
+    std::string_view s = x->s;
+    while (x->i < std::ssize(s)) {
         iz eol = hleol(s, x->i);
         x->i = hlblank(s, x->i);
         if (hlat(s, x->i) == '#') {
             hltoken(x, HL_COMMENT, eol);
         } else {
             iz end = x->i;
-            for (; end<eol && !whitespace(s.data[end]); end++) {}
+            for (; end<eol && !whitespace((u8)s[end]); end++) {}
             hltoken(x, HL_KEYWORD, end);
         }
         while (x->i < eol) {
             iz  i = x->i;
-            iz  j = i + hlin(s.data[i], "+-");
+            iz  j = i + hlin((u8)s[i], "+-");
             b32 n = digit(hlat(s, j)) || (hlat(s, j)=='.' && digit(hlat(s, j+1)));
-            b32 w = i==0 || !hlidchar(s.data[i-1]);
+            b32 w = i==0 || !hlidchar((u8)s[i-1]);
             if (n && w) {
                 hltoken(x, HL_NUMBER, hlnumber(s, j));
-            } else if (hlidchar(s.data[i])) {
+            } else if (hlidchar((u8)s[i])) {
                 x->i = hlidend(s, i);
             } else {
                 x->i++;
             }
         }
-        x->i = eol + (eol < s.len);
+        x->i = eol + (eol < std::ssize(s));
     }
 }
 
 // Windows batch files
 static void lexbat(Hl *x, HlLang *)
 {
-    Str s     = x->s;
+    std::string_view s     = x->s;
     b32 first = 1;  // next word is a command
-    while (x->i < s.len) {
+    while (x->i < std::ssize(s)) {
         iz i = x->i;
-        u8 c = s.data[i];
+        u8 c = s[i];
         if (c=='\n' || hlin(c, "&|(")) {
             first = 1;
             x->i++;
@@ -1319,7 +1318,7 @@ static void lexbat(Hl *x, HlLang *)
             hltoken(x, HL_COMMENT, hleol(s, i));
         } else if (c == '"') {
             iz end = i + 1;
-            for (; end<s.len && s.data[end]!='"' && s.data[end]!='\n'; end++) {}
+            for (; end<std::ssize(s) && s[end]!='"' && s[end]!='\n'; end++) {}
             hltoken(x, HL_STRING, end + (hlat(s, end)=='"'));
             first = 0;
         } else if (c == '%') {
@@ -1330,17 +1329,17 @@ static void lexbat(Hl *x, HlLang *)
             } else if (d=='%' && letter(hlat(s, i+2))) {
                 end = i + 3;
             } else if (d == '~') {
-                for (end = i+2; end<s.len && letter(s.data[end]); end++) {}
+                for (end = i+2; end<std::ssize(s) && letter((u8)s[end]); end++) {}
                 end += digit(hlat(s, end));
             } else {
-                for (; end<s.len && (hlidchar(s.data[end]) || s.data[end]==' '); end++) {}
+                for (; end<std::ssize(s) && (hlidchar((u8)s[end]) || s[end]==' '); end++) {}
                 end = hlat(s, end)=='%' ? end+1 : i+1;  // %name%
             }
             hltoken(x, end>i+1 ? HL_VAR : HL_PLAIN, end);
             first = 0;
         } else if (hlidchar(c)) {
             iz  end = hlidend(s, i);
-            Str w   = span(s.data+i, s.data+end);
+            std::string_view w   = std::string_view(s.data()+i, s.data()+end);
             if (first && hlword(HLWORDS(basicrem), w, 1)) {
                 hltoken(x, HL_COMMENT, hleol(s, i));
             } else {
@@ -1358,32 +1357,32 @@ static void lexbat(Hl *x, HlLang *)
 // Tokens in a YAML value up to end.
 static void hlyamlvalue(Hl *x, iz end)
 {
-    Str s = x->s;
+    std::string_view s = x->s;
     while (x->i < end) {
         iz i = x->i;
-        u8 c = s.data[i];
+        u8 c = s[i];
         if (whitespace(c) || hlin(c, "[]{},")) {
             x->i++;
         } else if (c == '#') {
             hltoken(x, HL_COMMENT, end);
         } else if (c=='"' || c=='\'') {
             iz j = i + 1;
-            for (; j<end && s.data[j]!=c; j++) {
-                j += c=='"' && s.data[j]=='\\' && j+1<end;
+            for (; j<end && (u8)s[j]!=c; j++) {
+                j += c=='"' && s[j]=='\\' && j+1<end;
             }
             hltoken(x, HL_STRING, j + (j<end));
         } else {
             iz j = i;  // plain scalar, up to a flow indicator
-            for (; j<end && !whitespace(s.data[j]) && !hlin(s.data[j], ",[]{}"); j++) {}
-            Str w  = span(s.data+i, s.data+j);
+            for (; j<end && !whitespace((u8)s[j]) && !hlin((u8)s[j], ",[]{}"); j++) {}
+            std::string_view w  = std::string_view(s.data()+i, s.data()+j);
             iz  d  = hlin(c, "+-");
-            b32 n  = d<w.len && (digit(w[d]) || w[d]=='.') && hlnumber(s, i+d)==j;
+            b32 n  = d<std::ssize(w) && (digit(w[d]) || w[d]=='.') && hlnumber(s, i+d)==j;
             i32 cl = HL_PLAIN;
             if (n) {
                 cl = HL_NUMBER;
             } else if (hlmember(HLWORDS(yamlkeywords), w) || w=="~") {
                 cl = HL_KEYWORD;
-            } else if (hlin(c, "&*!") && w.len>1) {
+            } else if (hlin(c, "&*!") && std::ssize(w)>1) {
                 cl = HL_VAR;  // anchor, alias, tag
             }
             hltoken(x, cl, j);
@@ -1393,25 +1392,25 @@ static void hlyamlvalue(Hl *x, iz end)
 
 static void lexyaml(Hl *x, HlLang *)
 {
-    Str s     = x->s;
+    std::string_view s     = x->s;
     iz  block = -1;  // indentation of a line that opened a block scalar
-    while (x->i < s.len) {
+    while (x->i < std::ssize(s)) {
         iz bol    = x->i;
         iz eol    = hleol(s, bol);
         iz indent = 0;
-        for (; bol+indent<eol && s.data[bol+indent]==' '; indent++) {}
+        for (; bol+indent<eol && s[bol+indent]==' '; indent++) {}
         iz i = bol + indent;
 
         if (block>=0 && (i==eol || indent>block)) {
             x->i = i;
             hltoken(x, HL_STRING, eol);  // block scalar content
-            x->i = eol + (eol < s.len);
+            x->i = eol + (eol < std::ssize(s));
             continue;
         }
         block = -1;
 
         x->i = i;
-        Str rest = trimright(span(s.data+i, s.data+eol));
+        std::string_view rest = trimright(std::string_view(s.data()+i, s.data()+eol));
         if (bol==i && (rest=="---" || rest=="...")) {
             hltoken(x, HL_PREPROC, eol);
         } else if (hlat(s, i) == '#') {
@@ -1424,11 +1423,11 @@ static void lexyaml(Hl *x, HlLang *)
             iz k = x->i;
             u8 q = hlat(s, k);
             if (q=='"' || q=='\'') {
-                for (k++; k<eol && s.data[k]!=q; k++) {}
+                for (k++; k<eol && (u8)s[k]!=q; k++) {}
                 k += k < eol;
             } else {
-                for (; k<eol && s.data[k]!='#' && !hlin(s.data[k], "[{"); k++) {
-                    if (s.data[k]==':' && (k+1==eol || whitespace(s.data[k+1]))) break;
+                for (; k<eol && s[k]!='#' && !hlin((u8)s[k], "[{"); k++) {
+                    if (s[k]==':' && (k+1==eol || whitespace((u8)s[k+1]))) break;
                 }
             }
             if (k>x->i && hlat(s, k)==':' && (k+1==eol || whitespace(hlat(s, k+1)))) {
@@ -1439,9 +1438,9 @@ static void lexyaml(Hl *x, HlLang *)
             iz v = hlblank(s, x->i);
             if (hlin(hlat(s, v), "|>")) {
                 iz m = v + 1;
-                for (; m<eol && hlin(s.data[m], "+-0123456789"); m++) {}
+                for (; m<eol && hlin((u8)s[m], "+-0123456789"); m++) {}
                 iz after = hlblank(s, m);
-                if (after==eol || s.data[after]=='#') {
+                if (after==eol || s[after]=='#') {
                     x->i = v;
                     hltoken(x, HL_PREPROC, m);
                     block = indent;
@@ -1449,7 +1448,7 @@ static void lexyaml(Hl *x, HlLang *)
             }
             hlyamlvalue(x, eol);
         }
-        x->i = eol + (eol < s.len);
+        x->i = eol + (eol < std::ssize(s));
     }
 }
 
@@ -1463,14 +1462,14 @@ static b32 hlmarkupdelim(u8 c)  // ends a tag or attribute name
 
 static void lexmarkup(Hl *x, HlLang *)
 {
-    Str s = x->s;
-    while (x->i < s.len) {
+    std::string_view s = x->s;
+    while (x->i < std::ssize(s)) {
         iz i = x->i;
-        u8 c = s.data[i];
+        u8 c = s[i];
         u8 d = hlat(s, i+1);
         if (c == '&') {  // entity
             iz end = i + 1;
-            for (; end<s.len && (alnum(s.data[end]) || s.data[end]=='#'); end++) {}
+            for (; end<std::ssize(s) && (alnum((u8)s[end]) || s[end]=='#'); end++) {}
             if (end>i+1 && hlat(s, end)==';') {
                 hltoken(x, HL_VAR, end+1);
             } else {
@@ -1479,19 +1478,19 @@ static void lexmarkup(Hl *x, HlLang *)
         } else if (c != '<') {
             x->i++;
         } else if (hlhas(s, i, "<!--")) {
-            iz end = find(cuthead(s, i+4), "-->");
-            hltoken(x, HL_COMMENT, end<0 ? s.len : i+4+end+3);
+            uz end = s.find("-->", i+4);
+            hltoken(x, HL_COMMENT, end==s.npos ? std::ssize(s) : (iz)end+3);
         } else if (d=='?' || d=='!') {  // <?xml ...?> and <!DOCTYPE ...>
             iz end = i;
-            for (; end<s.len && s.data[end]!='>'; end++) {}
-            hltoken(x, HL_PREPROC, end + (end<s.len));
+            for (; end<std::ssize(s) && s[end]!='>'; end++) {}
+            hltoken(x, HL_PREPROC, end + (end<std::ssize(s)));
         } else if (hlidstart(d) || (d=='/' && hlidstart(hlat(s, i+2)))) {
             iz end = i + 1 + (d=='/');
-            for (; end<s.len && !hlmarkupdelim(s.data[end]); end++) {}
+            for (; end<std::ssize(s) && !hlmarkupdelim((u8)s[end]); end++) {}
             hltoken(x, HL_KEYWORD, end);
-            while (x->i < s.len) {  // attributes
+            while (x->i < std::ssize(s)) {  // attributes
                 iz j = x->i;
-                u8 a = s.data[j];
+                u8 a = s[j];
                 if (a == '>') {
                     hltoken(x, HL_KEYWORD, j+1);
                     break;
@@ -1502,13 +1501,13 @@ static void lexmarkup(Hl *x, HlLang *)
                     break;  // malformed
                 } else if (a=='"' || a=='\'') {
                     iz end = j + 1;
-                    for (; end<s.len && s.data[end]!=a; end++) {}
-                    hltoken(x, HL_STRING, end + (end<s.len));
+                    for (; end<std::ssize(s) && (u8)s[end]!=a; end++) {}
+                    hltoken(x, HL_STRING, end + (end<std::ssize(s)));
                 } else if (whitespace(a) || hlin(a, "=/")) {
                     x->i++;
                 } else {  // name, or unquoted value
                     iz end = j;
-                    for (; end<s.len && !hlmarkupdelim(s.data[end]); end++) {}
+                    for (; end<std::ssize(s) && !hlmarkupdelim((u8)s[end]); end++) {}
                     hltoken(x, hlat(s, j-1)=='=' ? HL_STRING : HL_VAR, end);
                 }
             }
@@ -1521,7 +1520,7 @@ static void lexmarkup(Hl *x, HlLang *)
 
 // Language table
 
-static HlLang hllang(Str tag)
+static HlLang hllang(std::string_view tag)
 {
     HlLang l = {};
     l.lex    = lexgeneric;
@@ -1718,55 +1717,55 @@ static HlLang hllang(Str tag)
 
 
 // True if stripping the spans from html and unescaping it gives code.
-static b32 hlroundtrip(Str html, Str code)
+static b32 hlroundtrip(std::string_view html, std::string_view code)
 {
     iz  j     = 0;
     i32 depth = 0;
-    for (iz i = 0; i < html.len;) {
-        Str rest = cuthead(html, i);
-        if (startswith(rest, "</span>")) {
+    for (iz i = 0; i < std::ssize(html);) {
+        std::string_view rest = html.substr(i);
+        if (rest.starts_with("</span>")) {
             depth--;
             i += 7;
-        } else if (startswith(rest, "<span class=\"")) {
-            iz end = find(rest, "\">");
-            if (end < 14) return 0;
+        } else if (rest.starts_with("<span class=\"")) {
+            uz end = rest.find("\">");
+            if (end==rest.npos || end<14) return 0;
             depth++;
-            i += end + 2;
+            i += (iz)end + 2;
         } else {
             u8 c = rest[0];
             iz n = 1;
             if (c=='<' || c=='>') {
                 return 0;
-            } else if (startswith(rest, "&amp;")) {
+            } else if (rest.starts_with("&amp;")) {
                 n = 5;
-            } else if (startswith(rest, "&lt;")) {
+            } else if (rest.starts_with("&lt;")) {
                 c = '<';
                 n = 4;
-            } else if (startswith(rest, "&gt;")) {
+            } else if (rest.starts_with("&gt;")) {
                 c = '>';
                 n = 4;
             } else if (c == '&') {
                 return 0;
             }
-            if (j>=code.len || code[j]!=c) return 0;
+            if (j>=std::ssize(code) || (u8)code[j]!=c) return 0;
             j++;
             i += n;
         }
         if (depth < 0) return 0;
     }
-    return !depth && j==code.len;
+    return !depth && j==std::ssize(code);
 }
 
 // Write code to b, HTML-escaped, with tokens wrapped in <span class="X">.
 // Returns false if the language is unknown, in which case the code is
 // written escaped without highlighting. No language is not unknown.
-static b32 highlight(Buf *b, Str lang, Str code, Arena scratch)
+static b32 highlight(Buf *b, std::string_view lang, std::string_view code, Arena scratch)
 {
     (void)scratch;  // lexers run in constant space
     HlLang l = hllang(lang);
     if (!l.lex) {
         printhtml(b, code);
-        return !lang.len;
+        return lang.empty();
     }
 
     iz start = b->len;
@@ -1774,12 +1773,12 @@ static b32 highlight(Buf *b, Str lang, Str code, Arena scratch)
     x.b = b;
     x.s = code;
     l.lex(&x, &l);
-    assert(x.i <= code.len);
-    x.i = code.len;
+    assert(x.i <= std::ssize(code));
+    x.i = std::ssize(code);
     hlflush(&x);
 
     #ifndef NDEBUG
-    assert(hlroundtrip(span(b->data+start, b->data+b->len), code));
+    assert(hlroundtrip(std::string_view(b->data+start, b->data+b->len), code));
     #endif
     (void)start;
     return 1;

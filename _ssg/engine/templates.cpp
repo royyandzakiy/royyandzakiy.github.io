@@ -1,13 +1,13 @@
 // Page templates: layouts and generated pages, printed into buffers
 // This is free and unencumbered software released into the public domain.
 
-static Str site_url   = "https://royyandzakiy.com";
-static Str site_title = "Royyan Dzakiy";
-static Str site_desc  = "Hobby computing blog";
-static Str feed_uuid  = "060da7ea-d2f4-4736-b001-fb0e880dd589";
+static std::string_view site_url   = "https://royyandzakiy.com";
+static std::string_view site_title = "Royyan Dzakiy";
+static std::string_view site_desc  = "Hobby computing blog";
+static std::string_view feed_uuid  = "060da7ea-d2f4-4736-b001-fb0e880dd589";
 
 // The title is the concatenation of two parts.
-static void layouthead(Buf *b, Str title, Str title2 = {})
+static void layouthead(Buf *b, std::string_view title, std::string_view title2 = {})
 {
     print(b, "<!DOCTYPE html>\n<title>");
     printhtml(b, title);
@@ -121,7 +121,7 @@ static void homepage(Buf *b, Site *site, iz limit)
         print(b, "  <blockquote class=\"excerpt\" cite=\"");
         printattr(b, p->url);
         print(b, "\">\n");
-        print(b, takehead(p->html, p->excerpt));
+        print(b, p->html.substr(0, p->excerpt));
         print(b, "\n  </blockquote>\n  <div class=\"read-more\">[<a href=\"");
         printattr(b, p->url);
         print(b, "\">…</a>]</div>\n\n");
@@ -176,7 +176,7 @@ static void tagindexpage(Buf *b, Site *site)
     layouthead(b, "Tags");
     print(b, "<article class=\"tag\">\n  <h2>Tags</h2>\n  <ul class=\"post-list\">\n");
     for (iz i = 0; i < site->tags.len; i++) {
-        Str name = site->tags[i]->name;
+        std::string_view name = site->tags[i]->name;
         print(b, "    <li>\n      <a href=\"/tags/");
         printattr(b, name);
         print(b, "/feed/\" class=\"feed\"></a>\n      <a href=\"/tags/");
@@ -204,17 +204,17 @@ static void tagpage(Buf *b, Tag *tag)
     layouttail(b);
 }
 
-static void printcdata(Buf *b, Str s)
+static void printcdata(Buf *b, std::string_view s)
 {
     print(b, "<![CDATA[");
     for (;;) {
-        iz i = find(s, "]]>");
-        if (i < 0) {
+        uz i = s.find("]]>");
+        if (i == s.npos) {
             break;
         }
-        print(b, takehead(s, i+2));
+        print(b, s.substr(0, i+2));
         print(b, "]]><![CDATA[");
-        s = cuthead(s, i+2);
+        s = s.substr(i+2);
     }
     print(b, s);
     print(b, "]]>");
@@ -242,7 +242,7 @@ static void atomentry(Buf *b, Post *p)
     print(b, "\n    </content>\n  </entry>\n");
 }
 
-static void atomauthor(Buf *b, Str uri, Str suffix)
+static void atomauthor(Buf *b, std::string_view uri, std::string_view suffix)
 {
     print(b, "  <author>\n    <name>Royyan Dzakiy</name>\n    <uri>");
     print(b, uri);
