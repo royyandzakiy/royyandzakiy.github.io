@@ -3,6 +3,9 @@
     - to be: /blog/yyyy-mm/blogpost
 - remove the logo for tags, just use icon
 
+- remove most of core.cpp completely, just use cpp23
+- use enum class
+
 - mainly use clang-cl & clang
 - add complete cmake project structure
     - add clangd, clang tidy
