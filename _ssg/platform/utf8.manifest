@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!-- Windows: run with UTF-8 as the process code page, so main()'s argv
-     and the C runtime's narrow-string paths are UTF-8, as on POSIX. -->
+     and the C runtime's narrow-string paths are UTF-8, as on POSIX; and
+     allow paths past MAX_PATH (also needs LongPathsEnabled in the registry). -->
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
     </windowsSettings>
   </application>
 </assembly>
