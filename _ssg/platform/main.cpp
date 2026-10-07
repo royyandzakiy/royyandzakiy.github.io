@@ -17,12 +17,12 @@ namespace fs = std::filesystem;
 
 struct Os {};
 
-static fs::path topath(Str s)
+static fs::path topath(std::string_view s)
 {
-    return std::u8string_view{(char8_t const *)s.data, (uz)s.len};
+    return std::u8string_view{(char8_t const *)s.data(), s.size()};
 }
 
-static Str os_read(Os *, Arena *a, Str path)
+static std::string_view os_read(Os *, Arena *a, std::string_view path)
 {
     fs::path        p = topath(path);
     std::error_code ec;
@@ -37,32 +37,30 @@ static Str os_read(Os *, Arena *a, Str path)
     if (!f) {
         return {};
     }
-    Str r  = {};
-    r.data = allocbytes(a, size);
-    f.read((char *)r.data, size);
+    char *data = allocbytes(a, size);
+    f.read(data, size);
     if (f.gcount() != size) {
         return {};
     }
-    r.len = size;
-    return r;
+    return {data, (uz)size};
 }
 
-static b32 os_write(Os *, Arena, Str path, Str data)
+static b32 os_write(Os *, Arena, std::string_view path, std::string_view data)
 {
     std::ofstream f(topath(path), std::ios::binary|std::ios::trunc);
-    f.write(data.cdata, data.len);
+    f.write(data.data(), std::ssize(data));
     f.close();
     return !f.fail();
 }
 
-static b32 os_mkdirs(Os *, Arena, Str path)
+static b32 os_mkdirs(Os *, Arena, std::string_view path)
 {
     std::error_code ec;
     fs::create_directories(topath(path), ec);
     return !ec;
 }
 
-static Dirent *os_list(Os *, Arena *a, Str path)
+static Dirent *os_list(Os *, Arena *a, std::string_view path)
 {
     std::error_code         ec;
     fs::directory_iterator  it(topath(path), ec);
@@ -83,7 +81,7 @@ static Dirent *os_list(Os *, Arena *a, Str path)
         }
         std::u8string name = it->path().filename().u8string();
         Dirent *d = alloc<Dirent>(a);
-        d->name  = clone(a, {(u8 *)name.data(), (iz)name.size()});
+        d->name  = clone(a, {(char const *)name.data(), name.size()});
         d->size  = size;
         d->mtime = mtime;
         d->isdir = isdir;
@@ -93,7 +91,7 @@ static Dirent *os_list(Os *, Arena *a, Str path)
     return ec ? 0 : head;
 }
 
-static i32 os_copy(Os *, Arena, Str src, Str dst)
+static i32 os_copy(Os *, Arena, std::string_view src, std::string_view dst)
 {
     fs::path        s = topath(src);
     fs::path        d = topath(dst);
@@ -130,10 +128,10 @@ static i64 os_clock(Os *)
     return std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 }
 
-static b32 os_print(Os *, i32 fd, Str s)
+static b32 os_print(Os *, i32 fd, std::string_view s)
 {
     std::FILE *f = fd==1 ? stdout : stderr;
-    b32 ok = std::fwrite(s.data, 1, (uz)s.len, f) == (uz)s.len;
+    b32 ok = std::fwrite(s.data(), 1, s.size(), f) == s.size();
     return ok && !std::fflush(f);
 }
 
@@ -152,10 +150,9 @@ int main(int argc, char **argv)
     }
     Arena a = {mem, mem+cap};
 
-    Str *args = alloc<Str>(&a, argc);
+    std::string_view *args = alloc<std::string_view>(&a, argc);
     for (i32 i = 0; i < argc; i++) {
-        args[i].data = (u8 *)argv[i];
-        while (args[i].data[args[i].len]) args[i].len++;
+        args[i] = argv[i];
     }
 
     Os os;

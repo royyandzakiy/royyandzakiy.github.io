@@ -1,4 +1,4 @@
-// Foundation: types, arenas, strings, buffers, maps, sorting
+// Foundation: types, arenas, strings, buffers, maps
 // This is free and unencumbered software released into the public domain.
 #include <algorithm>
 #include <chrono>
@@ -9,6 +9,7 @@
 #include <format>
 #include <iterator>
 #include <new>
+#include <string>
 #include <string_view>
 
 using u8   = std::uint8_t;
@@ -47,134 +48,42 @@ static T *alloc(Arena *a, iz count = 1)
     return r;
 }
 
-// Like alloc<u8>, but does not zero the memory.
-static u8 *allocbytes(Arena *a, iz count)
+// Like alloc<char>, but does not zero the memory.
+static char *allocbytes(Arena *a, iz count)
 {
     if (count > a->end - a->beg) {
         os_oom();
     }
-    u8 *r = (u8 *)a->beg;
+    char *r = a->beg;
     a->beg += count;
     return r;
 }
 
-static void copybytes(void *dst, void *src, iz len)
+static void copybytes(void *dst, void const *src, iz len)
 {
     if (len) std::memcpy(dst, src, (uz)len);
 }
 
 
-// Strings
+// Strings: std::string_view over arena or literal memory. A null view
+// (data() == nullptr) means "none", distinct from an empty string.
+// Bytes are read as u8, since char may be signed and UTF-8 must compare
+// unsigned; std::string_view's own comparisons already are (like memcmp).
 
-struct Str {
-    union {
-        u8         *data = 0;
-        char const *cdata;
-    };
-    iz len = 0;
-
-    Str() = default;
-
-    constexpr Str(u8 *data, iz len) : data{data}, len{len} {}
-
-    template<iz N>
-    constexpr Str(char const (&s)[N]) : cdata{s}, len{N-1} {}
-
-    u8 &operator[](iz i)
-    {
-        assert(i >= 0 && i < len);
-        return data[i];
-    }
-
-    bool operator==(Str s)
-    {
-        return len==s.len && (!len || !std::memcmp(data, s.data, (uz)len));
-    }
-
-    // Byte-wise, like memcmp
-    std::strong_ordering operator<=>(Str s)
-    {
-        return std::lexicographical_compare_three_way(data, data+len, s.data, s.data+s.len);
-    }
-};
-
-template<>
-struct std::formatter<Str> : std::formatter<std::string_view> {
-    auto format(Str s, std::format_context &ctx) const
-    {
-        return std::formatter<std::string_view>::format({s.cdata, (uz)s.len}, ctx);
-    }
-};
-
-static Str span(u8 *beg, u8 *end)
-{
-    return {beg, end - beg};
-}
-
-static Str takehead(Str s, iz n)
-{
-    assert(n >= 0 && n <= s.len);
-    s.len = n;
-    return s;
-}
-
-static Str cuthead(Str s, iz n)
-{
-    assert(n >= 0 && n <= s.len);
-    s.data += n;
-    s.len  -= n;
-    return s;
-}
-
-static Str taketail(Str s, iz n)
-{
-    return cuthead(s, s.len-n);
-}
-
-static Str cuttail(Str s, iz n)
-{
-    return takehead(s, s.len-n);
-}
-
-static b32 startswith(Str s, Str prefix)
-{
-    return s.len>=prefix.len && takehead(s, prefix.len)==prefix;
-}
-
-static b32 endswith(Str s, Str suffix)
-{
-    return s.len>=suffix.len && taketail(s, suffix.len)==suffix;
-}
-
+// Split at the first c. Without one, tail is empty and ok is 0.
 struct Cut {
-    Str head;
-    Str tail;
-    b32 ok;
+    std::string_view head;
+    std::string_view tail;
+    b32              ok;
 };
 
-static Cut cut(Str s, u8 c)
+static Cut cut(std::string_view s, char c)
 {
-    Cut r = {};
-    iz  i = 0;
-    for (; i < s.len && s[i] != c; i++) {}
-    r.ok   = i < s.len;
-    r.head = takehead(s, i);
-    r.tail = cuthead(s, i+r.ok);
-    return r;
-}
-
-static iz find(Str s, Str needle)  // -1 if not found
-{
-    if (!needle.len) {
-        return 0;
+    uz i = s.find(c);
+    if (i == s.npos) {
+        return {s, s.substr(s.size()), 0};
     }
-    u8 *last = s.data + s.len - needle.len;
-    for (u8 *p = s.data; p <= last; p++) {
-        if (*p==needle.data[0] && !std::memcmp(p, needle.data, (uz)needle.len)) {
-            return p - s.data;
-        }
-    }
-    return -1;
+    return {s.substr(0, i), s.substr(i+1), 1};
 }
 
 static b32 whitespace(u8 c)
@@ -202,46 +111,45 @@ static u8 lowercase(u8 c)
     return c>='A' && c<='Z' ? (u8)(c + 32) : c;
 }
 
-static Str trimleft(Str s)
+static std::string_view trimleft(std::string_view s)
 {
-    for (; s.len && whitespace(*s.data); s.data++, s.len--) {}
+    while (!s.empty() && whitespace(s.front())) s.remove_prefix(1);
     return s;
 }
 
-static Str trimright(Str s)
+static std::string_view trimright(std::string_view s)
 {
-    for (; s.len && whitespace(s.data[s.len-1]); s.len--) {}
+    while (!s.empty() && whitespace(s.back())) s.remove_suffix(1);
     return s;
 }
 
-static Str trim(Str s)
+static std::string_view trim(std::string_view s)
 {
     return trimleft(trimright(s));
 }
 
-static Str clone(Arena *a, Str s)
+static std::string_view clone(Arena *a, std::string_view s)
 {
-    Str r = s;
-    r.data = allocbytes(a, s.len);
-    copybytes(r.data, s.data, s.len);
-    return r;
+    char *r = allocbytes(a, std::ssize(s));
+    copybytes(r, s.data(), std::ssize(s));
+    return {r, s.size()};
 }
 
 // Concatenate, extending head in place when it sits at the arena's end.
-static Str concat(Arena *a, Str head, Str tail)
+static std::string_view concat(Arena *a, std::string_view head, std::string_view tail)
 {
-    if (!head.data || (byte *)(head.data+head.len) != a->beg) {
+    if (!head.data() || head.data()+head.size() != a->beg) {
         head = clone(a, head);
     }
-    head.len += clone(a, tail).len;
-    return head;
+    clone(a, tail);
+    return {head.data(), head.size()+tail.size()};
 }
 
-static u64 hash(Str s)
+static u64 hash(std::string_view s)
 {
     u64 h = 0x100;
-    for (iz i = 0; i < s.len; i++) {
-        h ^= s[i];
+    for (u8 c : s) {
+        h ^= c;
         h *= 1111111111111111111u;
     }
     return h;
@@ -249,11 +157,11 @@ static u64 hash(Str s)
 
 // Decode one UTF-8 code point at s[*i], advancing *i. Invalid bytes
 // decode as themselves (Latin-1), one byte at a time.
-static i32 utf8decode(Str s, iz *i)
+static i32 utf8decode(std::string_view s, iz *i)
 {
     u8  c = s[(*i)++];
     i32 n = c>=0xf0 ? 3 : c>=0xe0 ? 2 : c>=0xc0 ? 1 : 0;
-    if (!n || *i+n > s.len) {
+    if (!n || *i+n > std::ssize(s)) {
         return c;
     }
     i32 r = c & (0x3f >> n);
@@ -269,19 +177,19 @@ static i32 utf8decode(Str s, iz *i)
 }
 
 // Code point ending just before s[i], or -1 at the start.
-static i32 utf8prev(Str s, iz i, iz *start)
+static i32 utf8prev(std::string_view s, iz i, iz *start)
 {
     if (i <= 0) {
         *start = 0;
         return -1;
     }
     iz j = i - 1;
-    for (i32 k = 0; k < 3 && j > 0 && (s[j]&0xc0) == 0x80; k++, j--) {}
+    for (i32 k = 0; k < 3 && j > 0 && ((u8)s[j]&0xc0) == 0x80; k++, j--) {}
     iz end = j;
     i32 r = utf8decode(s, &end);
     if (end != i) {
         j = i - 1;
-        r = s[j];
+        r = (u8)s[j];
     }
     *start = j;
     return r;
@@ -328,12 +236,12 @@ static Slice<T> push(Arena *a, Slice<T> s, T v)
 template<typename V>
 struct Map {
     Map *child[4];
-    Str  key;
+    std::string_view key;
     V    val;
 };
 
 template<typename V>
-static V *upsert(Map<V> **m, Str key, Arena *a)
+static V *upsert(Map<V> **m, std::string_view key, Arena *a)
 {
     for (u64 h = hash(key); *m; h <<= 2) {
         if ((*m)->key == key) {
@@ -353,7 +261,7 @@ static V *upsert(Map<V> **m, Str key, Arena *a)
 // Output buffers: appending grows in the arena, in place when possible.
 
 struct Buf {
-    u8    *data = {};
+    char  *data = {};
     iz     len  = {};
     iz     cap  = {};
     Arena *a    = {};
@@ -376,24 +284,24 @@ static void reserve(Buf *b, iz need)
     if ((byte *)(b->data+b->cap) == a->beg) {
         allocbytes(a, extend);
     } else {
-        u8 *data = allocbytes(a, b->cap+extend);
+        char *data = allocbytes(a, b->cap+extend);
         copybytes(data, b->data, b->len);
         b->data = data;
     }
     b->cap += extend;
 }
 
-static void print(Buf *b, Str s)
+static void print(Buf *b, std::string_view s)
 {
-    reserve(b, s.len);
-    copybytes(b->data+b->len, s.data, s.len);
-    b->len += s.len;
+    reserve(b, std::ssize(s));
+    copybytes(b->data+b->len, s.data(), std::ssize(s));
+    b->len += std::ssize(s);
 }
 
 static void putbyte(Buf *b, u8 c)
 {
     reserve(b, 1);
-    b->data[b->len++] = c;
+    b->data[b->len++] = (char)c;
 }
 
 void Buf::push_back(char c)
@@ -427,30 +335,30 @@ static void printhex(Buf *b, u64 v, i32 digits)
 }
 
 // Escape & < > for HTML text content.
-static void printhtml(Buf *b, Str s)
+static void printhtml(Buf *b, std::string_view s)
 {
     iz last = 0;
-    for (iz i = 0; i < s.len; i++) {
-        Str rep = {};
+    for (iz i = 0; i < std::ssize(s); i++) {
+        std::string_view rep;
         switch (s[i]) {
         case '&': rep = "&amp;"; break;
         case '<': rep = "&lt;";  break;
         case '>': rep = "&gt;";  break;
         default: continue;
         }
-        print(b, span(s.data+last, s.data+i));
+        print(b, s.substr(last, i-last));
         print(b, rep);
         last = i + 1;
     }
-    print(b, cuthead(s, last));
+    print(b, s.substr(last));
 }
 
 // Escape & < > " for double-quoted HTML attributes.
-static void printattr(Buf *b, Str s)
+static void printattr(Buf *b, std::string_view s)
 {
     iz last = 0;
-    for (iz i = 0; i < s.len; i++) {
-        Str rep = {};
+    for (iz i = 0; i < std::ssize(s); i++) {
+        std::string_view rep;
         switch (s[i]) {
         case '&': rep = "&amp;";  break;
         case '<': rep = "&lt;";   break;
@@ -458,14 +366,14 @@ static void printattr(Buf *b, Str s)
         case '"': rep = "&quot;"; break;
         default: continue;
         }
-        print(b, span(s.data+last, s.data+i));
+        print(b, s.substr(last, i-last));
         print(b, rep);
         last = i + 1;
     }
-    print(b, cuthead(s, last));
+    print(b, s.substr(last));
 }
 
-static Str finish(Buf *b)
+static std::string_view finish(Buf *b)
 {
-    return {b->data, b->len};
+    return {b->data, (uz)b->len};
 }

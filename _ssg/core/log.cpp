@@ -7,11 +7,11 @@ struct Log {
     i32 warnings = 0;
 };
 
-static void logmsg(Log *log, Str kind, Str file, iz line, Str msg)
+static void logmsg(Log *log, std::string_view kind, std::string_view file, iz line, std::string_view msg)
 {
     Buf *b = &log->buf;
     print(b, "ssg: ");
-    if (file.len) {
+    if (std::ssize(file)) {
         print(b, file);
         if (line > 0) {
             putbyte(b, ':');
@@ -24,13 +24,13 @@ static void logmsg(Log *log, Str kind, Str file, iz line, Str msg)
     putbyte(b, '\n');
 }
 
-static void warn(Log *log, Str file, iz line, Str msg)
+static void warn(Log *log, std::string_view file, iz line, std::string_view msg)
 {
     log->warnings++;
     logmsg(log, "warning: ", file, line, msg);
 }
 
-static void error(Log *log, Str file, iz line, Str msg)
+static void error(Log *log, std::string_view file, iz line, std::string_view msg)
 {
     log->errors++;
     logmsg(log, "error: ", file, line, msg);

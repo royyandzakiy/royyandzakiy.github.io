@@ -1,12 +1,12 @@
 // New post tests: drafts, file names, YAML titles
-static Str slug(Arena *a, Str title)
+static std::string_view slug(Arena *a, std::string_view title)
 {
     Buf b(a, 64);
     printslug(&b, title);
     return finish(&b);
 }
 
-static Str yaml(Arena *a, Str s)
+static std::string_view yaml(Arena *a, std::string_view s)
 {
     Buf b(a, 64);
     printyaml(&b, s);
@@ -44,7 +44,7 @@ static void test_newpost(Test *t)
                       "2026-09-29-Hello-world.markdown");
 
     // Titles survive the trip through front matter
-    Str titles[] = {
+    std::string_view titles[] = {
         "Plain title", "It's fine", "Title: subtitle", "'Quoted' start",
         "\"Double\" start", "Ends with:", "C# tricks", "A #hash", "- dash",
         "My take on \"where's all the code\"",

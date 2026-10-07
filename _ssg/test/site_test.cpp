@@ -1,12 +1,12 @@
 // Site model tests: dates, encoders, front matter, UUIDs
-static Str render(Arena *a, void (*fn)(Buf *, i64), i64 v)
+static std::string_view render(Arena *a, void (*fn)(Buf *, i64), i64 v)
 {
     Buf b(a, 64);
     fn(&b, v);
     return finish(&b);
 }
 
-static Str render(Arena *a, void (*fn)(Buf *, Str), Str s)
+static std::string_view render(Arena *a, void (*fn)(Buf *, std::string_view), std::string_view s)
 {
     Buf b(a, 64);
     fn(&b, s);
@@ -25,10 +25,10 @@ static void test_site(Test *t)
     expect(t, "ymd",     render(&a, printymd, parseday("2007-09-01")), "2007-09-01");
     expect(t, "rfc822b", render(&a, printrfc822, parseday("1970-01-01")), "Thu, 01 Jan 1970 00:00:00 GMT");
     expect(t, "rfc822c", render(&a, printrfc822, parseday("2000-02-29")), "Tue, 29 Feb 2000 00:00:00 GMT");
-    expect(t, "badts",   parsetimestamp("2026-09-20 01:49:36") < 0 ? Str("bad") : Str("ok"), "bad");
+    expect(t, "badts",   parsetimestamp("2026-09-20 01:49:36") < 0 ? std::string_view("bad") : std::string_view("ok"), "bad");
 
     // Filters, checked against Jekyll's output
-    struct { Str title, uri, url; } cases[] = {
+    struct { std::string_view title, uri, url; } cases[] = {
         {"My take on \"where's all the code\"",
          "My%20take%20on%20%22where's%20all%20the%20code%22",
          "My+take+on+%22where%27s+all+the+code%22"},
@@ -61,19 +61,19 @@ static void test_site(Test *t)
         "---\ntitle: 'My take on \"where''s all the code\"'\nlayout: post\n"
         "date: 2022-05-22T22:59:04Z\ntags: [c, cpp]\n"
         "uuid: 3c5b2b52-5e2f-4d57-8f3b-5b7b5a8f5e1d\n---\n\nBody\n", &a);
-    expect(t, "fm.ok",    fm.ok ? Str("ok") : fm.err, "ok");
+    expect(t, "fm.ok",    fm.ok ? std::string_view("ok") : fm.err, "ok");
     expect(t, "fm.title", fm.title, "My take on \"where's all the code\"");
-    expect(t, "fm.tags",  fm.tags.len==2 ? fm.tags[1] : Str{}, "cpp");
+    expect(t, "fm.tags",  fm.tags.len==2 ? fm.tags[1] : std::string_view{}, "cpp");
     expect(t, "fm.body",  fm.body, "Body\n");
     fm = parsefrontmatter("---\ntitle: \"A \\\"quoted\\\" title\"\ntags: []\n---\nx", &a);
     expect(t, "fm.dq",    fm.title, "A \"quoted\" title");
-    expect(t, "fm.empty", fm.tags.len ? Str("tags") : Str("none"), "none");
+    expect(t, "fm.empty", fm.tags.len ? std::string_view("tags") : std::string_view("none"), "none");
     fm = parsefrontmatter("---\ntitle: x\nbogus: y\n---\n", &a);
-    expect(t, "fm.bad",   fm.ok ? Str("ok") : Str("err"), "err");
+    expect(t, "fm.bad",   fm.ok ? std::string_view("ok") : std::string_view("err"), "err");
 
     // Derived tag UUIDs are well-formed and stable
-    Str u = deriveuuid(&a, "newtag");
-    expect(t, "uuid.valid", validuuid(u) ? Str("ok") : u, "ok");
-    expect(t, "uuid.ver",   takehead(cuthead(u, 14), 1), "8");
+    std::string_view u = deriveuuid(&a, "newtag");
+    expect(t, "uuid.valid", validuuid(u) ? std::string_view("ok") : u, "ok");
+    expect(t, "uuid.ver",   (u.substr(14)).substr(0, 1), "8");
     expect(t, "uuid.same",  deriveuuid(&a, "newtag"), u);
 }
