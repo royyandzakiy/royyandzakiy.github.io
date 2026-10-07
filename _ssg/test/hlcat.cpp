@@ -39,9 +39,9 @@ int main(int argc, char **argv)
     std::string_view code = {data, std::fread(data, 1, (uz)(cap/4), stdin)};
     perm.beg = data + code.size();
 
-    Buf b(&perm, std::ssize(code)*2 + 64);
+    std::string b;
     b32 known = highlight(&b, lang, code, scratch);
-    if (!writeall(stdout, finish(&b))) {
+    if (!writeall(stdout, b)) {
         return 2;
     }
     return !known;

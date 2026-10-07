@@ -7,24 +7,24 @@ static std::string_view site_desc  = "Hobby computing blog";
 static std::string_view feed_uuid  = "060da7ea-d2f4-4736-b001-fb0e880dd589";
 
 // The title is the concatenation of two parts.
-static void layouthead(Buf *b, std::string_view title, std::string_view title2 = {})
+static void layouthead(std::string *b, std::string_view title, std::string_view title2 = {})
 {
-    print(b, "<!DOCTYPE html>\n<title>");
+    *b += "<!DOCTYPE html>\n<title>";
     printhtml(b, title);
     printhtml(b, title2);
-    print(b, "</title>\n"
+    *b += "</title>\n"
 R"(<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <link rel="alternate" type="application/atom+xml" href="/feed/" title="Atom Feed"/>
 <link rel="stylesheet" href="/css/full.css"/>
 
 <main lang="en">
-)");
+)";
 }
 
-static void layouttail(Buf *b)
+static void layouttail(std::string *b)
 {
-    print(b,
+    *b +=
 R"(</main>
 
 <header>
@@ -48,320 +48,320 @@ R"(</main>
     reserved.
   </p>
 </footer>
-)");
+)";
 }
 
 // The date header shared by post pages and the front page.
-static void postheader(Buf *b, Post *p)
+static void postheader(std::string *b, Post *p)
 {
-    print(b, "  <h2><a href=\"");
+    *b += "  <h2><a href=\"";
     printattr(b, p->url);
-    print(b, "\">");
+    *b += "\">";
     printhtml(b, p->title);
-    print(b, "</a></h2>\n  <time datetime=\"");
+    *b += "</a></h2>\n  <time datetime=\"";
     printymd(b, p->time);
-    print(b, "\">\n    ");
+    *b += "\">\n    ";
     printlongdate(b, p->time);
-    print(b, "\n  </time>\n  <div class=\"print-only url\">\n    royyandzakiy.com");
+    *b += "\n  </time>\n  <div class=\"print-only url\">\n    royyandzakiy.com";
     printhtml(b, p->url);
-    print(b, "\n  </div>\n\n");
+    *b += "\n  </div>\n\n";
 }
 
-static void posttags(Buf *b, Post *p)
+static void posttags(std::string *b, Post *p)
 {
-    print(b, "  <ul class=\"tags\">\n");
+    *b += "  <ul class=\"tags\">\n";
     for (iz i = 0; i < std::ssize(p->tags); i++) {
-        print(b, "    <li><a href=\"/tags/");
+        *b += "    <li><a href=\"/tags/";
         printattr(b, p->tags[i]);
-        print(b, "/\">");
+        *b += "/\">";
         printhtml(b, p->tags[i]);
-        print(b, "</a></li>\n");
+        *b += "</a></li>\n";
     }
-    print(b, "  </ul>\n  <ol class=\"references print-only\"></ol>\n");
+    *b += "  </ul>\n  <ol class=\"references print-only\"></ol>\n";
 }
 
-static void postpage(Buf *b, Post *p)
+static void postpage(std::string *b, Post *p)
 {
     layouthead(b, p->title);
-    print(b, "<article class=\"single\">\n");
+    *b += "<article class=\"single\">\n";
     postheader(b, p);
-    print(b, p->html);
-    print(b, "\n\n");
+    *b += p->html;
+    *b += "\n\n";
     posttags(b, p);
 
-    print(b,
+    *b +=
 R"(
   <nav class="no-print">
-)");
+)";
     if (p->older) {
-        print(b, "    <div class=\"prev\">\n      <span class=\"marker\">«</span>\n      <a href=\"");
+        *b += "    <div class=\"prev\">\n      <span class=\"marker\">«</span>\n      <a href=\"";
         printattr(b, p->older->url);
-        print(b, "\">\n        ");
+        *b += "\">\n        ";
         printhtml(b, p->older->title);
-        print(b, "\n      </a>\n    </div>\n");
+        *b += "\n      </a>\n    </div>\n";
     }
     if (p->newer) {
-        print(b, "    <div class=\"next\">\n      <span class=\"marker\">»</span>\n      <a href=\"");
+        *b += "    <div class=\"next\">\n      <span class=\"marker\">»</span>\n      <a href=\"";
         printattr(b, p->newer->url);
-        print(b, "\">\n        ");
+        *b += "\">\n        ";
         printhtml(b, p->newer->title);
-        print(b, "\n      </a>\n    </div>\n");
+        *b += "\n      </a>\n    </div>\n";
     }
-    print(b, "  </nav>\n</article>\n");
+    *b += "  </nav>\n</article>\n";
     layouttail(b);
 }
 
-static void homepage(Buf *b, Site *site, iz limit)
+static void homepage(std::string *b, Site *site, iz limit)
 {
     layouthead(b, site_title);
     for (iz i = 0; i < std::ssize(site->posts) && i < limit; i++) {
         Post *p = site->posts[i];
-        print(b, "<article class=\"many\">\n");
+        *b += "<article class=\"many\">\n";
         postheader(b, p);
-        print(b, "  <blockquote class=\"excerpt\" cite=\"");
+        *b += "  <blockquote class=\"excerpt\" cite=\"";
         printattr(b, p->url);
-        print(b, "\">\n");
-        print(b, p->html.substr(0, p->excerpt));
-        print(b, "\n  </blockquote>\n  <div class=\"read-more\">[<a href=\"");
+        *b += "\">\n";
+        *b += p->html.substr(0, p->excerpt);
+        *b += "\n  </blockquote>\n  <div class=\"read-more\">[<a href=\"";
         printattr(b, p->url);
-        print(b, "\">…</a>]</div>\n\n");
+        *b += "\">…</a>]</div>\n\n";
         posttags(b, p);
-        print(b, "</article>\n");
+        *b += "</article>\n";
     }
     layouttail(b);
 }
 
-static void postitem(Buf *b, Post *p)
+static void postitem(std::string *b, Post *p)
 {
-    print(b, "    <li>\n      <time datetime=\"");
+    *b += "    <li>\n      <time datetime=\"";
     printymd(b, p->time);
-    print(b, "\">\n        ");
+    *b += "\">\n        ";
     printymd(b, p->time);
-    print(b, "\n      </time>\n      <a href=\"");
+    *b += "\n      </time>\n      <a href=\"";
     printattr(b, p->url);
-    print(b, "\">");
+    *b += "\">";
     printhtml(b, p->title);
-    print(b, "</a>\n    </li>\n");
+    *b += "</a>\n    </li>\n";
 }
 
-static void archivepage(Buf *b, Site *site)
+static void archivepage(std::string *b, Site *site)
 {
     layouthead(b, "Archives");
-    print(b, "<article class=\"index\">\n  <h2>Archives</h2>\n  <p>\n"
-             "    There are <span class=\"post-count\">");
-    print(b, (i64)std::ssize(site->posts));
-    print(b, "</span> articles.\n  </p>\n  <ul class=\"post-list\">\n");
+    *b += "<article class=\"index\">\n  <h2>Archives</h2>\n  <p>\n"
+             "    There are <span class=\"post-count\">";
+    *b += std::to_string(std::ssize(site->posts));
+    *b += "</span> articles.\n  </p>\n  <ul class=\"post-list\">\n";
     for (iz i = 0; i < std::ssize(site->posts); i++) {
         postitem(b, site->posts[i]);
     }
-    print(b, "  </ul>\n</article>\n");
+    *b += "  </ul>\n</article>\n";
     layouttail(b);
 }
 
 // The front page: every post, newest first.
-static void homelist(Buf *b, Site *site)
+static void homelist(std::string *b, Site *site)
 {
     layouthead(b, site_title);
-    print(b, "<article class=\"index\">\n  <h2>Posts</h2>\n"
-             "  <ul class=\"post-list\">\n");
+    *b += "<article class=\"index\">\n  <h2>Posts</h2>\n"
+             "  <ul class=\"post-list\">\n";
     for (iz i = 0; i < std::ssize(site->posts); i++) {
         postitem(b, site->posts[i]);
     }
-    print(b, "  </ul>\n</article>\n");
+    *b += "  </ul>\n</article>\n";
     layouttail(b);
 }
 
-static void tagindexpage(Buf *b, Site *site)
+static void tagindexpage(std::string *b, Site *site)
 {
     layouthead(b, "Tags");
-    print(b, "<article class=\"tag\">\n  <h2>Tags</h2>\n  <ul class=\"post-list\">\n");
+    *b += "<article class=\"tag\">\n  <h2>Tags</h2>\n  <ul class=\"post-list\">\n";
     for (iz i = 0; i < std::ssize(site->tags); i++) {
         std::string_view name = site->tags[i]->name;
-        print(b, "    <li>\n      <a href=\"/tags/");
+        *b += "    <li>\n      <a href=\"/tags/";
         printattr(b, name);
-        print(b, "/feed/\" class=\"feed\"></a>\n      <a href=\"/tags/");
+        *b += "/feed/\" class=\"feed\"></a>\n      <a href=\"/tags/";
         printattr(b, name);
-        print(b, "/\" class=\"tag-entry\">");
+        *b += "/\" class=\"tag-entry\">";
         printhtml(b, name);
-        print(b, "</a>\n    </li>\n");
+        *b += "</a>\n    </li>\n";
     }
-    print(b, "  </ul>\n</article>\n");
+    *b += "  </ul>\n</article>\n";
     layouttail(b);
 }
 
-static void tagpage(Buf *b, Tag *tag)
+static void tagpage(std::string *b, Tag *tag)
 {
     layouthead(b, "Posts tagged ", tag->name);
-    print(b, "<article class=\"tag\">\n  <h2>\n    <a class=\"feed\" href=\"/tags/");
+    *b += "<article class=\"tag\">\n  <h2>\n    <a class=\"feed\" href=\"/tags/";
     printattr(b, tag->name);
-    print(b, "/feed/\"></a>\n    Articles tagged \"");
+    *b += "/feed/\"></a>\n    Articles tagged \"";
     printhtml(b, tag->name);
-    print(b, "\"\n  </h2>\n  <ul class=\"post-list\">\n");
+    *b += "\"\n  </h2>\n  <ul class=\"post-list\">\n";
     for (iz i = 0; i < std::ssize(tag->posts); i++) {
         postitem(b, tag->posts[i]);
     }
-    print(b, "  </ul>\n</article>\n");
+    *b += "  </ul>\n</article>\n";
     layouttail(b);
 }
 
-static void printcdata(Buf *b, std::string_view s)
+static void printcdata(std::string *b, std::string_view s)
 {
-    print(b, "<![CDATA[");
+    *b += "<![CDATA[";
     for (;;) {
         uz i = s.find("]]>");
         if (i == s.npos) {
             break;
         }
-        print(b, s.substr(0, i+2));
-        print(b, "]]><![CDATA[");
+        *b += s.substr(0, i+2);
+        *b += "]]><![CDATA[";
         s = s.substr(i+2);
     }
-    print(b, s);
-    print(b, "]]>");
+    *b += s;
+    *b += "]]>";
 }
 
-static void atomentry(Buf *b, Post *p)
+static void atomentry(std::string *b, Post *p)
 {
-    print(b, "  <entry>\n    <title>");
+    *b += "  <entry>\n    <title>";
     printhtml(b, p->title);
-    print(b, "</title>\n    <link rel=\"alternate\" type=\"text/html\" href=\"");
+    *b += "</title>\n    <link rel=\"alternate\" type=\"text/html\" href=\"";
     printattr(b, site_url);
     printattr(b, p->url);
-    print(b, "\"/>\n    <id>urn:uuid:");
-    print(b, p->uuid);
-    print(b, "</id>\n    <updated>");
+    *b += "\"/>\n    <id>urn:uuid:";
+    *b += p->uuid;
+    *b += "</id>\n    <updated>";
     printiso(b, p->time);
-    print(b, "</updated>\n    ");
+    *b += "</updated>\n    ";
     for (iz i = 0; i < std::ssize(p->tags); i++) {
-        print(b, "<category term=\"");
+        *b += "<category term=\"";
         printattr(b, p->tags[i]);
-        print(b, "\"/>");
+        *b += "\"/>";
     }
-    print(b, "\n    <content type=\"html\">\n      ");
+    *b += "\n    <content type=\"html\">\n      ";
     printcdata(b, p->html);
-    print(b, "\n    </content>\n  </entry>\n");
+    *b += "\n    </content>\n  </entry>\n";
 }
 
-static void atomauthor(Buf *b, std::string_view uri, std::string_view suffix)
+static void atomauthor(std::string *b, std::string_view uri, std::string_view suffix)
 {
-    print(b, "  <author>\n    <name>Royyan Dzakiy</name>\n    <uri>");
-    print(b, uri);
-    print(b, suffix);
-    print(b, "</uri>\n  </author>\n\n");
+    *b += "  <author>\n    <name>Royyan Dzakiy</name>\n    <uri>";
+    *b += uri;
+    *b += suffix;
+    *b += "</uri>\n  </author>\n\n";
 }
 
-static void atomfeed(Buf *b, Site *site)
+static void atomfeed(std::string *b, Site *site)
 {
-    print(b, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-             "<feed xmlns=\"http://www.w3.org/2005/Atom\">\n\n  <title>");
+    *b += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+             "<feed xmlns=\"http://www.w3.org/2005/Atom\">\n\n  <title>";
     printhtml(b, site_title);
-    print(b, "</title>\n  <link rel=\"alternate\" type=\"text/html\" href=\"");
-    print(b, site_url);
-    print(b, "\"/>\n  <link rel=\"self\" type=\"application/atom+xml\" href=\"");
-    print(b, site_url);
-    print(b, "/feed/\"/>\n  <updated>");
+    *b += "</title>\n  <link rel=\"alternate\" type=\"text/html\" href=\"";
+    *b += site_url;
+    *b += "\"/>\n  <link rel=\"self\" type=\"application/atom+xml\" href=\"";
+    *b += site_url;
+    *b += "/feed/\"/>\n  <updated>";
     printiso(b, site->now);
-    print(b, "</updated>\n  <id>urn:uuid:");
-    print(b, feed_uuid);
-    print(b, "</id>\n\n");
+    *b += "</updated>\n  <id>urn:uuid:";
+    *b += feed_uuid;
+    *b += "</id>\n\n";
     atomauthor(b, site_url, "/");
     for (iz i = 0; i < std::ssize(site->posts) && i < 8; i++) {
         atomentry(b, site->posts[i]);
     }
-    print(b, "\n</feed>\n");
+    *b += "\n</feed>\n";
 }
 
-static void tagfeed(Buf *b, Site *site, Tag *tag)
+static void tagfeed(std::string *b, Site *site, Tag *tag)
 {
-    print(b, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-             "<feed xmlns=\"http://www.w3.org/2005/Atom\">\n\n  <title>Articles tagged ");
+    *b += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+             "<feed xmlns=\"http://www.w3.org/2005/Atom\">\n\n  <title>Articles tagged ";
     printhtml(b, tag->name);
-    print(b, " at ");
+    *b += " at ";
     printhtml(b, site_title);
-    print(b, "</title>\n  <link rel=\"alternate\" type=\"text/html\"\n        href=\"");
-    print(b, site_url);
-    print(b, "/tags/");
+    *b += "</title>\n  <link rel=\"alternate\" type=\"text/html\"\n        href=\"";
+    *b += site_url;
+    *b += "/tags/";
     printattr(b, tag->name);
-    print(b, "/\"/>\n  <link rel=\"self\" type=\"application/atom+xml\"\n        href=\"");
-    print(b, site_url);
-    print(b, "/tags/");
+    *b += "/\"/>\n  <link rel=\"self\" type=\"application/atom+xml\"\n        href=\"";
+    *b += site_url;
+    *b += "/tags/";
     printattr(b, tag->name);
-    print(b, "/feed/\"/>\n  <updated>");
+    *b += "/feed/\"/>\n  <updated>";
     printiso(b, site->now);
-    print(b, "</updated>\n  <id>urn:uuid:");
-    print(b, tag->uuid);
-    print(b, "</id>\n\n");
+    *b += "</updated>\n  <id>urn:uuid:";
+    *b += tag->uuid;
+    *b += "</id>\n\n";
     atomauthor(b, site_url, "");
     for (iz i = 0; i < std::ssize(tag->posts); i++) {
         atomentry(b, tag->posts[i]);
     }
-    print(b, "\n</feed>\n");
+    *b += "\n</feed>\n";
 }
 
-static void rssfeed(Buf *b, Site *site)
+static void rssfeed(std::string *b, Site *site)
 {
-    print(b, "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
+    *b += "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
              "<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n"
-             "  <channel>\n    <title>");
+             "  <channel>\n    <title>";
     printhtml(b, site_title);
-    print(b, "</title>\n    <description>");
+    *b += "</title>\n    <description>";
     printhtml(b, site_desc);
-    print(b, "</description>\n    <link>");
-    print(b, site_url);
-    print(b, "</link>\n    <atom:link href=\"");
-    print(b, site_url);
-    print(b, "/blog/index.rss\" rel=\"self\" type=\"application/rss+xml\"/>\n"
-             "    <language>en-us</language>\n    <pubDate>");
+    *b += "</description>\n    <link>";
+    *b += site_url;
+    *b += "</link>\n    <atom:link href=\"";
+    *b += site_url;
+    *b += "/blog/index.rss\" rel=\"self\" type=\"application/rss+xml\"/>\n"
+             "    <language>en-us</language>\n    <pubDate>";
     printrfc822(b, site->now);
-    print(b, "</pubDate>\n    <lastBuildDate>");
+    *b += "</pubDate>\n    <lastBuildDate>";
     printrfc822(b, site->now);
-    print(b, "</lastBuildDate>\n\n");
+    *b += "</lastBuildDate>\n\n";
     for (iz i = 0; i < std::ssize(site->posts) && i < 8; i++) {
         Post *p = site->posts[i];
-        print(b, "    <item>\n      <title>");
+        *b += "    <item>\n      <title>";
         printhtml(b, p->title);
-        print(b, "</title>\n      <link>");
-        print(b, site_url);
+        *b += "</title>\n      <link>";
+        *b += site_url;
         printhtml(b, p->url);
-        print(b, "</link>\n      <guid>");
-        print(b, site_url);
+        *b += "</link>\n      <guid>";
+        *b += site_url;
         printhtml(b, p->url);
-        print(b, "</guid>\n      <pubDate>");
+        *b += "</guid>\n      <pubDate>";
         printrfc822(b, p->time);
-        print(b, "</pubDate>\n      <comments>");
-        print(b, site_url);
+        *b += "</pubDate>\n      <comments>";
+        *b += site_url;
         printhtml(b, p->url);
-        print(b, "#disqus_thread</comments>\n      <description>\n        ");
+        *b += "#disqus_thread</comments>\n      <description>\n        ";
         printcdata(b, p->html);
-        print(b, "\n      </description>\n    </item>\n");
+        *b += "\n      </description>\n    </item>\n";
     }
-    print(b, "\n  </channel>\n</rss>\n");
+    *b += "\n  </channel>\n</rss>\n";
 }
 
 // A stub at a post's old permalink that forwards to its current URL.
-static void redirectpage(Buf *b, Post *p)
+static void redirectpage(std::string *b, Post *p)
 {
-    print(b, "<!DOCTYPE html>\n<meta charset=\"utf-8\">\n<title>");
+    *b += "<!DOCTYPE html>\n<meta charset=\"utf-8\">\n<title>";
     printhtml(b, p->title);
-    print(b, "</title>\n<link rel=\"canonical\" href=\"");
-    print(b, site_url);
+    *b += "</title>\n<link rel=\"canonical\" href=\"";
+    *b += site_url;
     printattr(b, p->url);
-    print(b, "\"/>\n<meta http-equiv=\"refresh\" content=\"0; url=");
+    *b += "\"/>\n<meta http-equiv=\"refresh\" content=\"0; url=";
     printattr(b, p->url);
-    print(b, "\"/>\n<p>Moved to <a href=\"");
+    *b += "\"/>\n<p>Moved to <a href=\"";
     printattr(b, p->url);
-    print(b, "\">");
+    *b += "\">";
     printhtml(b, p->title);
-    print(b, "</a>.</p>\n");
+    *b += "</a>.</p>\n";
 }
 
-static void aboutpage(Buf *b, Page *p)
+static void aboutpage(std::string *b, Page *p)
 {
     layouthead(b, p->title);
-    print(b, "<article class=\"single\">\n<h2>");
+    *b += "<article class=\"single\">\n<h2>";
     printhtml(b, p->title);
-    print(b, "</h2>\n");
-    print(b, p->html);
-    print(b, "\n</article>\n");
+    *b += "</h2>\n";
+    *b += p->html;
+    *b += "\n</article>\n";
     layouttail(b);
 }

@@ -1,16 +1,16 @@
 // New post tests: drafts, file names, YAML titles
 static std::string_view slug(Arena *a, std::string_view title)
 {
-    Buf b(a, 64);
+    std::string b;
     printslug(&b, title);
-    return finish(&b);
+    return clone(a, b);
 }
 
 static std::string_view yaml(Arena *a, std::string_view s)
 {
-    Buf b(a, 64);
+    std::string b;
     printyaml(&b, s);
-    return finish(&b);
+    return clone(a, b);
 }
 
 static void test_newpost(Test *t)
@@ -50,11 +50,11 @@ static void test_newpost(Test *t)
         "My take on \"where's all the code\"",
     };
     for (iz i = 0; i < std::ssize(titles); i++) {
-        Buf b(&a, 128);
-        print(&b, "---\ntitle: ");
+        std::string b;
+        b += "---\ntitle: ";
         printyaml(&b, titles[i]);
-        print(&b, "\n---\n");
-        FrontMatter fm = parsefrontmatter(finish(&b), &a);
+        b += "\n---\n";
+        FrontMatter fm = parsefrontmatter(b, &a);
         expect(t, "yaml.trip", fm.title, titles[i]);
     }
     expect(t, "yaml.plain", yaml(&a, "It's fine"), "It's fine");

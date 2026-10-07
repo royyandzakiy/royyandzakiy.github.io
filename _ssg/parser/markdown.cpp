@@ -259,28 +259,28 @@ static iz search(std::string_view s, iz i, std::string_view needle)
     return -1;
 }
 
-static void putcp(Buf *b, i32 c)
+static void putcp(std::string *b, i32 c)
 {
     if (c < 0x80) {
-        putbyte(b, (u8)c);
+        *b += (u8)c;
     } else if (c < 0x800) {
-        putbyte(b, (u8)(0xc0 | c>>6));
-        putbyte(b, (u8)(0x80 | (c & 0x3f)));
+        *b += (u8)(0xc0 | c>>6);
+        *b += (u8)(0x80 | (c & 0x3f));
     } else if (c < 0x10000) {
-        putbyte(b, (u8)(0xe0 | c>>12));
-        putbyte(b, (u8)(0x80 | (c>>6 & 0x3f)));
-        putbyte(b, (u8)(0x80 | (c & 0x3f)));
+        *b += (u8)(0xe0 | c>>12);
+        *b += (u8)(0x80 | (c>>6 & 0x3f));
+        *b += (u8)(0x80 | (c & 0x3f));
     } else {
-        putbyte(b, (u8)(0xf0 | c>>18));
-        putbyte(b, (u8)(0x80 | (c>>12 & 0x3f)));
-        putbyte(b, (u8)(0x80 | (c>>6 & 0x3f)));
-        putbyte(b, (u8)(0x80 | (c & 0x3f)));
+        *b += (u8)(0xf0 | c>>18);
+        *b += (u8)(0x80 | (c>>12 & 0x3f));
+        *b += (u8)(0x80 | (c>>6 & 0x3f));
+        *b += (u8)(0x80 | (c & 0x3f));
     }
 }
 
-static void putspaces(Buf *b, iz n)
+static void putspaces(std::string *b, iz n)
 {
-    for (iz i = 0; i < n; i++) putbyte(b, ' ');
+    for (iz i = 0; i < n; i++) *b += ' ';
 }
 
 
@@ -305,7 +305,7 @@ static b32 isref(std::string_view s, iz i)
 
 // Escape < > and &, except & starting a reference. Attributes also
 // escape the double quote.
-static void printesc(Buf *b, std::string_view s, b32 attr)
+static void printesc(std::string *b, std::string_view s, b32 attr)
 {
     iz last = 0;
     for (iz i = 0; i < std::ssize(s); i++) {
@@ -315,12 +315,12 @@ static void printesc(Buf *b, std::string_view s, b32 attr)
                   c=='&' ? (isref(s, i) ? std::string_view() : std::string_view("&amp;")) :
                   attr ? std::string_view("&quot;") : std::string_view();
         if (std::ssize(rep)) {
-            print(b, slice(s, last, i));
-            print(b, rep);
+            *b += slice(s, last, i);
+            *b += rep;
             last = i + 1;
         }
     }
-    print(b, s.substr(last));
+    *b += s.substr(last);
 }
 
 
@@ -384,10 +384,10 @@ static i32 htmlflags(std::string_view name)
            (parse ? H_PARSE : 0);
 }
 
-static void printname(Buf *b, std::string_view name, b32 known)
+static void printname(std::string *b, std::string_view name, b32 known)
 {
     for (iz i = 0; i < std::ssize(name); i++) {
-        putbyte(b, known ? lowercase((u8)name[i]) : (u8)name[i]);
+        *b += known ? lowercase((u8)name[i]) : (u8)name[i];
     }
 }
 
@@ -485,7 +485,7 @@ static iz delimited(std::string_view s, iz i, std::string_view open, std::string
 // Print attributes the way kramdown re-serializes them: lowercase names
 // for known elements, first position but last value for duplicates,
 // double-quoted escaped values, no empty id, and no markdown attribute.
-static void printattrs(Buf *b, std::string_view attrs, b32 known, b32 span)
+static void printattrs(std::string *b, std::string_view attrs, b32 known, b32 span)
 {
     struct Attr { std::string_view name, value; };
     Attr list[32];
@@ -531,9 +531,9 @@ static void printattrs(Buf *b, std::string_view attrs, b32 known, b32 span)
         if (md || (id && !std::ssize(trim(list[k].value)))) {
             continue;
         }
-        putbyte(b, ' ');
+        *b += ' ';
         printname(b, list[k].name, known);
-        print(b, "=\"");
+        *b += "=\"";
         std::string_view v = list[k].value;
         if (span) {
             // Newline runs in span tag attributes become one space
@@ -541,7 +541,7 @@ static void printattrs(Buf *b, std::string_view attrs, b32 known, b32 span)
             for (iz i = 0; i < std::ssize(v); i++) {
                 if (v[i] == '\n') {
                     printesc(b, slice(v, last, i), 1);
-                    putbyte(b, ' ');
+                    *b += ' ';
                     for (; i+1<std::ssize(v) && v[i+1]=='\n'; i++) {}
                     last = i + 1;
                 }
@@ -549,7 +549,7 @@ static void printattrs(Buf *b, std::string_view attrs, b32 known, b32 span)
             v = v.substr(last);
         }
         printesc(b, v, 1);
-        putbyte(b, '"');
+        *b += '"';
     }
 }
 
@@ -1249,7 +1249,7 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
 struct MdRaw {
     std::string_view  s;
     iz   pos;
-    Buf *out;
+    std::string *out;
     b32  eof;
     b32  mdattr;  // saw a markdown attribute
 };
@@ -1287,7 +1287,7 @@ static void rawchildren(MdRaw *r, std::string_view name, b32 known)
         HtmlTag t;
         if ((e = delimited(s, i, "<!--", "-->")) >= 0 ||
                 (e = delimited(s, i, "<?", "?>")) >= 0) {
-            print(r->out, slice(s, i, e));
+            *r->out += slice(s, i, e);
             r->pos = e;
         } else if ((e = delimited(s, i, "<![CDATA[", "]]>")) >= 0) {
             printesc(r->out, slice(s, i+9, e-3), 0);
@@ -1310,12 +1310,12 @@ static void rawchildren(MdRaw *r, std::string_view name, b32 known)
 
 static void rawelement(MdRaw *r, HtmlTag t, b32 top)
 {
-    Buf *b      = r->out;
+    std::string *b      = r->out;
     i32  fl     = htmlflags(t.name);
     b32  known  = fl != 0;
     b32  closed = t.selfclose || (fl & H_VOID);
     r->mdattr |= search(t.attrs, 0, "markdown") >= 0;
-    putbyte(b, '<');
+    *b += '<';
     printname(b, t.name, known);
     printattrs(b, t.attrs, known, 0);
 
@@ -1326,29 +1326,29 @@ static void rawelement(MdRaw *r, HtmlTag t, b32 top)
             HtmlTag c = matchclose(r->s, i);
             if (c.end>=0 && equalfold(c.name, t.name)) break;
         }
-        putbyte(b, '>');
-        print(b, slice(r->s, r->pos, i));
+        *b += '>';
+        *b += slice(r->s, r->pos, i);
         r->pos = i;
         if (i < std::ssize(r->s)) {
             r->pos = matchclose(r->s, i).end;
         } else {
             r->eof = 1;
         }
-        print(b, "</");
+        *b += "</";
         printname(b, t.name, known);
-        putbyte(b, '>');
+        *b += '>';
         return;
     }
 
     if (closed) {
-        print(b, " />");
+        *b += " />";
         return;
     }
-    putbyte(b, '>');
+    *b += '>';
     rawchildren(r, t.name, known);
-    print(b, "</");
+    *b += "</";
     printname(b, t.name, known);
-    putbyte(b, '>');
+    *b += '>';
     if (top && !r->eof) {
         // TRAILING_WHITESPACE
         iz i = r->pos;
@@ -1378,7 +1378,7 @@ static b32 blockhtml(Md *m, MdBlock *tree, MdSrc *src)
     if (t.end<0 || (htmlflags(t.name) & H_SPAN)) {
         return 0;
     }
-    Buf   out(m->a, 256);
+    std::string   out;
     MdRaw r = {s, t.end, &out, 0, 0};
     rawelement(&r, t, 1);
     if (r.mdattr) {
@@ -1389,7 +1389,7 @@ static b32 blockhtml(Md *m, MdBlock *tree, MdSrc *src)
         error(m->log, m->name, srcline(src, pos), msg);
     }
     MdBlock *b = addblock(m, tree, B_HTML, src, pos);
-    b->text  = finish(&out);
+    b->text  = clone(m->a, out);
     src->pos = r.pos;
     return 1;
 }
@@ -1514,7 +1514,7 @@ static iz defrest(std::string_view s, iz k, std::string_view *title)
 // Normalize a link label: \s+ to one space, then lowercase
 static std::string_view normlabel(Arena *a, std::string_view label)
 {
-    Buf key(a, 2*std::ssize(label));
+    std::string key;
     for (iz k = 0; k < std::ssize(label);) {
         iz  n;
         i32 c = cpat(label, k, &n);
@@ -1527,7 +1527,7 @@ static std::string_view normlabel(Arena *a, std::string_view label)
         putcp(&key, c==0x130 ? 'i' : c);
         if (c == 0x130) putcp(&key, 0x307);
     }
-    return finish(&key);
+    return clone(a, key);
 }
 
 // LINK_DEFINITION_START: the URL is the shortest that lets the rest of
@@ -2627,17 +2627,17 @@ static b32 tablepipes(Md *m, std::string_view text, Arena scratch)
     // Adjacent text, including CDATA, is one child
     MdPipes p     = {};
     i32     depth = 0;
-    Buf     run(&misc, 256);
+    std::string     run;
     for (iz i = 0; i < std::ssize(sp.nodes); i++) {
         MdSpan *n = sp.nodes.data() + i;
         if (n->type == S_WARN) continue;  // not in kramdown's tree
         if (!depth && (n->type==S_TEXT || n->type==S_CDATA)) {
-            print(&run, n->text);
+            run += n->text;
             continue;
         }
-        if (run.len) {
-            pipesegment(&p, finish(&run), 0);
-            run.len = 0;
+        if (std::ssize(run)) {
+            pipesegment(&p, run, 0);
+            run.clear();
         }
         switch (n->type) {
         case S_CODE:    if (!depth) pipesegment(&p, n->text, 1); break;
@@ -2646,7 +2646,7 @@ static b32 tablepipes(Md *m, std::string_view text, Arena scratch)
         case S_TAGEND:  depth--; break;
         }
     }
-    pipesegment(&p, finish(&run), 0);
+    pipesegment(&p, run, 0);
     return p.pipe;
 }
 
@@ -2700,24 +2700,24 @@ static b32 istable(Md *m, std::string_view s, iz pos)
 
 struct MdOut {
     Md    *m;
-    Buf   *b;
+    std::string   *b;
     Arena  temp;  // per text block
 };
 
 // The text of a header's children (gfm.rb update_raw_text)
-static void headertext(Buf *b, MdSpan *v, iz n)
+static void headertext(std::string *b, MdSpan *v, iz n)
 {
     for (iz i = 0; i < n; i++) {
         switch (v[i].type) {
         case S_TEXT:
-        case S_CODE:  print(b, v[i].text); break;
+        case S_CODE:  *b += v[i].text; break;
         case S_CDATA: printhtml(b, v[i].text); break;
         case S_CHAR:  putcp(b, v[i].aux); break;
         case S_ENTITY:
             if (v[i].aux > 0) {
                 putcp(b, v[i].aux);
             } else {
-                print(b, v[i].text);
+                *b += v[i].text;
             }
             break;
         case S_SYM:
@@ -2730,24 +2730,24 @@ static void headertext(Buf *b, MdSpan *v, iz n)
 
 static void headerattr(MdOut *o, MdBlock *h, MdSpan *v, iz n, Arena scratch)
 {
-    Buf *b = o->b;
+    std::string *b = o->b;
     if (std::ssize(h->id)) {
-        print(b, " id=\"");
+        *b += " id=\"";
         printesc(b, h->id, 1);
-        putbyte(b, '"');
+        *b += '"';
         return;
     }
 
-    Buf raw(&scratch, 256);
+    std::string raw;
     headertext(&raw, v, n);
-    std::string_view text = finish(&raw);
-    Buf slug(&scratch, std::ssize(text)+16);
+    std::string_view text = raw;
+    std::string slug;
     for (iz i = 0; i < std::ssize(text);) {
         iz  k;
         i32 c = downcase(cpat(text, i, &k));
         i  += k;
         if (c==' ' || c=='\t') {
-            putbyte(&slug, '-');
+            slug += '-';
         } else if (c == 0x130) {
             putcp(&slug, 'i');
             putcp(&slug, 0x307);
@@ -2755,20 +2755,20 @@ static void headerattr(MdOut *o, MdBlock *h, MdSpan *v, iz n, Arena scratch)
             putcp(&slug, c);
         }
     }
-    std::string_view id = finish(&slug);
+    std::string_view id = slug;
     auto count = o->m->ids.find(id);
     if (count == o->m->ids.end()) {
         count = o->m->ids.emplace(clone(o->m->a, id), 0).first;  // id is scratch
     }
     i32 dup = count->second++;
     if (id.empty() && !dup) return;
-    print(b, " id=\"");
+    *b += " id=\"";
     printesc(b, id, 1);
     if (dup) {
-        putbyte(b, '-');
-        print(b, (i64)dup);
+        *b += '-';
+        *b += std::to_string(dup);
     }
-    putbyte(b, '"');
+    *b += '"';
 }
 
 static void spanwarnings(MdOut *o, MdBlock *blk, std::string_view text, MdSpan *v, iz n)
@@ -2833,14 +2833,14 @@ static void renderspans(MdOut *o, MdBlock *blk, b32 header, b32 lastbr)
         mdwarn(o->m, srcline(blk->src, blk->off), msg);
     }
 
-    Buf    *b = o->b;
+    std::string    *b = o->b;
     MdSpan *v = sp.nodes.data();
     iz      n = std::ssize(sp.nodes);
     if (header) {
-        print(b, "<h");
-        print(b, (i64)blk->level);
+        *b += "<h";
+        *b += std::to_string(blk->level);
         headerattr(o, blk, v, n, misc);
-        putbyte(b, '>');
+        *b += '>';
     }
     spanwarnings(o, blk, blk->text, v, n);
 
@@ -2866,16 +2866,16 @@ static void renderspans(MdOut *o, MdBlock *blk, b32 header, b32 lastbr)
                 // No break for a trailing "\\\n" ending the block
                 b32 end = lastbr && !depth && (k+2==std::ssize(text) ? i+1==n :
                           k+1==std::ssize(text) && i+2==n && std::ssize(v[i+1].text)==1);
-                if (!end) print(b, "<br />");
+                if (!end) *b += "<br />";
             }
             printesc(b, text.substr(last), 0);
         } break;
         case S_CODE:
-            print(b, "<code>");
+            *b += "<code>";
             printhtml(b, s->text);
-            print(b, "</code>");
+            *b += "</code>";
             break;
-        case S_BR:      print(b, "<br />"); break;
+        case S_BR:      *b += "<br />"; break;
         case S_CHAR:    putcp(b, s->aux); break;
         case S_SYM:
             putcp(b, s->aux==LAQUO ? LAQUO : NBSP);
@@ -2883,69 +2883,69 @@ static void renderspans(MdOut *o, MdBlock *blk, b32 header, b32 lastbr)
             break;
         case S_ENTITY:
             if (std::ssize(s->text)) {
-                print(b, s->text);
+                *b += s->text;
             } else {
                 putcp(b, s->aux);
             }
             break;
-        case S_COMMENT: print(b, s->text); break;
+        case S_COMMENT: *b += s->text; break;
         case S_CDATA:   printhtml(b, s->text); break;
         case S_WARN:    break;
-        case S_EM:      depth++; print(b, "<em>"); break;
-        case S_EMEND:   depth--; print(b, "</em>"); break;
-        case S_STRONG:  depth++; print(b, "<strong>"); break;
-        case S_STRONGEND: depth--; print(b, "</strong>"); break;
+        case S_EM:      depth++; *b += "<em>"; break;
+        case S_EMEND:   depth--; *b += "</em>"; break;
+        case S_STRONG:  depth++; *b += "<strong>"; break;
+        case S_STRONGEND: depth--; *b += "</strong>"; break;
         case S_A:
             depth++;
-            print(b, "<a href=\"");
-            if (s->aux & MAILTO) print(b, "mailto:");
+            *b += "<a href=\"";
+            if (s->aux & MAILTO) *b += "mailto:";
             printesc(b, s->text, 1);
             if (s->attr.data()) {
-                print(b, "\" title=\"");
+                *b += "\" title=\"";
                 printesc(b, s->attr, 1);
             }
-            print(b, "\">");
+            *b += "\">";
             break;
-        case S_AEND:    depth--; print(b, "</a>"); break;
+        case S_AEND:    depth--; *b += "</a>"; break;
         case S_IMG:
-            print(b, "<img src=\"");
+            *b += "<img src=\"";
             printesc(b, s->text, 1);
-            print(b, "\" alt=\"");
+            *b += "\" alt=\"";
             printesc(b, s->alt, 1);
             if (s->attr.data()) {
-                print(b, "\" title=\"");
+                *b += "\" title=\"";
                 printesc(b, s->attr, 1);
             }
-            print(b, "\" />");
+            *b += "\" />";
             break;
-        case S_DEL:     depth++; html++; print(b, "<del>"); break;
-        case S_DELEND:  depth--; html--; print(b, "</del>"); break;
+        case S_DEL:     depth++; html++; *b += "<del>"; break;
+        case S_DELEND:  depth--; html--; *b += "</del>"; break;
         case S_TAG:
-            putbyte(b, '<');
+            *b += '<';
             printname(b, s->text, s->aux & TAG_KNOWN);
             printattrs(b, s->attr, s->aux & TAG_KNOWN, 1);
             if (s->aux & TAG_VOID) {
-                print(b, " />");
+                *b += " />";
             } else {
                 depth++;
                 html++;
-                putbyte(b, '>');
+                *b += '>';
             }
             break;
         case S_TAGEND:
             depth--;
             html--;
-            print(b, "</");
+            *b += "</";
             printname(b, s->text, s->aux & TAG_KNOWN);
-            putbyte(b, '>');
+            *b += '>';
             break;
         }
     }
 
     if (header) {
-        print(b, "</h");
-        print(b, (i64)blk->level);
-        print(b, ">\n");
+        *b += "</h";
+        *b += std::to_string(blk->level);
+        *b += ">\n";
     }
 }
 
@@ -2980,19 +2980,19 @@ static MdBlock *firstchild(MdBlock *blk)
 // is dropped depends on its position there: last, and not in the root.
 static void renderblock(MdOut *o, MdBlock *blk, iz indent, b32 last)
 {
-    Buf *b = o->b;
+    std::string *b = o->b;
     switch (blk->type) {
     case B_BLANK:
-        putbyte(b, '\n');
+        *b += '\n';
         break;
     case B_P:
         if (blk->transparent) {
             renderspans(o, blk, 0, 1);
         } else {
             putspaces(b, indent);
-            print(b, "<p>");
+            *b += "<p>";
             renderspans(o, blk, 0, 1);
-            print(b, "</p>\n");
+            *b += "</p>\n";
         }
         break;
     case B_TEXT:
@@ -3004,7 +3004,7 @@ static void renderblock(MdOut *o, MdBlock *blk, iz indent, b32 last)
         break;
     case B_CODE:
         putspaces(b, indent);
-        print(b, "<pre class=\"highlight\"><code>");
+        *b += "<pre class=\"highlight\"><code>";
         if (std::ssize(blk->lang)) {
             if (!highlight(b, blk->lang, blk->text, o->temp)) {
                 mdwarn(o->m, srcline(blk->src, blk->off), "unknown code language");
@@ -3012,8 +3012,8 @@ static void renderblock(MdOut *o, MdBlock *blk, iz indent, b32 last)
         } else {
             printhtml(b, blk->text);
         }
-        if (!blk->text.ends_with("\n")) putbyte(b, '\n');
-        print(b, "</code></pre>\n");
+        if (!blk->text.ends_with("\n")) *b += '\n';
+        *b += "</code></pre>\n";
         break;
     case B_QUOTE:
     case B_UL:
@@ -3021,37 +3021,37 @@ static void renderblock(MdOut *o, MdBlock *blk, iz indent, b32 last)
         std::string_view name = blk->type==B_QUOTE ? std::string_view("blockquote") :
                    blk->type==B_UL    ? std::string_view("ul") : std::string_view("ol");
         putspaces(b, indent);
-        putbyte(b, '<');
-        print(b, name);
-        print(b, ">\n");
+        *b += '<';
+        *b += name;
+        *b += ">\n";
         renderchildren(o, blk, indent+2);
         putspaces(b, indent);
-        print(b, "</");
-        print(b, name);
-        print(b, ">\n");
+        *b += "</";
+        *b += name;
+        *b += ">\n";
     } break;
     case B_LI: {
         MdBlock *first = firstchild(blk);
         b32 tight = !first || (first->type==B_P && first->transparent);
         putspaces(b, indent);
-        print(b, "<li>");
-        if (!tight) putbyte(b, '\n');
-        iz start = b->len;
+        *b += "<li>";
+        if (!tight) *b += '\n';
+        iz start = std::ssize(*b);
         renderchildren(o, blk, indent+2);
-        if (!tight || (b->len>start && b->data[b->len-1]=='\n')) {
+        if (!tight || (std::ssize(*b)>start && b->back()=='\n')) {
             putspaces(b, indent);
         }
-        print(b, "</li>\n");
+        *b += "</li>\n";
     } break;
     case B_HR:
         putspaces(b, indent);
-        print(b, "<hr />\n");
+        *b += "<hr />\n";
         break;
     case B_HTML:
     case B_COMMENT:
         putspaces(b, indent);
-        print(b, blk->text);
-        putbyte(b, '\n');
+        *b += blk->text;
+        *b += '\n';
         break;
     }
 }
@@ -3109,7 +3109,7 @@ static Markdown markdown(std::string_view src, std::string_view name, iz line, A
     o.temp.beg = scratch.beg + (scratch.end - scratch.beg)/2;
     scratch.end = o.temp.beg;
 
-    Buf b(perm, std::ssize(src) + std::ssize(src)/2 + 256);
+    std::string b;
     o.b = &b;
     b32 lastblank = 0;
     iz  mark      = 0;
@@ -3118,12 +3118,9 @@ static Markdown markdown(std::string_view src, std::string_view name, iz line, A
         if (c->type==B_BLANK && lastblank) continue;
         lastblank = c->type == B_BLANK;
         renderblock(&o, c, 0, 0);
-        if (c->off < split) mark = b.len;
+        if (c->off < split) mark = std::ssize(b);
     }
-    r.html    = finish(&b);
+    r.html    = clone(perm, b);
     r.excerpt = mark;
-    if ((byte *)(b.data+b.cap) == perm->beg) {
-        perm->beg = (byte *)(b.data+b.len);  // return the unused capacity
-    }
     return r;
 }

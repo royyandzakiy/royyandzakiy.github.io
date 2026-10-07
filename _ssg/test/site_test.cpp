@@ -1,16 +1,16 @@
 // Site model tests: dates, encoders, front matter, UUIDs
-static std::string_view render(Arena *a, void (*fn)(Buf *, i64), i64 v)
+static std::string_view render(Arena *a, void (*fn)(std::string *, i64), i64 v)
 {
-    Buf b(a, 64);
+    std::string b;
     fn(&b, v);
-    return finish(&b);
+    return clone(a, b);
 }
 
-static std::string_view render(Arena *a, void (*fn)(Buf *, std::string_view), std::string_view s)
+static std::string_view render(Arena *a, void (*fn)(std::string *, std::string_view), std::string_view s)
 {
-    Buf b(a, 64);
+    std::string b;
     fn(&b, s);
-    return finish(&b);
+    return clone(a, b);
 }
 
 static void test_site(Test *t)

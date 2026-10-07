@@ -23,27 +23,26 @@ static std::string_view yamlscalar(std::string_view v, Arena *perm)
         return std::ssize(v) ? v : std::string_view{"", 0};
     }
     u8  q = v[0];
-    Buf b(perm, std::ssize(v));
+    std::string b;
     for (iz i = 1; i < std::ssize(v); i++) {
         u8 c = v[i];
         if (c == q) {
             if (q=='\'' && i+1<std::ssize(v) && v[i+1]=='\'') {
-                putbyte(&b, '\'');
+                b += '\'';
                 i++;
                 continue;
             }
             if (i != std::ssize(v)-1) {
                 return {};  // trailing junk after closing quote
             }
-            std::string_view r = finish(&b);
-            return std::ssize(r) ? r : std::string_view{"", 0};
+            return b.empty() ? std::string_view{"", 0} : clone(perm, b);
         } else if (q=='"' && c=='\\') {
             if (i+1 >= std::ssize(v) || (v[i+1] != '"' && v[i+1] != '\\')) {
                 return {};  // unsupported escape
             }
-            putbyte(&b, v[++i]);
+            b += v[++i];
         } else {
-            putbyte(&b, c);
+            b += c;
         }
     }
     return {};  // unterminated
