@@ -3,37 +3,33 @@
 // Exits with 1 if LANG is unknown (the output is then plain escaped
 // text). Debug builds check that the markup round-trips to the input.
 // This is free and unencumbered software released into the public domain.
-#include <stdlib.h>
-#include <unistd.h>
+#include <cstdio>
+#include <cstdlib>
 #include "core/base.cpp"
 #include "parser/highlight.cpp"
 
-static b32 writeall(i32 fd, Str s)
+static b32 writeall(std::FILE *f, Str s)
 {
-    for (iz off = 0, n; off < s.len; off += n) {
-        n = write(fd, s.data+off, (uz)(s.len-off));
-        if (n < 0) return 0;
-    }
-    return 1;
+    return std::fwrite(s.data, 1, (uz)s.len, f) == (uz)s.len;
 }
 
 [[noreturn]] static void os_oom()
 {
-    writeall(2, "hlcat: out of memory\n");
-    _exit(2);
+    writeall(stderr, "hlcat: out of memory\n");
+    std::_Exit(2);
 }
 
 int main(int argc, char **argv)
 {
     if (argc != 2) {
-        writeall(2, "usage: hlcat LANG <file\n");
+        writeall(stderr, "usage: hlcat LANG <file\n");
         return 2;
     }
     Str lang = {(u8 *)argv[1], 0};
     while (lang.data[lang.len]) lang.len++;
 
     iz    cap = (iz)1<<28;
-    byte *mem = (byte *)malloc((uz)cap);
+    byte *mem = (byte *)std::malloc((uz)cap);
     if (!mem) {
         return 2;
     }
@@ -42,14 +38,12 @@ int main(int argc, char **argv)
 
     Str code = {};
     code.data = allocbytes(&perm, cap/4);
-    for (iz n; (n = read(0, code.data+code.len, (uz)(cap/4-code.len))) > 0;) {
-        code.len += n;
-    }
+    code.len  = (iz)std::fread(code.data, 1, (uz)(cap/4), stdin);
     perm.beg = (byte *)(code.data + code.len);
 
     Buf b(&perm, code.len*2 + 64);
     b32 known = highlight(&b, lang, code, scratch);
-    if (!writeall(1, finish(&b))) {
+    if (!writeall(stdout, finish(&b))) {
         return 2;
     }
     return !known;

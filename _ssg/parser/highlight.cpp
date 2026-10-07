@@ -161,14 +161,14 @@ struct HlWords {
     iz   len;
 };
 
-#define HLWORDS(a)  HlWords{a, countof(a)}
+#define HLWORDS(a)  HlWords{a, std::ssize(a)}
 
 static b32 hlmember(HlWords w, Str s)
 {
     for (iz lo = 0, hi = w.len; lo < hi;) {
         iz  mid = lo + (hi - lo)/2;
-        i32 c   = compare(w.data[mid], s);
-        if (!c) {
+        auto c  = w.data[mid] <=> s;
+        if (c == 0) {
             return 1;
         } else if (c < 0) {
             lo = mid + 1;
@@ -185,7 +185,7 @@ static b32 hlword(HlWords w, Str s, b32 fold)
     u8 tmp[32];
     if (!fold) {
         return hlmember(w, s);
-    } else if (s.len > countof(tmp)) {
+    } else if (s.len > std::ssize(tmp)) {
         return 0;
     }
     for (iz i = 0; i < s.len; i++) {
@@ -557,7 +557,7 @@ static void lexgeneric(Hl *x, HlLang *l)
             }
             b32 declared = (want==HL_TYPE && (flags & LEX_CLASSES)) ||
                            (cls==HL_PLAIN && tdef==depth && !paren && hlin(after, ";,"));
-            if (declared && !keyword && !isknown && nknown<countof(known)) {
+            if (declared && !keyword && !isknown && nknown<std::ssize(known)) {
                 known[nknown++] = word;
             }
             cls = declared && !keyword ? HL_TYPE : cls;
@@ -787,7 +787,7 @@ static b32 hlx86reg(Str w)  // lowercase
     if (hlmember(HLWORDS(x86regs), w)) {
         return 1;
     }
-    for (iz p = 0; p < countof(numbered); p++) {
+    for (iz p = 0; p < std::ssize(numbered); p++) {
         if (!startswith(w, numbered[p])) {
             continue;
         }
@@ -901,7 +901,7 @@ static void lexasm(Hl *x, HlLang *l)
             }
             Str w = span(s.data+i, s.data+end);
             u8  tmp[32];
-            Str lw = {tmp, w.len<countof(tmp) ? w.len : 0};
+            Str lw = {tmp, w.len<std::ssize(tmp) ? w.len : 0};
             for (iz k = 0; k < lw.len; k++) {
                 tmp[k] = lowercase(w[k]);
             }

@@ -34,7 +34,6 @@ R"(</main>
       <ul>
         <li class="nav index"><a href="/index/">Index</a></li>
         <li class="nav tags"><a href="/tags/">Tags</a></li>
-        <li class="nav feed"><a href="/feed/">Feed</a></li>
         <li class="nav about"><a href="/about/">About</a></li>
         <li class="nav github"><a href="https://github.com/royyandzakiy">GitHub</a></li>
       </ul>

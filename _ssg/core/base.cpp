@@ -1,21 +1,27 @@
 // Foundation: types, arenas, strings, buffers, maps, sorting
 // This is free and unencumbered software released into the public domain.
+#include <algorithm>
+#include <chrono>
+#include <compare>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <format>
+#include <iterator>
+#include <new>
+#include <string_view>
 
-using u8   = unsigned char;
-using b32  = decltype(0);
-using i32  = decltype(0);
-using u32  = decltype(0u);
-using i64  = decltype(0ll);
-using u64  = decltype(0ull);
-using iz   = decltype((u8 *)0 - (u8 *)0);
-using uz   = decltype(sizeof(0));
-using byte = decltype('0');
+using u8   = std::uint8_t;
+using b32  = std::int32_t;
+using i32  = std::int32_t;
+using u32  = std::uint32_t;
+using i64  = std::int64_t;
+using u64  = std::uint64_t;
+using iz   = std::ptrdiff_t;
+using uz   = std::size_t;
+using byte = char;
 
 #define assert(c)   while (!(c)) __builtin_unreachable()
-#define countof(a)  (iz)(sizeof(a) / sizeof(*(a)))
-
-template<typename T>
-void *operator new(uz, T *p) noexcept { return p; }
 
 struct Arena {
     byte *beg = {};
@@ -54,7 +60,7 @@ static u8 *allocbytes(Arena *a, iz count)
 
 static void copybytes(void *dst, void *src, iz len)
 {
-    if (len) __builtin_memcpy(dst, src, (uz)len);
+    if (len) std::memcpy(dst, src, (uz)len);
 }
 
 
@@ -82,7 +88,21 @@ struct Str {
 
     bool operator==(Str s)
     {
-        return len==s.len && (!len || !__builtin_memcmp(data, s.data, (uz)len));
+        return len==s.len && (!len || !std::memcmp(data, s.data, (uz)len));
+    }
+
+    // Byte-wise, like memcmp
+    std::strong_ordering operator<=>(Str s)
+    {
+        return std::lexicographical_compare_three_way(data, data+len, s.data, s.data+s.len);
+    }
+};
+
+template<>
+struct std::formatter<Str> : std::formatter<std::string_view> {
+    auto format(Str s, std::format_context &ctx) const
+    {
+        return std::formatter<std::string_view>::format({s.cdata, (uz)s.len}, ctx);
     }
 };
 
@@ -126,16 +146,6 @@ static b32 endswith(Str s, Str suffix)
     return s.len>=suffix.len && taketail(s, suffix.len)==suffix;
 }
 
-static i32 compare(Str a, Str b)  // like memcmp, byte-wise
-{
-    iz len = a.len<b.len ? a.len : b.len;
-    for (iz i = 0; i < len; i++) {
-        i32 d = a[i] - b[i];
-        if (d) return d;
-    }
-    return a.len<b.len ? -1 : a.len>b.len;
-}
-
 struct Cut {
     Str head;
     Str tail;
@@ -160,7 +170,7 @@ static iz find(Str s, Str needle)  // -1 if not found
     }
     u8 *last = s.data + s.len - needle.len;
     for (u8 *p = s.data; p <= last; p++) {
-        if (*p==needle.data[0] && !__builtin_memcmp(p, needle.data, (uz)needle.len)) {
+        if (*p==needle.data[0] && !std::memcmp(p, needle.data, (uz)needle.len)) {
             return p - s.data;
         }
     }
@@ -350,6 +360,10 @@ struct Buf {
 
     Buf() = default;
     Buf(Arena *a, iz cap = 1<<12) : data{allocbytes(a, cap)}, cap{cap}, a{a} {}
+
+    // For std::back_inserter, so std::format_to can append
+    using value_type = char;
+    void push_back(char c);
 };
 
 static void reserve(Buf *b, iz need)
@@ -382,37 +396,34 @@ static void putbyte(Buf *b, u8 c)
     b->data[b->len++] = c;
 }
 
+void Buf::push_back(char c)
+{
+    putbyte(this, (u8)c);
+}
+
+// std::format into the buffer
+template<typename... Args>
+static void printfmt(Buf *b, std::format_string<Args...> fmt, Args &&...args)
+{
+    std::format_to(std::back_inserter(*b), fmt, std::forward<Args>(args)...);
+}
+
 static void print(Buf *b, i64 v)
 {
-    u8  tmp[32];
-    u8 *end = tmp + countof(tmp);
-    u8 *beg = end;
-    i64 t   = v<0 ? v : -v;
-    do {
-        *--beg = (u8)('0' - t%10);
-    } while (t /= 10);
-    if (v < 0) {
-        *--beg = '-';
-    }
-    print(b, span(beg, end));
+    printfmt(b, "{}", v);
 }
 
 // Zero-padded decimal of at least width digits.
 static void printpad(Buf *b, i64 v, i32 width)
 {
-    i64 limit = 1;
-    for (i32 i = 1; i < width; i++) {
-        limit *= 10;
-        if (v < limit) putbyte(b, '0');
-    }
-    print(b, v);
+    printfmt(b, "{:0{}}", v, width);
 }
 
+// The low digits hex digits of v, zero-padded.
 static void printhex(Buf *b, u64 v, i32 digits)
 {
-    for (i32 i = digits-1; i >= 0; i--) {
-        putbyte(b, "0123456789abcdef"[v>>(4*i) & 15]);
-    }
+    u64 mask = digits<16 ? ((u64)1<<(4*digits)) - 1 : ~(u64)0;
+    printfmt(b, "{:0{}x}", v & mask, digits);
 }
 
 // Escape & < > for HTML text content.
@@ -457,31 +468,4 @@ static void printattr(Buf *b, Str s)
 static Str finish(Buf *b)
 {
     return {b->data, b->len};
-}
-
-
-// Stable merge sort
-
-template<typename T>
-static void sort(T *a, iz n, b32 (*less)(T *, T *), Arena scratch)
-{
-    if (n < 2) {
-        return;
-    }
-    T *tmp = alloc<T>(&scratch, n);
-    for (iz width = 1; width < n; width *= 2) {
-        for (iz lo = 0; lo < n; lo += 2*width) {
-            iz mid = lo+width < n ? lo+width : n;
-            iz hi  = lo+2*width < n ? lo+2*width : n;
-            iz i = lo, j = mid, k = lo;
-            while (i < mid && j < hi) {
-                tmp[k++] = less(a+j, a+i) ? a[j++] : a[i++];
-            }
-            while (i < mid) tmp[k++] = a[i++];
-            while (j < hi)  tmp[k++] = a[j++];
-        }
-        for (iz i = 0; i < n; i++) {
-            a[i] = tmp[i];
-        }
-    }
 }

@@ -93,7 +93,7 @@ static b32 uniword(i32 c)
     if (c < 0xc0) return c==0xaa || c==0xb5 || c==0xba;
     if (c==0xd7 || c==0xf7) return 0;
     if (c>=0x2000 && c<0x3040) {
-        for (iz i = 0; i < countof(words); i++) {
+        for (iz i = 0; i < std::ssize(words); i++) {
             if (c>=words[i][0] && c<=words[i][1]) return 1;
         }
         // punctuation, symbols, arrows, radicals, CJK punctuation
@@ -195,7 +195,7 @@ static iz lineend(Str s, iz i)
     if (i >= s.len) {
         return i;
     }
-    u8 *p = (u8 *)__builtin_memchr(s.data+i, '\n', (uz)(s.len-i));
+    u8 *p = (u8 *)std::memchr(s.data+i, '\n', (uz)(s.len-i));
     return p ? p-s.data : s.len;
 }
 
@@ -360,7 +360,7 @@ enum {
 static b32 inlist(Str list, Str name, b32 fold)
 {
     u8 buf[16];
-    if (!name.len || name.len > countof(buf)-2) return 0;
+    if (!name.len || name.len > std::ssize(buf)-2) return 0;
     buf[0] = buf[name.len+1] = ' ';
     for (iz i = 0; i < name.len; i++) {
         buf[i+1] = fold ? lowercase(name.data[i]) : name.data[i];
@@ -520,7 +520,7 @@ static void printattrs(Buf *b, Str attrs, b32 known, b32 span)
                 dup = 1;
             }
         }
-        if (!dup && n<countof(list)) {
+        if (!dup && n<std::ssize(list)) {
             list[n++] = attr;
         }
     }
@@ -1930,7 +1930,7 @@ static b32 autolink(MdSpans *sp)
     static Str schemes[] = {"mailto", "https", "http", "ftps", "ftp"};
     Str s = sp->s;
     iz  p = sp->pos;
-    for (iz i = 0; i < countof(schemes); i++) {
+    for (iz i = 0; i < std::ssize(schemes); i++) {
         iz c = p + 1 + schemes[i].len;
         if (!startsat(s, p+1, schemes[i]) || at(s, c)!=':') continue;
         // .+? then >
@@ -2335,7 +2335,7 @@ static b32 typographic(MdSpans *sp)
         {"<< ", S_SYM, LAQUO}, {" >>", S_SYM, RAQUO},
         {"<<", S_CHAR, LAQUO}, {">>", S_CHAR, RAQUO},
     };
-    for (iz i = 0; i < countof(syms); i++) {
+    for (iz i = 0; i < std::ssize(syms); i++) {
         if (!startsat(sp->s, sp->pos, syms[i].match)) continue;
         sp->pos += syms[i].match.len;
         if (syms[i].type == S_ENTITY) {

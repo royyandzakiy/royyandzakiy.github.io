@@ -39,9 +39,9 @@ static void render(Ctx *c, Site *site, Arena scratch)
 static Str stylesheet(Ctx *c, Arena *a)
 {
     static Str parts[] = {"main.css", "print.css", "syntax.css", "dark.css"};
-    Str data[countof(parts)] = {};
+    Str data[std::ssize(parts)] = {};
     iz  total = 0;
-    for (iz i = 0; i < countof(parts); i++) {
+    for (iz i = 0; i < std::ssize(parts); i++) {
         Str rel = join(a, "css", parts[i]);
         data[i] = os_read(c->os, a, srcpath(c, a, rel));
         if (!data[i].data) {
@@ -50,7 +50,7 @@ static Str stylesheet(Ctx *c, Arena *a)
         total += data[i].len + 1;
     }
     Buf b(a, total);
-    for (iz i = 0; i < countof(parts); i++) {
+    for (iz i = 0; i < std::ssize(parts); i++) {
         print(&b, data[i]);
         putbyte(&b, '\n');
     }

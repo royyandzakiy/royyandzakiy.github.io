@@ -24,46 +24,13 @@ static i64 parseint(Str s)
 }
 
 
-// Dates (proleptic Gregorian, UTC)
+// Dates (proleptic Gregorian, UTC), as Unix seconds
 
-struct Tm {
-    i32 year, mon, day, hour, min, sec, wday;
-};
+namespace chr = std::chrono;
 
-static i64 daysfromcivil(i64 y, i64 m, i64 d)
+static chr::sys_seconds systime(i64 t)
 {
-    y -= m <= 2;
-    i64 era = (y >= 0 ? y : y-399) / 400;
-    i64 yoe = y - era*400;
-    i64 doy = (153*(m + (m > 2 ? -3 : 9)) + 2)/5 + d - 1;
-    i64 doe = yoe*365 + yoe/4 - yoe/100 + doy;
-    return era*146097 + doe - 719468;
-}
-
-static Tm gmtime(i64 t)
-{
-    Tm  r    = {};
-    i64 days = t / 86400;
-    i64 secs = t % 86400;
-    if (secs < 0) {
-        secs += 86400;
-        days--;
-    }
-    r.hour = (i32)(secs / 3600);
-    r.min  = (i32)(secs / 60 % 60);
-    r.sec  = (i32)(secs % 60);
-    r.wday = (i32)(((days % 7) + 11) % 7);  // 1970-01-01 was Thursday
-
-    i64 z   = days + 719468;
-    i64 era = (z >= 0 ? z : z - 146096) / 146097;
-    i64 doe = z - era*146097;
-    i64 yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
-    i64 doy = doe - (365*yoe + yoe/4 - yoe/100);
-    i64 mp  = (5*doy + 2) / 153;
-    r.day   = (i32)(doy - (153*mp + 2)/5 + 1);
-    r.mon   = (i32)(mp < 10 ? mp + 3 : mp - 9);
-    r.year  = (i32)(yoe + era*400 + (r.mon <= 2));
-    return r;
+    return chr::sys_seconds{chr::seconds{t}};
 }
 
 // Parse fixed-width digits, or -1 on error.
@@ -89,7 +56,9 @@ static i64 parseday(Str s)
     if (y<0 || m<1 || m>12 || d<1 || d>31 || s[4]!='-' || s[7]!='-') {
         return -1;
     }
-    return daysfromcivil(y, m, d) * 86400;
+    // Like Jekyll, a day past the end of the month rolls over (Feb 30 = Mar 2)
+    chr::year_month_day ymd{chr::year{y}, chr::month{(u32)m}, chr::day{(u32)d}};
+    return chr::sys_seconds{chr::sys_days{ymd}}.time_since_epoch().count();
 }
 
 // Parse "YYYY-MM-DDTHH:MM:SSZ" into a time, or -1.
@@ -108,67 +77,26 @@ static i64 parsetimestamp(Str s)
     return day + h*3600 + m*60 + sec;
 }
 
-static Str monthnames[] = {
-    "January", "February", "March", "April", "May", "June", "July",
-    "August", "September", "October", "November", "December",
-};
+// Without a locale argument, names are the C locale's (English).
 
-static Str daynames[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
-// %Y-%m-%d
 static void printymd(Buf *b, i64 t)
 {
-    Tm tm = gmtime(t);
-    printpad(b, tm.year, 4);
-    putbyte(b, '-');
-    printpad(b, tm.mon, 2);
-    putbyte(b, '-');
-    printpad(b, tm.day, 2);
+    printfmt(b, "{:%Y-%m-%d}", systime(t));
 }
 
-// %B %d, %Y
 static void printlongdate(Buf *b, i64 t)
 {
-    Tm tm = gmtime(t);
-    print(b, monthnames[tm.mon-1]);
-    putbyte(b, ' ');
-    printpad(b, tm.day, 2);
-    print(b, ", ");
-    printpad(b, tm.year, 4);
+    printfmt(b, "{:%B %d, %Y}", systime(t));
 }
 
-static void printhms(Buf *b, Tm tm)
-{
-    printpad(b, tm.hour, 2);
-    putbyte(b, ':');
-    printpad(b, tm.min, 2);
-    putbyte(b, ':');
-    printpad(b, tm.sec, 2);
-}
-
-// %Y-%m-%dT%H:%M:%SZ
 static void printiso(Buf *b, i64 t)
 {
-    printymd(b, t);
-    putbyte(b, 'T');
-    printhms(b, gmtime(t));
-    putbyte(b, 'Z');
+    printfmt(b, "{:%Y-%m-%dT%H:%M:%SZ}", systime(t));
 }
 
-// %a, %d %b %Y %H:%M:%S GMT
 static void printrfc822(Buf *b, i64 t)
 {
-    Tm tm = gmtime(t);
-    print(b, daynames[tm.wday]);
-    print(b, ", ");
-    printpad(b, tm.day, 2);
-    putbyte(b, ' ');
-    print(b, takehead(monthnames[tm.mon-1], 3));
-    putbyte(b, ' ');
-    printpad(b, tm.year, 4);
-    putbyte(b, ' ');
-    printhms(b, tm);
-    print(b, " GMT");
+    printfmt(b, "{:%a, %d %b %Y %H:%M:%S GMT}", systime(t));
 }
 
 
@@ -387,18 +315,18 @@ static Str normalize(Str s)
     return s;
 }
 
-static b32 postless(Post **a, Post **b)
+static bool postless(Post *a, Post *b)
 {
     // Newest first; ties broken by path, as Jekyll does (reversed)
-    if ((*a)->time != (*b)->time) {
-        return (*a)->time > (*b)->time;
+    if (a->time != b->time) {
+        return a->time > b->time;
     }
-    return compare((*a)->src, (*b)->src) > 0;
+    return a->src > b->src;
 }
 
-static b32 tagless(Tag **a, Tag **b)
+static bool tagless(Tag *a, Tag *b)
 {
-    return compare((*a)->name, (*b)->name) < 0;
+    return a->name < b->name;
 }
 
 static Post *loadpost(Ctx *c, Str name, Arena scratch)
@@ -498,7 +426,7 @@ static void loadposts(Ctx *c, Site *site, Arena scratch)
         return;
     }
 
-    sort(site->posts.data, site->posts.len, postless, scratch);
+    std::stable_sort(site->posts.data, site->posts.data+site->posts.len, postless);
     for (iz i = 0; i < site->posts.len; i++) {
         Post *p  = site->posts[i];
         p->newer = i > 0 ? site->posts[i-1] : 0;
@@ -514,7 +442,7 @@ static void loadposts(Ctx *c, Site *site, Arena scratch)
             if (!*t) {
                 *t = alloc<Tag>(perm);
                 (*t)->name = p->tags[j];
-                for (iz k = 0; k < countof(taguuids); k++) {
+                for (iz k = 0; k < std::ssize(taguuids); k++) {
                     if (taguuids[k].name == (*t)->name) {
                         (*t)->uuid = taguuids[k].uuid;
                     }
@@ -532,7 +460,7 @@ static void loadposts(Ctx *c, Site *site, Arena scratch)
             tag->posts = push(perm, tag->posts, p);
         }
     }
-    sort(site->tags.data, site->tags.len, tagless, scratch);
+    std::stable_sort(site->tags.data, site->tags.data+site->tags.len, tagless);
 }
 
 static b32 skipname(Str name)
@@ -550,7 +478,7 @@ static b32 skipentry(Str rel, Str name)
     if (skipname(name)) {
         return 1;
     }
-    for (iz i = 0; !rel.len && i < countof(excluded); i++) {
+    for (iz i = 0; !rel.len && i < std::ssize(excluded); i++) {
         if (excluded[i] == name) {
             return 1;
         }

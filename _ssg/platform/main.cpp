@@ -1,9 +1,8 @@
-// Standard C++ platform layer: any host with <filesystem>
-// $ cmake -S _ssg -B _ssg/build-std -DSSG_STD=ON
+// Platform layer: implements core/os.cpp with standard C++
 //
-// Built without exceptions, so every <filesystem> call takes the
-// std::error_code overload. Paths go through char8_t, so they stay
-// UTF-8 on Windows too.
+// <filesystem> calls take the std::error_code overload: a file that
+// cannot be read is reported and the build goes on, not unwound. Paths
+// go through char8_t, so they stay UTF-8 on Windows too.
 //
 // This is free and unencumbered software released into the public domain.
 #include <chrono>

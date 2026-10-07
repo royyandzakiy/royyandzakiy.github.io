@@ -11,6 +11,9 @@ Needs CMake and a C++ compiler (g++ or clang++).
     $ cmake --build _ssg\build
     $ ctest --test-dir _ssg\build   # optional: unit tests
 
+Add `-DSSG_STD=ON` to the first command to build with the standard C++
+platform layer (`platform/main_std.cpp`) instead of native POSIX/Win32.
+
 ## Source layout
 
 A unity build: a platform file includes `engine/ssg.cpp`, which includes
@@ -19,7 +22,7 @@ the rest.
     _ssg/core/      base types, arenas, strings; the os_* interface; logging
     _ssg/parser/    front matter, Markdown, syntax highlighting
     _ssg/engine/    site model, page templates, build driver
-    _ssg/platform/  main: os_* for POSIX and Win32
+    _ssg/platform/  main: os_* for POSIX, Win32, or standard C++
     _ssg/test/      unit tests (main_test.cpp is the test platform)
 
 ## Run locally

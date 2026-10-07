@@ -35,7 +35,7 @@ static Str unhighlight(Arena *a, Str s)
 
 static void test_markdown(Test *t)
 {
-    for (iz i = 0; i < countof(mdvectors); i++) {
+    for (iz i = 0; i < std::ssize(mdvectors); i++) {
         // The log grows in the same arena object as the output
         Arena perm    = t->perm;
         perm.end      = perm.beg + (perm.end - perm.beg)/2;
@@ -89,7 +89,7 @@ static void test_markdown(Test *t)
         {"[^]: b\n",               ""},
         {"<div><p markdown=\"1\">a</p></div>\n", "the markdown attribute is not supported"},
     };
-    for (iz i = 0; i < countof(warnings); i++) {
+    for (iz i = 0; i < std::ssize(warnings); i++) {
         Arena perm    = t->perm;
         perm.end      = perm.beg + (perm.end - perm.beg)/2;
         Arena scratch = t->perm;

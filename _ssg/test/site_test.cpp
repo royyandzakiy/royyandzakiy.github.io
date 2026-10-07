@@ -51,7 +51,7 @@ static void test_site(Test *t)
          "2026%20has%20been%20the%20most%20pivotal%20year%20in%20my%20career%E2%80%A6%20and%20it's%20only%20March",
          "2026+has+been+the+most+pivotal+year+in+my+career%E2%80%A6+and+it%27s+only+March"},
     };
-    for (iz i = 0; i < countof(cases); i++) {
+    for (iz i = 0; i < std::ssize(cases); i++) {
         expect(t, "uri_escape", render(&a, printuriescape, cases[i].title), cases[i].uri);
         expect(t, "url_encode", render(&a, printurlencode, cases[i].title), cases[i].url);
     }

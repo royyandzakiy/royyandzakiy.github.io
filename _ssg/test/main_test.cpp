@@ -53,7 +53,6 @@ static b32 expect(Test *t, Str name, Str got, Str want)
 #include "newpost_test.cpp"
 #include "markdown_test.cpp"
 #include "highlight_test.cpp"
-#include "wide_test.cpp"
 
 int main()
 {
@@ -66,7 +65,6 @@ int main()
     test_newpost(&t);
     test_markdown(&t);
     test_highlight(&t);
-    test_wide(&t);
 
     fprintf(stderr, "%d tests, %d failed\n", t.run, t.failed);
     return t.failed ? 1 : 0;

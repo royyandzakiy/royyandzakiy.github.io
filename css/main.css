@@ -131,7 +131,6 @@ header nav .index a:before  { content: '\f169'; }
 header nav .tags a:before   { content: '\f19d'; }
 header nav .github a:before { content: '\f1c9'; }
 header nav .about a:before  { content: '\f1ee'; }
-header nav .feed a:before   { content: '\f1aa'; }
 
 /* Articles */
 

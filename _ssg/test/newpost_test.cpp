@@ -49,7 +49,7 @@ static void test_newpost(Test *t)
         "\"Double\" start", "Ends with:", "C# tricks", "A #hash", "- dash",
         "My take on \"where's all the code\"",
     };
-    for (iz i = 0; i < countof(titles); i++) {
+    for (iz i = 0; i < std::ssize(titles); i++) {
         Buf b(&a, 128);
         print(&b, "---\ntitle: ");
         printyaml(&b, titles[i]);

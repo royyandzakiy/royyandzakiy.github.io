@@ -297,7 +297,7 @@ static void test_highlight(Test *t)
         {"bat", "@echo off\nrem comment\ncc %* %1 %PATH%", "%1", "v"},
         {"bat", "@echo off\nrem comment\ncc %* %1 %PATH%", "%PATH%", "v"},
     };
-    for (iz i = 0; i < countof(cases); i++) {
+    for (iz i = 0; i < std::ssize(cases); i++) {
         Arena a    = perm;
         Str   html = hlrender(&a, cases[i].lang, cases[i].code, scratch);
         Str   name = concat(&a, concat(&a, cases[i].lang, ": "), cases[i].tok);
@@ -338,7 +338,7 @@ static void test_highlight(Test *t)
     }
 
     // Every tag used by the blog is known
-    for (iz i = 0; i < countof(hltags); i++) {
+    for (iz i = 0; i < std::ssize(hltags); i++) {
         Arena a     = perm;
         b32   known = 0;
         hlrender(&a, hltags[i], "x", scratch, &known);
@@ -349,7 +349,7 @@ static void test_highlight(Test *t)
     {
         Slice<HlWords> tables = {};
         Arena a = perm;
-        for (iz i = 0; i < countof(hltags); i++) {
+        for (iz i = 0; i < std::ssize(hltags); i++) {
             HlLang l = hllang(hltags[i]);
             tables = push(&a, tables, l.keywords);
             tables = push(&a, tables, l.types);
@@ -364,14 +364,14 @@ static void test_highlight(Test *t)
             HLWORDS(a64regs), HLWORDS(shkeywords), HLWORDS(makedirectives),
             HLWORDS(batkeywords), HLWORDS(yamlkeywords), HLWORDS(basicrem),
         };
-        for (iz i = 0; i < countof(special); i++) {
+        for (iz i = 0; i < std::ssize(special); i++) {
             tables = push(&a, tables, special[i]);
         }
         Str bad = {};
         for (iz i = 0; i < tables.len; i++) {
             HlWords w = tables[i];
             for (iz j = 1; j < w.len; j++) {
-                if (compare(w.data[j-1], w.data[j]) >= 0) bad = w.data[j];
+                if (w.data[j-1] >= w.data[j]) bad = w.data[j];
             }
         }
         expect(t, "hl.sorted", bad, "");
@@ -389,10 +389,10 @@ static void test_highlight(Test *t)
             iz len = (iz)(rng >> 58);
             for (iz k = 0; k < len; k++) {
                 rng = rng*0x3243f6a8885a308d + 1;
-                buf[k] = alphabet[(rng >> 33) % (countof(alphabet) - 1)];
+                buf[k] = alphabet[(rng >> 33) % (std::ssize(alphabet) - 1)];
             }
             Str code = {buf, len};
-            for (iz i = 0; i < countof(hltags); i++) {
+            for (iz i = 0; i < std::ssize(hltags); i++) {
                 Arena a    = perm;
                 Str   html = hlrender(&a, hltags[i], code, scratch);
                 if (!hlroundtrip(html, code)) {
