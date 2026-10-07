@@ -39,12 +39,25 @@ endif()
 add_compile_options("$<$<CONFIG:Debug>:-g3;${SSG_TRAP}>")
 add_link_options("$<$<CONFIG:Debug>:${SSG_TRAP}>")
 
+# ON: the platform layer is standard C++ (platform/main_std.cpp) instead
+# of native POSIX or Win32 calls, and links the C++ standard library.
+option(SSG_STD "Use the standard C++ platform layer" OFF)
+
 check_linker_flag(CXX -nostdlib++ SSG_HAS_NOSTDLIBXX)
-if(SSG_HAS_NOSTDLIBXX)
+if(SSG_HAS_NOSTDLIBXX AND NOT SSG_STD)
   add_link_options(-nostdlib++)
 endif()
 
-if(WIN32)
+if(SSG_STD)
+  add_executable(ssg platform/main_std.cpp)
+  # Link the C++ runtime statically so ssg.exe runs on any Windows machine
+  if(CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+    set_property(TARGET ssg PROPERTY
+      MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  elseif(WIN32)
+    target_link_options(ssg PRIVATE -static)
+  endif()
+elseif(WIN32)
   # CRT-free: the only import is kernel32.dll. Static libgcc keeps its
   # helpers (e.g. 64-bit division on i686) from adding a DLL dependency.
   add_executable(ssg platform/main_win32.cpp)
