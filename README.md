@@ -7,13 +7,13 @@ Actions (`.github/workflows/pages.yml`) on every push to `master`.
 
 Needs CMake and a C++ compiler (g++ or clang++).
 
-    $ cmake -S _ssg -B _ssg/build
-    $ cmake --build _ssg/build
-    $ ctest --test-dir _ssg/build   # optional: unit tests
+    $ cmake -S _ssg -B _ssg\build
+    $ cmake --build _ssg\build
+    $ ctest --test-dir _ssg\build   # optional: unit tests
 
 ## Run locally
 
-    $ _ssg/build/ssg -w                     # rebuild _site/ on every change
+    $ _ssg\build\ssg -w                     # rebuild _site/ on every change
     $ python -m http.server 8000 -d _site   # in a second terminal
 
 Open <http://localhost:8000>. Pages use absolute paths (`/css/...`),
