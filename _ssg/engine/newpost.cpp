@@ -92,7 +92,7 @@ static void printyaml(std::string *b, std::string_view s)
     *b += '\'';
 }
 
-static std::string_view postname(Arena *perm, std::string_view title, i64 now)  // or empty
+static std::string postname(std::string_view title, i64 now)  // or empty
 {
     std::string name;
     printymd(&name, now);
@@ -103,40 +103,41 @@ static std::string_view postname(Arena *perm, std::string_view title, i64 now)  
         return {};
     }
     name += ".markdown";
-    return clone(perm, name);
+    return name;
 }
 
 // Write the draft into _posts, dated now, and print its path.
-static i32 newpost(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
+static i32 newpost(Os *os, Options *opt, Log *log)
 {
-    std::string_view draft = os_read(os, perm, opt->newpost);
-    if (!draft.data()) {
+    std::optional<std::string> draft = os_read(os, opt->newpost);
+    if (!draft) {
         error(log, opt->newpost, 0, "could not read file");
         return 1;
     }
-    Draft d = parsedraft(normalize(perm, draft));
+    normalize(&*draft);
+    Draft d = parsedraft(*draft);
     if (d.title.empty()) {
         error(log, opt->newpost, 0, "draft must begin with a \"# Title\" heading");
         return 1;
     }
-    std::string_view name = postname(perm, d.title, opt->now);
+    std::string name = postname(d.title, opt->now);
     if (name.empty()) {
         error(log, opt->newpost, 0, "no usable file name from the title");
         return 1;
     }
 
     // Post URLs are by date, so one post per day
-    std::string_view dir = join(perm, opt->src, "_posts");
-    std::string_view day = name.substr(0, 11);  // "YYYY-MM-DD-"
-    for (Dirent *e = os_list(os, &scratch, dir); e; e = e->next) {
-        if (e->name.starts_with(day)) {
-            error(log, join(perm, dir, e->name), 0, "a post already has this date");
+    std::string      dir = join(opt->src, "_posts");
+    std::string_view day = std::string_view(name).substr(0, 11);  // "YYYY-MM-DD-"
+    for (Dirent &e : os_list(os, dir)) {
+        if (e.name.starts_with(day)) {
+            error(log, join(dir, e.name), 0, "a post already has this date");
             return 1;
         }
     }
 
-    std::string_view uuid = deriveuuid(perm, name);
-    std::string_view path = join(perm, dir, name);
+    std::string uuid = deriveuuid(name);
+    std::string path = join(dir, name);
     std::string b;
     b += "---\ntitle: ";
     printyaml(&b, d.title);
@@ -147,15 +148,10 @@ static i32 newpost(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
     b += "\n---\n\n";
     b += d.body;
     b += '\n';
-    std::string_view post = b;
-    if (!os_write(os, scratch, path, post)) {
+    if (!os_write(os, path, b)) {
         error(log, path, 0, "could not write file");
         return 1;
     }
-
-    std::string out;
-    out += path;
-    out += '\n';
-    os_print(os, 1, out);
+    os_print(os, 1, path + "\n");
     return 0;
 }

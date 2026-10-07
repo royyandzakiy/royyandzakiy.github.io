@@ -16,7 +16,7 @@ Needs CMake and a C++ compiler (g++ or clang++).
 A unity build: a platform file includes `engine/ssg.cpp`, which includes
 the rest.
 
-    _ssg/core/      base types, arenas, strings; the os_* interface; logging
+    _ssg/core/      base types, strings, output; the os_* interface; logging
     _ssg/parser/    front matter, Markdown, syntax highlighting
     _ssg/engine/    site model, page templates, build driver
     _ssg/platform/  main.cpp: os_* with <filesystem>, <fstream>, <chrono>

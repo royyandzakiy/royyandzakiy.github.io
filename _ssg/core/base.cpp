@@ -1,4 +1,4 @@
-// Foundation: types, arenas, strings, output
+// Foundation: types, strings, output
 // This is free and unencumbered software released into the public domain.
 #include <algorithm>
 #include <chrono>
@@ -6,10 +6,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <deque>
 #include <format>
 #include <functional>
 #include <iterator>
-#include <new>
+#include <memory>
+#include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -25,52 +28,10 @@ using i64  = std::int64_t;
 using u64  = std::uint64_t;
 using iz   = std::ptrdiff_t;
 using uz   = std::size_t;
-using byte = char;
 
 #define assert(c)   while (!(c)) __builtin_unreachable()
 
-struct Arena {
-    byte *beg = {};
-    byte *end = {};
-};
-
-// Provided by the platform layer: report out-of-memory and exit.
-[[noreturn]] static void os_oom();
-
-template<typename T>
-static T *alloc(Arena *a, iz count = 1)
-{
-    iz size = sizeof(T);
-    iz pad  = -(uz)a->beg & (alignof(T) - 1);
-    if (count >= (a->end - a->beg - pad)/size) {
-        os_oom();
-    }
-    T *r = (T *)(a->beg + pad);
-    a->beg += pad + count*size;
-    for (iz i = 0; i < count; i++) {
-        new (r+i) T();
-    }
-    return r;
-}
-
-// Like alloc<char>, but does not zero the memory.
-static char *allocbytes(Arena *a, iz count)
-{
-    if (count > a->end - a->beg) {
-        os_oom();
-    }
-    char *r = a->beg;
-    a->beg += count;
-    return r;
-}
-
-static void copybytes(void *dst, void const *src, iz len)
-{
-    if (len) std::memcpy(dst, src, (uz)len);
-}
-
-
-// Strings: std::string_view over arena or literal memory. A null view
+// Strings: std::string_view to read, std::string to own. A null view
 // (data() == nullptr) means "none", distinct from an empty string.
 // Bytes are read as u8, since char may be signed and UTF-8 must compare
 // unsigned; std::string_view's own comparisons already are (like memcmp).
@@ -131,23 +92,6 @@ static std::string_view trimright(std::string_view s)
 static std::string_view trim(std::string_view s)
 {
     return trimleft(trimright(s));
-}
-
-static std::string_view clone(Arena *a, std::string_view s)
-{
-    char *r = allocbytes(a, std::ssize(s));
-    copybytes(r, s.data(), std::ssize(s));
-    return {r, s.size()};
-}
-
-// Concatenate, extending head in place when it sits at the arena's end.
-static std::string_view concat(Arena *a, std::string_view head, std::string_view tail)
-{
-    if (!head.data() || head.data()+head.size() != a->beg) {
-        head = clone(a, head);
-    }
-    clone(a, tail);
-    return {head.data(), head.size()+tail.size()};
 }
 
 static u64 hash(std::string_view s)
@@ -217,29 +161,30 @@ static void printhex(std::string *b, u64 v, i32 digits)
     printfmt(b, "{:0{}x}", v & mask, digits);
 }
 
+// Append s with each character in special replaced by its entity,
+// copying the runs between them whole.
+static void printescaped(std::string *b, std::string_view s, std::string_view special)
+{
+    for (uz i; (i = s.find_first_of(special)) != s.npos; s.remove_prefix(i+1)) {
+        b->append(s, 0, i);
+        switch (s[i]) {
+        case '&': *b += "&amp;";  break;
+        case '<': *b += "&lt;";   break;
+        case '>': *b += "&gt;";   break;
+        case '"': *b += "&quot;"; break;
+        }
+    }
+    *b += s;
+}
+
 // Escape & < > for HTML text content.
 static void printhtml(std::string *b, std::string_view s)
 {
-    for (char c : s) {
-        switch (c) {
-        case '&': *b += "&amp;"; break;
-        case '<': *b += "&lt;";  break;
-        case '>': *b += "&gt;";  break;
-        default:  *b += c;
-        }
-    }
+    printescaped(b, s, "&<>");
 }
 
 // Escape & < > " for double-quoted HTML attributes.
 static void printattr(std::string *b, std::string_view s)
 {
-    for (char c : s) {
-        switch (c) {
-        case '&': *b += "&amp;";  break;
-        case '<': *b += "&lt;";   break;
-        case '>': *b += "&gt;";   break;
-        case '"': *b += "&quot;"; break;
-        default:  *b += c;
-        }
-    }
+    printescaped(b, s, "&<>\"");
 }

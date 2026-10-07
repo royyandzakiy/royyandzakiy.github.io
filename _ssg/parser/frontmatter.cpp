@@ -1,26 +1,27 @@
 // Front matter: the small YAML subset used by posts and pages
 // This is free and unencumbered software released into the public domain.
 
+// Views point into the parsed source, except the (unescaped) title.
 struct FrontMatter {
-    std::string_view        title;
-    std::string_view        layout;
-    std::string_view        date;
-    std::string_view        uuid;
+    std::optional<std::string>    title;
+    std::string_view              layout;
+    std::string_view              date;
+    std::string_view              uuid;
     std::vector<std::string_view> tags;
-    std::string_view        body;     // content after the front matter
-    iz         bodyline; // line number where body begins
-    b32        ok;
-    std::string_view        err;
-    iz         errline;
+    std::string_view              body;      // content after the front matter
+    iz                            bodyline;  // line number where body begins
+    b32                           ok;
+    std::string_view              err;
+    iz                            errline;
 };
 
 // Parse a YAML scalar value: plain, 'single' ('' escapes), "double"
-// (only \" and \\ escapes). Returns a null string on syntax error.
-static std::string_view yamlscalar(std::string_view v, Arena *perm)
+// (only \" and \\ escapes). Returns nothing on syntax error.
+static std::optional<std::string> yamlscalar(std::string_view v)
 {
     v = trim(v);
     if (v.empty() || (v[0] != '\'' && v[0] != '"')) {
-        return std::ssize(v) ? v : std::string_view{"", 0};
+        return std::string(v);
     }
     u8  q = v[0];
     std::string b;
@@ -35,7 +36,7 @@ static std::string_view yamlscalar(std::string_view v, Arena *perm)
             if (i != std::ssize(v)-1) {
                 return {};  // trailing junk after closing quote
             }
-            return b.empty() ? std::string_view{"", 0} : clone(perm, b);
+            return b;
         } else if (q=='"' && c=='\\') {
             if (i+1 >= std::ssize(v) || (v[i+1] != '"' && v[i+1] != '\\')) {
                 return {};  // unsupported escape
@@ -53,7 +54,7 @@ static b32 tagchar(u8 c)
     return (c>='a' && c<='z') || digit(c);
 }
 
-static FrontMatter parsefrontmatter(std::string_view src, Arena *perm)
+static FrontMatter parsefrontmatter(std::string_view src)
 {
     FrontMatter r = {};
     if (!src.starts_with("---\n")) {
@@ -89,8 +90,8 @@ static FrontMatter parsefrontmatter(std::string_view src, Arena *perm)
         }
 
         if (key == "title") {
-            r.title = yamlscalar(val, perm);
-            if (!r.title.data()) {
+            r.title = yamlscalar(val);
+            if (!r.title) {
                 r.err = "invalid title string";
                 r.errline = line;
                 return r;
