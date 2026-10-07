@@ -225,6 +225,20 @@ main article canvas {
     border-radius: var(--radius);
 }
 
+/* YouTube embeds in the migrated posts */
+main article .video-container {
+    margin: 1.25em 0;
+}
+
+main article .video-container iframe {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    height: auto;
+    border: 0;
+    border-radius: var(--radius);
+}
+
 main article .grid {
     text-align: center;
     margin: 0;

@@ -159,6 +159,19 @@ static void archivepage(Buf *b, Site *site)
     layouttail(b);
 }
 
+// The front page: every post, newest first.
+static void homelist(Buf *b, Site *site)
+{
+    layouthead(b, site_title);
+    print(b, "<article class=\"index\">\n  <h2>Posts</h2>\n"
+             "  <ul class=\"post-list\">\n");
+    for (iz i = 0; i < site->posts.len; i++) {
+        postitem(b, site->posts[i]);
+    }
+    print(b, "  </ul>\n</article>\n");
+    layouttail(b);
+}
+
 static void tagindexpage(Buf *b, Site *site)
 {
     layouthead(b, "Tags");

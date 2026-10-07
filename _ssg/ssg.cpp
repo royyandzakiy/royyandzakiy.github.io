@@ -173,8 +173,11 @@ static i32 build(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
         Page *p = site.pages[i];
         EMIT(p->out, aboutpage(&b, p));
     }
-    iz limit = opt->excerpts ? site.posts.len : 10;
-    EMIT("index.html",       homepage(&b, &site, limit));
+    if (opt->excerpts) {
+        EMIT("index.html",   homepage(&b, &site, site.posts.len));
+    } else {
+        EMIT("index.html",   homelist(&b, &site));
+    }
     EMIT("index/index.html", archivepage(&b, &site));
     EMIT("tags/index.html",  tagindexpage(&b, &site));
     EMIT("feed/index.xml",   atomfeed(&b, &site));

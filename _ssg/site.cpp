@@ -316,7 +316,7 @@ struct Post {
     Str        uuid;
     Slice<Str> tags;
     i64        time;
-    Str        url;      // /blog/YYYY/MM/DD/
+    Str        url;      // /YYYY-MM-DD/slug/
     Str        body;     // Markdown
     iz         bodyline;
     Str        html;
@@ -458,14 +458,14 @@ static Post *loadpost(Ctx *c, Str name, Arena scratch)
         }
     }
 
+    // /YYYY-MM-DD/slug/, the old Jekyll permalinks, from the file name
+    Str slug = cuthead(name, 11);
+    slug = cuttail(slug, endswith(slug, ".md") ? 3 : 9);
     Buf url(perm, 20);
-    print(&url, "/blog/");
-    Tm tm = gmtime(p->time);
-    printpad(&url, tm.year, 4);
     putbyte(&url, '/');
-    printpad(&url, tm.mon, 2);
+    print(&url, takehead(name, 10));
     putbyte(&url, '/');
-    printpad(&url, tm.day, 2);
+    print(&url, slug);
     putbyte(&url, '/');
     p->url = finish(&url);
     return p;
@@ -487,7 +487,7 @@ static void loadposts(Ctx *c, Site *site, Arena scratch)
         }
         Post **prev = upsert(&urls, p->url, perm);
         if (*prev) {
-            error(c->log, p->src, 0, "another post has the same date");
+            error(c->log, p->src, 0, "another post has the same URL");
             continue;
         }
         *prev = p;
