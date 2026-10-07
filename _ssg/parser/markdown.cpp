@@ -619,8 +619,8 @@ struct Md {
     Arena      *a;
     Log        *log;
     std::string_view         name;
-    Map<MdDef> *defs;
-    Map<i32>   *ids;
+    std::unordered_map<std::string_view, MdDef> defs;
+    std::unordered_map<std::string_view, i32>   ids;  // header ids used
     i32         depth;  // block nesting
     b32         deep;   // reported nesting beyond MAXDEPTH
 };
@@ -1084,7 +1084,7 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
     if (!type) return 0;
     MdBlock *list = addblock(m, tree, type, src, src->pos);
 
-    Slice<MdPiece> pieces = {};
+    std::vector<MdPiece> pieces = {};
     iz  ind       = 0;
     iz  maxspaces = 3;
     b32 nested    = 0;
@@ -1133,7 +1133,7 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
                 mdwarn(m, srcline(src, pos), "IAL syntax is not supported");
             }
             MdPiece p = {PIECE_ITEM, 0, content, pos};
-            pieces    = push(m->a, pieces, p);
+            pieces.push_back(p);
             maxspaces = ind<4 ? ind-1 : 3;
             nested    = anylist(content, 0);
             lastblank = 0;
@@ -1160,17 +1160,17 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
             b32 islist = lsp<=3 && anylist(p.text, 0);
             if (!nested && found && islist) {
                 MdPiece c = {PIECE_CHUNK, 0, {}, pos};
-                pieces = push(m->a, pieces, c);
+                pieces.push_back(c);
                 nested = 1;
             } else if (nested && !found && islist) {
                 p.spaces += ind + 4;
             }
-            pieces    = push(m->a, pieces, p);
+            pieces.push_back(p);
             lastblank = 0;
             src->pos  = eol + 1;
         } else if ((e = blankend(s, pos)) >= 0) {
             MdPiece p = {PIECE_LINE, 0, slice(s, pos, e), pos};
-            pieces    = push(m->a, pieces, p);
+            pieces.push_back(p);
             nested    = 1;
             lastblank = 1;
             src->pos  = e;
@@ -1181,19 +1181,19 @@ static b32 list(Md *m, MdBlock *tree, MdSrc *src)
 
     // Parse each item's chunks as blocks
     i32 nitems = 0;
-    for (iz i = 0; i < pieces.len;) {
+    for (iz i = 0; i < std::ssize(pieces);) {
         MdBlock *li = addblock(m, list, B_LI, src, pieces[i].off);
         nitems++;
         do {
             iz start = i;
-            for (i++; i<pieces.len && pieces[i].kind==PIECE_LINE; i++) {}
+            for (i++; i<std::ssize(pieces) && pieces[i].kind==PIECE_LINE; i++) {}
             std::string chunk;
             for (iz k = start; k < i; k++) {
                 chunk.append((uz)pieces[k].spaces, ' ');
                 chunk += pieces[k].text;
             }
             parseblocks(m, li, newsrc(m, clone(m->a, chunk), src, pieces[start].off));
-        } while (i<pieces.len && pieces[i].kind==PIECE_CHUNK);
+        } while (i<std::ssize(pieces) && pieces[i].kind==PIECE_CHUNK);
     }
 
     // Tight or loose (list.rb:125-141)
@@ -1566,7 +1566,7 @@ static b32 linkdef(Md *m, MdBlock *tree, MdSrc *src)
     }
     if (end < 0) return 0;
 
-    MdDef *d = upsert(&m->defs, normlabel(m->a, label), m->a);
+    MdDef *d = &m->defs[normlabel(m->a, label)];
     d->url   = url;
     d->title = title;
     addblock(m, tree, B_EOB, src, pos);
@@ -1718,7 +1718,7 @@ struct MdSpans {
     Arena         *misc;  // everything else
     std::string_view            s;
     iz             pos;
-    Slice<MdSpan>  nodes;
+    std::vector<MdSpan>  nodes;
     i32            inem;
     i32            instrong;
     i32            inlink;
@@ -1732,15 +1732,15 @@ static void pushspan(MdSpans *sp, i32 type, std::string_view text = {}, i32 aux 
     n.type   = type;
     n.text   = text;
     n.aux    = aux;
-    sp->nodes = push(sp->a, sp->nodes, n);
+    sp->nodes.push_back(n);
 }
 
 static void addtext(MdSpans *sp, std::string_view text)
 {
     if (text.empty()) return;
-    Slice<MdSpan> *v = &sp->nodes;
-    if (v->len) {
-        MdSpan *last = &v->data[v->len-1];
+    std::vector<MdSpan> *v = &sp->nodes;
+    if (!v->empty()) {
+        MdSpan *last = &v->back();
         if (last->type==S_TEXT && last->text.data()+std::ssize(last->text)==text.data()) {
             last->text = {last->text.data(), last->text.size() + text.size()};
             return;
@@ -1762,7 +1762,7 @@ static void spanwarn(MdSpans *sp, std::string_view msg)
     n.type = S_WARN;
     n.text = msg;
     n.attr = slice(sp->s, sp->pos, sp->pos);  // position, for the line
-    sp->nodes = push(sp->a, sp->nodes, n);
+    sp->nodes.push_back(n);
 }
 
 // The span_start regex union: where the scanner stops for a parser
@@ -1821,7 +1821,7 @@ static b32 stopcond(MdSpans *sp, MdFrame *f)
             i32 c = cpat(s, p+n, &k);
             if (unialnum(c)) return 0;
         }
-        return sp->nodes.len > f->first;
+        return std::ssize(sp->nodes) > f->first;
     }
     case STOP_LINK:
         f->count += s[p]==']' ? -1 : 1;
@@ -1862,14 +1862,14 @@ static void emphasis(MdSpans *sp, MdFrame *f)
         return;
     }
 
-    iz mark = sp->nodes.len;
+    iz mark = std::ssize(sp->nodes);
     for (i32 attempt = 0; attempt < 2; attempt++) {
         MdFrame g = {};
         g.type  = elem;
         g.stop  = STOP_EM;
         g.delim = elem==S_STRONG ? result : slice(s, saved, saved+1);
         pushspan(sp, elem, {}, type);
-        g.first = sp->nodes.len;
+        g.first = std::ssize(sp->nodes);
         i32 *depth = elem==S_EM ? &sp->inem : &sp->instrong;
         ++*depth;
         b32 found = parsespans(sp, &g);
@@ -1879,7 +1879,7 @@ static void emphasis(MdSpans *sp, MdFrame *f)
             pushspan(sp, elem==S_EM ? S_EMEND : S_STRONGEND);
             return;
         }
-        sp->nodes.len = mark;
+        sp->nodes.resize(mark);
         if (elem!=S_STRONG || f->type==S_EM) break;
         // Retry the second delimiter character as emphasis
         sp->pos = saved + 1;
@@ -2010,14 +2010,14 @@ static void spanhtml(MdSpans *sp, MdFrame *f)
 
     i32 flags = (fl ? TAG_KNOWN : 0) | (fl&H_VOID ? TAG_VOID : 0);
     pushspan(sp, S_TAG, t.name, flags);
-    sp->nodes.data[sp->nodes.len-1].attr = t.attrs;
+    sp->nodes.data()[std::ssize(sp->nodes)-1].attr = t.attrs;
     if (fl & H_VOID) {
         return;
     }
     if (!t.selfclose) {
         MdFrame g = {};
         g.type  = S_TAG;
-        g.first = sp->nodes.len;
+        g.first = std::ssize(sp->nodes);
         g.raw   = f->raw || !(fl & H_PARSE);
         g.stop  = STOP_TAG;
         g.delim = t.name;
@@ -2051,12 +2051,12 @@ static std::string_view unescape(Arena *a, std::string_view s)
 // Complete a link or image whose open node is at mark (add_link)
 static void addlink(MdSpans *sp, MdFrame *f, iz mark, std::string_view url, std::string_view title, std::string_view alt)
 {
-    MdSpan *n = sp->nodes.data + mark;
+    MdSpan *n = sp->nodes.data() + mark;
     n->text = url;
     n->attr = title;
     if (n->type == S_IMG) {
         n->alt = alt;
-        sp->nodes.len = mark + 1;
+        sp->nodes.resize(mark + 1);
         f->nimg++;
     } else {
         pushspan(sp, S_AEND);
@@ -2077,11 +2077,11 @@ static void parselink(MdSpans *sp, MdFrame *f)
     }
 
     // Link text, counting brackets
-    iz mark = sp->nodes.len;
+    iz mark = std::ssize(sp->nodes);
     pushspan(sp, img ? S_IMG : S_A);
     MdFrame g = {};
     g.type  = img ? S_IMG : S_A;
-    g.first = sp->nodes.len;
+    g.first = std::ssize(sp->nodes);
     g.stop  = STOP_LINK;
     g.count = 1;
     sp->inlink++;
@@ -2106,9 +2106,9 @@ static void parselink(MdSpans *sp, MdFrame *f)
             sp->pos = j + 1;
             id = j>i+1 ? slice(s, i+1, j) : alt;
         }
-        MdDef *d = upsert(&sp->m->defs, normlabel(sp->misc, id), 0);
-        if (d) {
-            addlink(sp, f, mark, d->url, d->title, alt);
+        auto d = sp->m->defs.find(normlabel(sp->misc, id));
+        if (d != sp->m->defs.end()) {
+            addlink(sp, f, mark, d->second.url, d->second.title, alt);
             return;
         }
         undefined = isid;
@@ -2169,7 +2169,7 @@ static void parselink(MdSpans *sp, MdFrame *f)
         sp->fuel -= isquote(at(s, t)) ? std::ssize(s)-t : 0;
     }
 
-    sp->nodes.len = mark;
+    sp->nodes.resize(mark);
     sp->pos = curpos;
     if (undefined) {
         spanwarn(sp, "undefined link reference");
@@ -2368,7 +2368,7 @@ static b32 strikethrough(MdSpans *sp)
     sp->inem     = sp->instrong = sp->inlink = 0;
     MdFrame g = {};
     g.type  = S_DEL;
-    g.first = sp->nodes.len;
+    g.first = std::ssize(sp->nodes);
     parsespans(sp, &g);
     sp->s        = save.s;
     sp->pos      = k + 3;
@@ -2390,7 +2390,7 @@ static void spanext(MdSpans *sp, MdFrame *f)
     }
     sp->fuel -= j - p;
     if (j<std::ssize(s) && j>p+2) {
-        MdSpan *last = sp->nodes.len>f->first ? &sp->nodes.data[sp->nodes.len-1] : 0;
+        MdSpan *last = std::ssize(sp->nodes)>f->first ? &sp->nodes.data()[std::ssize(sp->nodes)-1] : 0;
         b32     ial  = last && last->type!=S_TEXT && at(s, p+2)!=':' && at(s, p+2)!='/';
         spanwarn(sp, "IAL and extension syntax is not supported");
         if (ial) {
@@ -2628,8 +2628,8 @@ static b32 tablepipes(Md *m, std::string_view text, Arena scratch)
     MdPipes p     = {};
     i32     depth = 0;
     Buf     run(&misc, 256);
-    for (iz i = 0; i < sp.nodes.len; i++) {
-        MdSpan *n = sp.nodes.data + i;
+    for (iz i = 0; i < std::ssize(sp.nodes); i++) {
+        MdSpan *n = sp.nodes.data() + i;
         if (n->type == S_WARN) continue;  // not in kramdown's tree
         if (!depth && (n->type==S_TEXT || n->type==S_CDATA)) {
             print(&run, n->text);
@@ -2756,11 +2756,11 @@ static void headerattr(MdOut *o, MdBlock *h, MdSpan *v, iz n, Arena scratch)
         }
     }
     std::string_view id = finish(&slug);
-    i32 *count = upsert(&o->m->ids, id, 0);
-    if (!count) {
-        count = upsert(&o->m->ids, clone(o->m->a, id), o->m->a);
+    auto count = o->m->ids.find(id);
+    if (count == o->m->ids.end()) {
+        count = o->m->ids.emplace(clone(o->m->a, id), 0).first;  // id is scratch
     }
-    i32 dup = (*count)++;
+    i32 dup = count->second++;
     if (id.empty() && !dup) return;
     print(b, " id=\"");
     printesc(b, id, 1);
@@ -2834,8 +2834,8 @@ static void renderspans(MdOut *o, MdBlock *blk, b32 header, b32 lastbr)
     }
 
     Buf    *b = o->b;
-    MdSpan *v = sp.nodes.data;
-    iz      n = sp.nodes.len;
+    MdSpan *v = sp.nodes.data();
+    iz      n = std::ssize(sp.nodes);
     if (header) {
         print(b, "<h");
         print(b, (i64)blk->level);

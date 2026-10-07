@@ -23,13 +23,13 @@ static std::string_view outpath(Arena *a, std::string_view url)  // "/x/y/" -> "
 
 static void render(Ctx *c, Site *site, Arena scratch)
 {
-    for (iz i = 0; i < site->posts.len; i++) {
+    for (iz i = 0; i < std::ssize(site->posts); i++) {
         Post *p = site->posts[i];
         Markdown md = markdown(p->body, p->src, p->bodyline, c->perm, scratch, c->log);
         p->html    = md.html;
         p->excerpt = md.excerpt;
     }
-    for (iz i = 0; i < site->pages.len; i++) {
+    for (iz i = 0; i < std::ssize(site->pages); i++) {
         Page *p = site->pages[i];
         p->html = markdown(p->body, p->src, p->bodyline, c->perm, scratch, c->log).html;
     }
@@ -82,23 +82,23 @@ static i32 build(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
             emit(&c, path, finish(&b), tmp); \
         } while (0)
 
-    for (iz i = 0; i < site.posts.len; i++) {
+    for (iz i = 0; i < std::ssize(site.posts); i++) {
         Post *p = site.posts[i];
         EMIT(outpath(perm, p->url), postpage(&b, p));
     }
-    for (iz i = 0; i < site.tags.len; i++) {
+    for (iz i = 0; i < std::ssize(site.tags); i++) {
         Tag *t   = site.tags[i];
         std::string_view  dir = concat(perm, concat(perm, "tags/", t->name), "/");
         EMIT(concat(perm, dir, "index.html"), tagpage(&b, t));
         dir = concat(perm, concat(perm, "tags/", t->name), "/");
         EMIT(concat(perm, dir, "feed/index.xml"), tagfeed(&b, &site, t));
     }
-    for (iz i = 0; i < site.pages.len; i++) {
+    for (iz i = 0; i < std::ssize(site.pages); i++) {
         Page *p = site.pages[i];
         EMIT(p->out, aboutpage(&b, p));
     }
     if (opt->excerpts) {
-        EMIT("index.html",   homepage(&b, &site, site.posts.len));
+        EMIT("index.html",   homepage(&b, &site, std::ssize(site.posts)));
     } else {
         EMIT("index.html",   homelist(&b, &site));
     }
@@ -113,14 +113,14 @@ static i32 build(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
     }
     #undef EMIT
 
-    for (iz i = 0; i < site.statics.len; i++) {
+    for (iz i = 0; i < std::ssize(site.statics); i++) {
         copystatic(&c, site.statics[i], scratch);
     }
 
     if (!opt->quiet) {
         Buf b(&scratch, 256);
         print(&b, "ssg: ");
-        print(&b, (i64)site.posts.len);
+        print(&b, (i64)std::ssize(site.posts));
         print(&b, " posts, ");
         print(&b, (i64)c.written);
         print(&b, " pages written, ");

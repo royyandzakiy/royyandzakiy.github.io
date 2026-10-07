@@ -1,4 +1,4 @@
-// Foundation: types, arenas, strings, buffers, maps
+// Foundation: types, arenas, strings, buffers
 // This is free and unencumbered software released into the public domain.
 #include <algorithm>
 #include <chrono>
@@ -7,10 +7,15 @@
 #include <cstdint>
 #include <cstring>
 #include <format>
+#include <functional>
 #include <iterator>
 #include <new>
+#include <span>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 using u8   = std::uint8_t;
 using b32  = std::int32_t;
@@ -193,68 +198,6 @@ static i32 utf8prev(std::string_view s, iz i, iz *start)
     }
     *start = j;
     return r;
-}
-
-
-// Dynamic arrays
-
-template<typename T>
-struct Slice {
-    T *data = {};
-    iz len  = {};
-    iz cap  = {};
-
-    T &operator[](iz i)
-    {
-        assert(i >= 0 && i < len);
-        return data[i];
-    }
-};
-
-template<typename T>
-static Slice<T> push(Arena *a, Slice<T> s, T v)
-{
-    if (s.len == s.cap) {
-        if (!s.data || (byte *)(s.data+s.cap) != a->beg) {
-            T *data = alloc<T>(a, s.cap);
-            for (iz i = 0; i < s.len; i++) {
-                data[i] = s.data[i];
-            }
-            s.data = data;
-        }
-        iz extend = s.cap ? s.cap : 8;
-        alloc<T>(a, extend);
-        s.cap += extend;
-    }
-    s.data[s.len++] = v;
-    return s;
-}
-
-
-// Hash trie keyed by strings. With a null arena, lookup only.
-
-template<typename V>
-struct Map {
-    Map *child[4];
-    std::string_view key;
-    V    val;
-};
-
-template<typename V>
-static V *upsert(Map<V> **m, std::string_view key, Arena *a)
-{
-    for (u64 h = hash(key); *m; h <<= 2) {
-        if ((*m)->key == key) {
-            return &(*m)->val;
-        }
-        m = &(*m)->child[h>>62];
-    }
-    if (!a) {
-        return 0;
-    }
-    *m = alloc<Map<V>>(a);
-    (*m)->key = key;
-    return &(*m)->val;
 }
 
 

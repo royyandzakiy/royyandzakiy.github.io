@@ -156,27 +156,12 @@ static iz hlnumber(std::string_view s, iz i)
     return j;
 }
 
-struct HlWords {
-    std::string_view *data;
-    iz   len;
-};
-
-#define HLWORDS(a)  HlWords{a, std::ssize(a)}
+// A sorted word table
+using HlWords = std::span<std::string_view const>;
 
 static b32 hlmember(HlWords w, std::string_view s)
 {
-    for (iz lo = 0, hi = w.len; lo < hi;) {
-        iz  mid = lo + (hi - lo)/2;
-        auto c  = w.data[mid] <=> s;
-        if (c == 0) {
-            return 1;
-        } else if (c < 0) {
-            lo = mid + 1;
-        } else {
-            hi = mid;
-        }
-    }
-    return 0;
+    return std::ranges::binary_search(w, s);
 }
 
 // Like hlmember, but optionally ignoring ASCII case (lowercase table).
@@ -494,7 +479,7 @@ static void lexgeneric(Hl *x, HlLang *l)
                 continue;
             }
 
-            if ((flags & LEX_BASIC) && hlword(HLWORDS(basicrem), word, 1)) {
+            if ((flags & LEX_BASIC) && hlword(HlWords(basicrem), word, 1)) {
                 hltoken(x, HL_COMMENT, hleol(s, i));
                 continue;
             }
@@ -561,7 +546,7 @@ static void lexgeneric(Hl *x, HlLang *l)
             }
             cls = declared && !keyword ? HL_TYPE : cls;
             hltoken(x, cls, end);
-            value = !keyword || hlmember(HLWORDS(valuekeywords), word);
+            value = !keyword || hlmember(HlWords(valuekeywords), word);
             prev  = !keyword;
             continue;
         }
@@ -753,15 +738,15 @@ static void lexlisp(Hl *x, HlLang *l)
                 cls = HL_VAR;  // :keyword
             } else if (wat && c=='$') {
                 cls = want==HL_FUNC ? HL_FUNC : HL_VAR;
-            } else if (ishead && hlmember(wat ? HLWORDS(watdefs) : HLWORDS(lispdefs), w)) {
+            } else if (ishead && hlmember(wat ? HlWords(watdefs) : HlWords(lispdefs), w)) {
                 cls  = HL_KEYWORD;
                 next = HL_FUNC;
-            } else if (ishead && (wat || hlmember(HLWORDS(lispheads), w))) {
+            } else if (ishead && (wat || hlmember(HlWords(lispheads), w))) {
                 cls = HL_KEYWORD;
             } else if (want == HL_FUNC) {
                 cls = HL_FUNC;
             } else if (wat) {
-                cls = hlmember(HLWORDS(wattypes), w) ? HL_TYPE : HL_PLAIN;
+                cls = hlmember(HlWords(wattypes), w) ? HL_TYPE : HL_PLAIN;
             } else if (w=="t" || w=="nil" || w=="true" || w=="false") {
                 cls = HL_KEYWORD;
             } else if (c=='&' && std::ssize(w)>1) {
@@ -783,7 +768,7 @@ static b32 hlasmchar(u8 c)
 static b32 hlx86reg(std::string_view w)  // lowercase
 {
     static std::string_view numbered[] = {"xmm", "ymm", "zmm", "mm", "st", "cr", "dr", "k", "r"};
-    if (hlmember(HLWORDS(x86regs), w)) {
+    if (hlmember(HlWords(x86regs), w)) {
         return 1;
     }
     for (iz p = 0; p < std::ssize(numbered); p++) {
@@ -804,7 +789,7 @@ static b32 hlx86reg(std::string_view w)  // lowercase
 
 static b32 hla64reg(std::string_view w)  // lowercase
 {
-    if (hlmember(HLWORDS(a64regs), w)) {
+    if (hlmember(HlWords(a64regs), w)) {
         return 1;
     } else if (std::ssize(w)<2 || std::ssize(w)>3 || !hlin(w[0], "xwvqdshb")) {
         return 0;
@@ -913,15 +898,15 @@ static void lexasm(Hl *x, HlLang *l)
                 continue;
             } else if (start) {
                 cls  = HL_KEYWORD;
-                stmt = hlmember(HLWORDS(asmprefixes), lw);
-                if ((!nasm && c=='.') || (nasm && hlmember(HLWORDS(nasmdirectives), lw))) {
+                stmt = hlmember(HlWords(asmprefixes), lw);
+                if ((!nasm && c=='.') || (nasm && hlmember(HlWords(nasmdirectives), lw))) {
                     cls = HL_PREPROC;
                 }
             } else if (want == HL_FUNC) {
                 cls = HL_FUNC;
             } else if (nasm ? hlx86reg(lw) : (arm && hla64reg(lw))) {
                 cls = HL_VAR;
-            } else if (nasm && hlmember(HLWORDS(nasmsizes), lw)) {
+            } else if (nasm && hlmember(HlWords(nasmsizes), lw)) {
                 cls = HL_TYPE;
             }
             hltoken(x, cls, end);
@@ -1031,7 +1016,7 @@ static void hlshcode(Hl *x, i32 depth, b32 nested)
             iz name = hlidend(s, i);
             if (hlidstart(c) && hlat(s, name)=='=') {
                 hltoken(x, HL_VAR, name);  // NAME=value
-            } else if (hlmember(HLWORDS(shkeywords), std::string_view(s.data()+i, s.data()+end))) {
+            } else if (hlmember(HlWords(shkeywords), std::string_view(s.data()+i, s.data()+end))) {
                 hltoken(x, HL_KEYWORD, end);
             }
             x->i = end;
@@ -1094,7 +1079,7 @@ static b32 hlmakeline(Hl *x, iz eol, b32 rule)
     iz  word = beg;
     for (; word<eol && !whitespace((u8)s[word]); word++) {}
     x->i = beg;
-    if (hlmember(HLWORDS(makedirectives), std::string_view(s.data()+beg, s.data()+word))) {
+    if (hlmember(HlWords(makedirectives), std::string_view(s.data()+beg, s.data()+word))) {
         hltoken(x, HL_KEYWORD, word);
         hlmakevalue(x, eol);
         return rule;
@@ -1340,10 +1325,10 @@ static void lexbat(Hl *x, HlLang *)
         } else if (hlidchar(c)) {
             iz  end = hlidend(s, i);
             std::string_view w   = std::string_view(s.data()+i, s.data()+end);
-            if (first && hlword(HLWORDS(basicrem), w, 1)) {
+            if (first && hlword(HlWords(basicrem), w, 1)) {
                 hltoken(x, HL_COMMENT, hleol(s, i));
             } else {
-                b32 keyword = hlword(HLWORDS(batkeywords), w, 1);
+                b32 keyword = hlword(HlWords(batkeywords), w, 1);
                 hltoken(x, keyword ? HL_KEYWORD : HL_PLAIN, end);
             }
             first = 0;
@@ -1380,7 +1365,7 @@ static void hlyamlvalue(Hl *x, iz end)
             i32 cl = HL_PLAIN;
             if (n) {
                 cl = HL_NUMBER;
-            } else if (hlmember(HLWORDS(yamlkeywords), w) || w=="~") {
+            } else if (hlmember(HlWords(yamlkeywords), w) || w=="~") {
                 cl = HL_KEYWORD;
             } else if (hlin(c, "&*!") && std::ssize(w)>1) {
                 cl = HL_VAR;  // anchor, alias, tag
@@ -1534,10 +1519,10 @@ static HlLang hllang(std::string_view tag)
         l.quotes   = "\"'";
         l.flags    = LEX_CPP | LEX_FUNCDEF | LEX_TSUFFIX | LEX_CAMEL;
         l.flags   |= cpp ? LEX_CLASSES : 0;
-        l.keywords = cpp ? HLWORDS(cppkeywords) : HLWORDS(ckeywords);
-        l.types    = HLWORDS(ctypes);
-        l.tdefs    = cpp ? HLWORDS(cpptdefs) : HLWORDS(ctdefs);
-        l.prefixes = HLWORDS(cprefixes);
+        l.keywords = cpp ? HlWords(cppkeywords) : HlWords(ckeywords);
+        l.types    = HlWords(ctypes);
+        l.tdefs    = cpp ? HlWords(cpptdefs) : HlWords(ctdefs);
+        l.prefixes = HlWords(cprefixes);
 
     } else if (tag == "glsl") {
         l.comment  = "//";
@@ -1545,9 +1530,9 @@ static HlLang hllang(std::string_view tag)
         l.close    = "*/";
         l.quotes   = "\"";
         l.flags    = LEX_CPP | LEX_FUNCDEF;
-        l.keywords = HLWORDS(glslkeywords);
-        l.types    = HLWORDS(glsltypes);
-        l.tdefs    = HLWORDS(ctdefs);
+        l.keywords = HlWords(glslkeywords);
+        l.types    = HlWords(glsltypes);
+        l.tdefs    = HlWords(ctdefs);
 
     } else if (tag == "java") {
         l.comment  = "//";
@@ -1555,10 +1540,10 @@ static HlLang hllang(std::string_view tag)
         l.close    = "*/";
         l.quotes   = "\"'";
         l.flags    = LEX_FUNCDEF | LEX_METHODS | LEX_CAMEL | LEX_AT;
-        l.keywords = HLWORDS(javakeywords);
-        l.types    = HLWORDS(javatypes);
-        l.defs     = HLWORDS(javadefs);
-        l.tdefs    = HLWORDS(javatdefs);
+        l.keywords = HlWords(javakeywords);
+        l.types    = HlWords(javatypes);
+        l.defs     = HlWords(javadefs);
+        l.tdefs    = HlWords(javatdefs);
 
     } else if (tag=="javascript" || tag=="js") {
         l.comment  = "//";
@@ -1566,34 +1551,34 @@ static HlLang hllang(std::string_view tag)
         l.close    = "*/";
         l.quotes   = "\"'`";
         l.flags    = LEX_REGEX | LEX_IDDOLLAR;
-        l.keywords = HLWORDS(jskeywords);
-        l.defs     = HLWORDS(jsdefs);
+        l.keywords = HlWords(jskeywords);
+        l.defs     = HlWords(jsdefs);
 
     } else if (tag == "go") {
         l.comment  = "//";
         l.open     = "/*";
         l.close    = "*/";
         l.quotes   = "\"'`";
-        l.keywords = HLWORDS(gokeywords);
-        l.types    = HLWORDS(gotypes);
-        l.defs     = HLWORDS(godefs);
+        l.keywords = HlWords(gokeywords);
+        l.types    = HlWords(gotypes);
+        l.defs     = HlWords(godefs);
 
     } else if (tag=="py" || tag=="python") {
         l.comment  = "#";
         l.quotes   = "\"'";
         l.flags    = LEX_TRIPLE | LEX_AT;
-        l.keywords = HLWORDS(pykeywords);
-        l.types    = HLWORDS(pytypes);
-        l.defs     = HLWORDS(pydefs);
-        l.prefixes = HLWORDS(pyprefixes);
+        l.keywords = HlWords(pykeywords);
+        l.types    = HlWords(pytypes);
+        l.defs     = HlWords(pydefs);
+        l.prefixes = HlWords(pyprefixes);
 
     } else if (tag == "lua") {
         l.comment  = "--";
         l.open     = "--[[";
         l.close    = "]]";
         l.quotes   = "\"'";
-        l.keywords = HLWORDS(luakeywords);
-        l.defs     = HLWORDS(luadefs);
+        l.keywords = HlWords(luakeywords);
+        l.defs     = HlWords(luadefs);
 
     } else if (tag == "php") {
         l.comment  = "//";
@@ -1602,22 +1587,22 @@ static HlLang hllang(std::string_view tag)
         l.close    = "*/";
         l.quotes   = "\"'";
         l.flags    = LEX_DOLLAR;
-        l.keywords = HLWORDS(phpkeywords);
-        l.defs     = HLWORDS(phpdefs);
+        l.keywords = HlWords(phpkeywords);
+        l.defs     = HlWords(phpdefs);
 
     } else if (tag == "perl") {
         l.comment  = "#";
         l.quotes   = "\"'";
         l.flags    = LEX_DOLLAR | LEX_PERL | LEX_REGEX;
-        l.keywords = HLWORDS(perlkeywords);
-        l.defs     = HLWORDS(perldefs);
+        l.keywords = HlWords(perlkeywords);
+        l.defs     = HlWords(perldefs);
 
     } else if (tag == "ruby") {
         l.comment  = "#";
         l.quotes   = "\"'";
         l.flags    = LEX_SYMBOL | LEX_REGEX;
-        l.keywords = HLWORDS(rubykeywords);
-        l.defs     = HLWORDS(rubydefs);
+        l.keywords = HlWords(rubykeywords);
+        l.defs     = HlWords(rubydefs);
 
     } else if (tag == "julia") {
         l.comment  = "#";
@@ -1625,8 +1610,8 @@ static HlLang hllang(std::string_view tag)
         l.close    = "=#";
         l.quotes   = "\"'";
         l.flags    = LEX_TRIPLE | LEX_TRANSPOSE | LEX_CAMEL | LEX_AT;
-        l.keywords = HLWORDS(juliakeywords);
-        l.defs     = HLWORDS(juliadefs);
+        l.keywords = HlWords(juliakeywords);
+        l.defs     = HlWords(juliadefs);
 
     } else if (tag=="matlab" || tag=="octave") {
         l.comment  = "%";
@@ -1634,8 +1619,8 @@ static HlLang hllang(std::string_view tag)
         l.quotes   = "\"'";
         l.escape   = 0;
         l.flags    = LEX_TRANSPOSE | LEX_DOUBLING | LEX_OUTPUTS;
-        l.keywords = HLWORDS(matlabkeywords);
-        l.defs     = HLWORDS(matlabdefs);
+        l.keywords = HlWords(matlabkeywords);
+        l.defs     = HlWords(matlabdefs);
 
     } else if (tag == "sql") {
         l.comment  = "--";
@@ -1644,32 +1629,32 @@ static HlLang hllang(std::string_view tag)
         l.quotes   = "\"'";
         l.escape   = 0;
         l.flags    = LEX_CASEFOLD | LEX_DOUBLING;
-        l.keywords = HLWORDS(sqlkeywords);
-        l.types    = HLWORDS(sqltypes);
+        l.keywords = HlWords(sqlkeywords);
+        l.types    = HlWords(sqltypes);
 
     } else if (tag == "qbasic") {
         l.comment  = "'";
         l.quotes   = "\"";
         l.escape   = 0;
         l.flags    = LEX_CASEFOLD | LEX_BASIC;
-        l.keywords = HLWORDS(basickeywords);
-        l.types    = HLWORDS(basictypes);
-        l.defs     = HLWORDS(basicdefs);
+        l.keywords = HlWords(basickeywords);
+        l.types    = HlWords(basictypes);
+        l.defs     = HlWords(basicdefs);
 
     } else if (tag == "gnuplot") {
         l.comment  = "#";
         l.quotes   = "\"'";
-        l.keywords = HLWORDS(gnuplotkeywords);
+        l.keywords = HlWords(gnuplotkeywords);
 
     } else if (tag == "vim") {
         l.quotes   = "\"'";
         l.flags    = LEX_VIM;
-        l.keywords = HLWORDS(vimkeywords);
+        l.keywords = HlWords(vimkeywords);
 
     } else if (tag == "json") {
         l.quotes   = "\"";
         l.flags    = LEX_KEYS;
-        l.keywords = HLWORDS(jsonkeywords);
+        l.keywords = HlWords(jsonkeywords);
 
     } else if (tag=="cl" || tag=="lisp" || tag=="elisp" || tag=="scheme" ||
                tag=="clojure" || tag=="wat") {

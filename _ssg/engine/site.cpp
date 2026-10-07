@@ -242,7 +242,7 @@ struct Post {
     std::string_view        src;      // path relative to the source root
     std::string_view        title;
     std::string_view        uuid;
-    Slice<std::string_view> tags;
+    std::vector<std::string_view> tags;
     i64        time;
     std::string_view        url;      // /YYYY-MM-DD/slug/
     std::string_view        body;     // Markdown
@@ -256,7 +256,7 @@ struct Post {
 struct Tag {
     std::string_view           name;
     std::string_view           uuid;
-    Slice<Post *> posts;  // newest first
+    std::vector<Post *> posts;  // newest first
 };
 
 struct Page {
@@ -269,10 +269,10 @@ struct Page {
 };
 
 struct Site {
-    Slice<Post *> posts;    // newest first
-    Slice<Tag *>  tags;     // sorted by name
-    Slice<Page *> pages;
-    Slice<std::string_view>    statics;  // relative paths
+    std::vector<Post *> posts;    // newest first
+    std::vector<Tag *>  tags;     // sorted by name
+    std::vector<Page *> pages;
+    std::vector<std::string_view>    statics;  // relative paths
     i64           now;
 };
 
@@ -281,7 +281,7 @@ struct Ctx {
     Options  *opt;
     Log      *log;
     Arena    *perm;
-    Map<b32> *outputs;
+    std::unordered_set<std::string_view> outputs;
     i32       written;
     i32       copied;
     i32       skipped;
@@ -404,7 +404,7 @@ static Post *loadpost(Ctx *c, std::string_view name, Arena scratch)
 static void loadposts(Ctx *c, Site *site, Arena scratch)
 {
     Arena   *perm  = c->perm;
-    Map<Post *> *urls = 0;
+    std::unordered_map<std::string_view, Post *> urls;
 
     std::string_view dir = srcpath(c, perm, "_posts");
     for (Dirent *e = os_list(c->os, perm, dir); e; e = e->next) {
@@ -415,32 +415,32 @@ static void loadposts(Ctx *c, Site *site, Arena scratch)
         if (!p) {
             continue;
         }
-        Post **prev = upsert(&urls, p->url, perm);
+        Post **prev = &urls[p->url];
         if (*prev) {
             error(c->log, p->src, 0, "another post has the same URL");
             continue;
         }
         *prev = p;
-        site->posts = push(perm, site->posts, p);
+        site->posts.push_back(p);
     }
-    if (!site->posts.len) {
+    if (!std::ssize(site->posts)) {
         error(c->log, dir, 0, "no posts found");  // or could not list it
         return;
     }
 
-    std::stable_sort(site->posts.data, site->posts.data+site->posts.len, postless);
-    for (iz i = 0; i < site->posts.len; i++) {
+    std::stable_sort(site->posts.data(), site->posts.data()+std::ssize(site->posts), postless);
+    for (iz i = 0; i < std::ssize(site->posts); i++) {
         Post *p  = site->posts[i];
         p->newer = i > 0 ? site->posts[i-1] : 0;
-        p->older = i+1 < site->posts.len ? site->posts[i+1] : 0;
+        p->older = i+1 < std::ssize(site->posts) ? site->posts[i+1] : 0;
     }
 
     // Tags, collected newest first since posts are already sorted
-    Map<Tag *> *tags = 0;
-    for (iz i = 0; i < site->posts.len; i++) {
+    std::unordered_map<std::string_view, Tag *> tags;
+    for (iz i = 0; i < std::ssize(site->posts); i++) {
         Post *p = site->posts[i];
-        for (iz j = 0; j < p->tags.len; j++) {
-            Tag **t = upsert(&tags, p->tags[j], perm);
+        for (iz j = 0; j < std::ssize(p->tags); j++) {
+            Tag **t = &tags[p->tags[j]];
             if (!*t) {
                 *t = alloc<Tag>(perm);
                 (*t)->name = p->tags[j];
@@ -452,17 +452,17 @@ static void loadposts(Ctx *c, Site *site, Arena scratch)
                 if (!std::ssize((*t)->uuid)) {
                     (*t)->uuid = deriveuuid(perm, (*t)->name);
                 }
-                site->tags = push(perm, site->tags, *t);
+                site->tags.push_back(*t);
             }
             Tag *tag = *t;
-            if (tag->posts.len && tag->posts[tag->posts.len-1] == p) {
+            if (std::ssize(tag->posts) && tag->posts[std::ssize(tag->posts)-1] == p) {
                 warn(c->log, p->src, 0, "duplicate tag");
                 continue;
             }
-            tag->posts = push(perm, tag->posts, p);
+            tag->posts.push_back(p);
         }
     }
-    std::stable_sort(site->tags.data, site->tags.data+site->tags.len, tagless);
+    std::stable_sort(site->tags.data(), site->tags.data()+std::ssize(site->tags), tagless);
 }
 
 static b32 skipname(std::string_view name)
@@ -526,11 +526,11 @@ static void walk(Ctx *c, Site *site, std::string_view rel, std::string_view outd
                 p->title    = fm.title;
                 p->body     = fm.body;
                 p->bodyline = fm.bodyline;
-                site->pages = push(perm, site->pages, p);
+                site->pages.push_back(p);
                 continue;
             }
         }
-        site->statics = push(perm, site->statics, child);
+        site->statics.push_back(child);
     }
 }
 
@@ -557,12 +557,10 @@ static std::string_view relativeout(Options *opt, Arena *perm)
 
 static void emit(Ctx *c, std::string_view rel, std::string_view data, Arena scratch)
 {
-    b32 *seen = upsert(&c->outputs, rel, c->perm);
-    if (*seen) {
+    if (!c->outputs.insert(rel).second) {
         error(c->log, rel, 0, "output path generated twice");
         return;
     }
-    *seen = 1;
 
     std::string_view path = join(&scratch, c->opt->out, rel);
     iz  slash = std::ssize(path);
@@ -580,7 +578,7 @@ static void emit(Ctx *c, std::string_view rel, std::string_view data, Arena scra
 
 static void copystatic(Ctx *c, std::string_view rel, Arena scratch)
 {
-    if (upsert(&c->outputs, rel, 0)) {
+    if (c->outputs.contains(rel)) {
         return;  // replaced by a generated file
     }
     std::string_view src = srcpath(c, &scratch, rel);
