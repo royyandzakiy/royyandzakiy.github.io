@@ -443,15 +443,19 @@ article .post-count {
 }
 
 article.tag a.feed {
-    display: inline-block;
-    background-image: url(/img/feed.png);
-    background-repeat: no-repeat;
-    background-size: 1em 1em;
-    background-position: 0 0;
-    width: 1em;
-    height: 1em;
-    margin-right: 0.25em;
-    vertical-align: -15%;
+    margin-right: 0.35em;
+    color: var(--muted);
+    text-decoration: none;
+}
+
+article.tag a.feed:hover {
+    color: var(--accent);
+}
+
+/* The same feed icon as the header's Feed link */
+article.tag a.feed:before {
+    font-family: 'foundation-icons';
+    content: '\f1aa';
 }
 
 /* Miscellaneous */

@@ -244,7 +244,8 @@ struct Post {
     std::string_view        uuid;
     std::vector<std::string_view> tags;
     i64        time;
-    std::string_view        url;      // /YYYY-MM-DD/slug/
+    std::string_view        url;      // /blog/YYYY-MM/slug/
+    std::string_view        oldurl;   // /YYYY-MM-DD/slug/, redirects to url
     std::string_view        body;     // Markdown
     iz         bodyline;
     std::string_view        html;
@@ -388,16 +389,16 @@ static Post *loadpost(Ctx *c, std::string_view name, Arena scratch)
         }
     }
 
-    // /YYYY-MM-DD/slug/, the old Jekyll permalinks, from the file name
+    // /blog/YYYY-MM/slug/ from the file name. The old Jekyll permalink,
+    // /YYYY-MM-DD/slug/, gets a page redirecting here.
     std::string_view slug = name.substr(11);
     slug = slug.substr(0, slug.size()-(slug.ends_with(".md") ? 3 : 9));
-    Buf url(perm, 20);
-    putbyte(&url, '/');
-    print(&url, name.substr(0, 10));
-    putbyte(&url, '/');
-    print(&url, slug);
-    putbyte(&url, '/');
+    Buf url(perm, 32);
+    printfmt(&url, "/blog/{}/{}/", name.substr(0, 7), slug);
     p->url = finish(&url);
+    Buf oldurl(perm, 32);
+    printfmt(&oldurl, "/{}/{}/", name.substr(0, 10), slug);
+    p->oldurl = finish(&oldurl);
     return p;
 }
 
