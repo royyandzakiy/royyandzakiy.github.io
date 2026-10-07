@@ -1,30 +1,30 @@
 // Syntax highlighter tests
 
-static Str hlrender(Arena *perm, Str lang, Str code, Arena scratch, b32 *known = 0)
+static std::string hlrender(std::string_view lang, std::string_view code, b32 *known = 0)
 {
-    Buf b(perm, 256);
-    b32 ok = highlight(&b, lang, code, scratch);
+    std::string b;
+    b32 ok = highlight(&b, lang, code);
     if (known) *known = ok;
-    return finish(&b);
+    return b;
 }
 
 // Class of the first span wrapping exactly tok (escaped), or "" if none.
-static Str hlclassof(Str html, Str tok)
+static std::string_view hlclassof(std::string_view html, std::string_view tok)
 {
-    for (iz off = 0; off < html.len;) {
-        iz i = find(cuthead(html, off), tok);
-        if (i < 0) {
+    for (iz off = 0; off < std::ssize(html);) {
+        uz found = html.find(tok, off);
+        if (found == html.npos) {
             break;
         }
-        i += off;
-        Str before = takehead(html, i);
-        Str after  = cuthead(html, i+tok.len);
-        if (endswith(before, "\">") && startswith(after, "</span>")) {
-            before = cuttail(before, 2);
-            iz k = before.len;
+        iz i = (iz)found;
+        std::string_view before = html.substr(0, i);
+        std::string_view after  = html.substr(i+std::ssize(tok));
+        if (before.ends_with("\">") && after.starts_with("</span>")) {
+            before = before.substr(0, before.size()-2);
+            iz k = std::ssize(before);
             for (; k>0 && before[k-1]!='"'; k--) {}
-            if (endswith(takehead(before, k), "<span class=\"")) {
-                return cuthead(before, k);
+            if ((before.substr(0, k)).ends_with("<span class=\"")) {
+                return before.substr(k);
             }
         }
         off = i + 1;
@@ -32,16 +32,16 @@ static Str hlclassof(Str html, Str tok)
     return "";
 }
 
-static iz hlcount(Str s, Str needle)
+static iz hlcount(std::string_view s, std::string_view needle)
 {
     iz n = 0;
-    for (iz i; (i = find(s, needle)) >= 0; n++) {
-        s = cuthead(s, i+needle.len);
+    for (uz i; (i = s.find(needle)) != s.npos; n++) {
+        s = s.substr(i+needle.size());
     }
     return n;
 }
 
-static Str hltags[] = {
+static std::string_view hltags[] = {
     "aarch64", "att", "bash", "bat", "c", "c++", "cl", "clojure", "cpp", "diff",
     "elisp", "glsl", "gnuplot", "go", "html", "ini", "java",
     "javascript", "js", "json", "julia", "lisp", "make", "makefile",
@@ -52,13 +52,9 @@ static Str hltags[] = {
 
 static void test_highlight(Test *t)
 {
-    Arena perm    = t->perm;
-    Arena scratch = perm;
-    perm.end    -= 1<<20;
-    scratch.beg  = perm.end;
 
     // Token classes: {language, code, token as escaped HTML, class}
-    struct { Str lang, code, tok, cls; } cases[] = {
+    struct { std::string_view lang, code, tok, cls; } cases[] = {
         {"c", "int main(void) { return 0; }", "int", "t"},
         {"c", "int main(void) { return 0; }", "main", "f"},
         {"c", "int main(void) { return 0; }", "return", "k"},
@@ -83,7 +79,7 @@ static void test_highlight(Test *t)
         {"c", "a = b * sqrt(c);", "sqrt", ""},
         {"c", "if (a && ready()) {}", "ready", ""},
         {"c", "static int\nfoo(void)\n{\n}", "foo", "f"},
-        {"c", "static Str *lookup(Env **env, Str key)", "lookup", "f"},
+        {"c", "static std::string_view *lookup(Env **env, std::string_view key)", "lookup", "f"},
         {"c", "struct node *next;", "node", "t"},
         {"c", "x = s.int_value;", "int_value", ""},
         {"c", "typedef void (*fn)(char *key);", "key", ""},
@@ -298,9 +294,8 @@ static void test_highlight(Test *t)
         {"bat", "@echo off\nrem comment\ncc %* %1 %PATH%", "%PATH%", "v"},
     };
     for (iz i = 0; i < std::ssize(cases); i++) {
-        Arena a    = perm;
-        Str   html = hlrender(&a, cases[i].lang, cases[i].code, scratch);
-        Str   name = concat(&a, concat(&a, cases[i].lang, ": "), cases[i].tok);
+        std::string   html = hlrender(cases[i].lang, cases[i].code);
+        std::string   name = std::format("{}: {}", cases[i].lang, cases[i].tok);
         if (!expect(t, name, hlclassof(html, cases[i].tok), cases[i].cls)) {
             fprintf(stderr, "  in:   [");
             printstr(stderr, html);
@@ -310,69 +305,63 @@ static void test_highlight(Test *t)
 
     // Exact output, unknown languages, and no language
     {
-        Arena a     = perm;
         b32   known = 0;
-        Str   html  = hlrender(&a, "c", "a<b && c>d", scratch, &known);
+        std::string   html  = hlrender("c", "a<b && c>d", &known);
         expect(t, "hl.escape", html, "a&lt;b &amp;&amp; c&gt;d");
-        expect(t, "hl.known", known ? Str("yes") : Str("no"), "yes");
-        html = hlrender(&a, "c", "x = 'a'; // <b>", scratch);
+        expect(t, "hl.known", known ? std::string_view("yes") : std::string_view("no"), "yes");
+        html = hlrender("c", "x = 'a'; // <b>");
         expect(t, "hl.exact", html,
                "x = <span class=\"s\">'a'</span>; "
                "<span class=\"c\">// &lt;b&gt;</span>");
-        html = hlrender(&a, "bf", "<+>", scratch, &known);
+        html = hlrender("bf", "<+>", &known);
         expect(t, "hl.unknown", html, "&lt;+&gt;");
-        expect(t, "hl.unknown.ret", known ? Str("yes") : Str("no"), "no");
-        html = hlrender(&a, "", "<+>", scratch, &known);
+        expect(t, "hl.unknown.ret", known ? std::string_view("yes") : std::string_view("no"), "no");
+        html = hlrender("", "<+>", &known);
         expect(t, "hl.nolang", html, "&lt;+&gt;");
-        expect(t, "hl.nolang.ret", known ? Str("yes") : Str("no"), "yes");
-        html = hlrender(&a, "sh", "x=\"$(cmd \"$y\")\"", scratch);
+        expect(t, "hl.nolang.ret", known ? std::string_view("yes") : std::string_view("no"), "yes");
+        html = hlrender("sh", "x=\"$(cmd \"$y\")\"");
         expect(t, "hl.nested", html,
                "<span class=\"v\">x</span>=<span class=\"s\">\""
                "<span class=\"v\">$(</span>cmd <span class=\"s\">\""
                "<span class=\"v\">$y</span>\"</span><span class=\"v\">)</span>"
                "\"</span>");
-        html = hlrender(&a, "c++", "template<typename T>\nT *f(T x);", scratch);
-        expect(t, "hl.known", hlcount(html, "<span class=\"t\">T</span>") == 3 ? Str("ok") : html, "ok");
-        html = hlrender(&a, "c", "typedef long size;\nsize n;", scratch);
-        expect(t, "hl.typedef", hlcount(html, "<span class=\"t\">size</span>") == 2 ? Str("ok") : html, "ok");
+        html = hlrender("c++", "template<typename T>\nT *f(T x);");
+        expect(t, "hl.known", hlcount(html, "<span class=\"t\">T</span>") == 3 ? std::string_view("ok") : html, "ok");
+        html = hlrender("c", "typedef long size;\nsize n;");
+        expect(t, "hl.typedef", hlcount(html, "<span class=\"t\">size</span>") == 2 ? std::string_view("ok") : html, "ok");
     }
 
     // Every tag used by the blog is known
     for (iz i = 0; i < std::ssize(hltags); i++) {
-        Arena a     = perm;
         b32   known = 0;
-        hlrender(&a, hltags[i], "x", scratch, &known);
-        expect(t, hltags[i], known ? Str("known") : Str("unknown"), "known");
+        hlrender(hltags[i], "x", &known);
+        expect(t, hltags[i], known ? std::string_view("known") : std::string_view("unknown"), "known");
     }
 
     // Word tables must be sorted for bisection
     {
-        Slice<HlWords> tables = {};
-        Arena a = perm;
+        std::vector<HlWords> tables;
         for (iz i = 0; i < std::ssize(hltags); i++) {
             HlLang l = hllang(hltags[i]);
-            tables = push(&a, tables, l.keywords);
-            tables = push(&a, tables, l.types);
-            tables = push(&a, tables, l.defs);
-            tables = push(&a, tables, l.tdefs);
-            tables = push(&a, tables, l.prefixes);
+            tables.push_back(l.keywords);
+            tables.push_back(l.types);
+            tables.push_back(l.defs);
+            tables.push_back(l.tdefs);
+            tables.push_back(l.prefixes);
         }
         HlWords special[] = {
-            HLWORDS(valuekeywords), HLWORDS(lispheads), HLWORDS(lispdefs),
-            HLWORDS(watdefs), HLWORDS(wattypes), HLWORDS(nasmdirectives),
-            HLWORDS(nasmsizes), HLWORDS(asmprefixes), HLWORDS(x86regs),
-            HLWORDS(a64regs), HLWORDS(shkeywords), HLWORDS(makedirectives),
-            HLWORDS(batkeywords), HLWORDS(yamlkeywords), HLWORDS(basicrem),
+            HlWords(valuekeywords), HlWords(lispheads), HlWords(lispdefs),
+            HlWords(watdefs), HlWords(wattypes), HlWords(nasmdirectives),
+            HlWords(nasmsizes), HlWords(asmprefixes), HlWords(x86regs),
+            HlWords(a64regs), HlWords(shkeywords), HlWords(makedirectives),
+            HlWords(batkeywords), HlWords(yamlkeywords), HlWords(basicrem),
         };
-        for (iz i = 0; i < std::ssize(special); i++) {
-            tables = push(&a, tables, special[i]);
-        }
-        Str bad = {};
-        for (iz i = 0; i < tables.len; i++) {
-            HlWords w = tables[i];
-            for (iz j = 1; j < w.len; j++) {
-                if (w.data[j-1] >= w.data[j]) bad = w.data[j];
-            }
+        tables.insert(tables.end(), std::begin(special), std::end(special));
+        std::string_view bad = {};
+        for (HlWords w : tables) {
+            // strictly increasing: no out-of-order or duplicate word
+            auto it = std::ranges::adjacent_find(w, std::ranges::greater_equal{});
+            if (it != w.end()) bad = it[1];
         }
         expect(t, "hl.sorted", bad, "");
     }
@@ -382,21 +371,20 @@ static void test_highlight(Test *t)
         static u8 alphabet[] =
             "\"'`/\\*#;%$@(){}[]<>&:=.-+!?,|~^ \t\n\n0x1aeZ_Lr\xce\xbb";
         u64 rng  = 1;
-        Str fail = {};
-        for (i32 n = 0; n < 300 && !fail.len; n++) {
-            u8 buf[64];
+        std::string fail;
+        for (i32 n = 0; n < 300 && fail.empty(); n++) {
+            char buf[64];
             rng = rng*0x3243f6a8885a308d + 1;
             iz len = (iz)(rng >> 58);
             for (iz k = 0; k < len; k++) {
                 rng = rng*0x3243f6a8885a308d + 1;
                 buf[k] = alphabet[(rng >> 33) % (std::ssize(alphabet) - 1)];
             }
-            Str code = {buf, len};
+            std::string_view code = {buf, (uz)len};
             for (iz i = 0; i < std::ssize(hltags); i++) {
-                Arena a    = perm;
-                Str   html = hlrender(&a, hltags[i], code, scratch);
+                std::string   html = hlrender(hltags[i], code);
                 if (!hlroundtrip(html, code)) {
-                    fail = concat(&perm, concat(&perm, hltags[i], ": "), code);
+                    fail = std::format("{}: {}", hltags[i], code);
                     break;
                 }
             }

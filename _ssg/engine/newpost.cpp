@@ -2,35 +2,35 @@
 // This is free and unencumbered software released into the public domain.
 
 struct Draft {
-    Str title;
-    Str body;
+    std::string_view title;
+    std::string_view body;
 };
 
 // The draft begins with a "# Title" heading, which is removed from the
 // body along with surrounding blank lines. The title is empty when the
 // first non-blank line is not such a heading.
-static Draft parsedraft(Str src)
+static Draft parsedraft(std::string_view src)
 {
     Draft r    = {};
-    Str   rest = src;
+    std::string_view   rest = src;
     for (;;) {
         Cut c    = cut(rest, '\n');
-        Str line = trim(c.head);
-        if (!line.len) {
+        std::string_view line = trim(c.head);
+        if (line.empty()) {
             if (!c.ok) {
                 return r;
             }
             rest = c.tail;
             continue;
         }
-        if (line.len<2 || line[0]!='#' || !whitespace(line[1])) {
+        if (std::ssize(line)<2 || line[0]!='#' || !whitespace(line[1])) {
             return r;
         }
-        Str title = trim(cuthead(line, 1));
-        iz  n     = title.len;
+        std::string_view title = trim(line.substr(1));
+        iz  n     = std::ssize(title);
         for (; n && title[n-1]=='#'; n--) {}
         if (!n || whitespace(title[n-1])) {
-            title = trim(takehead(title, n));  // closing hashes
+            title = trim(title.substr(0, n));  // closing hashes
         }
         r.title = title;
         rest    = c.tail;
@@ -39,7 +39,7 @@ static Draft parsedraft(Str src)
 
     for (;;) {
         Cut c = cut(rest, '\n');
-        if (!c.ok || trim(c.head).len) {
+        if (!c.ok || std::ssize(trim(c.head))) {
             break;
         }
         rest = c.tail;
@@ -50,112 +50,108 @@ static Draft parsedraft(Str src)
 
 // Runs of non-alphanumerics become a dash. A leading dash is dropped, but
 // a trailing dash is kept, as in existing names like "...-in-C-" (C++).
-static void printslug(Buf *b, Str title)
+static void printslug(std::string *b, std::string_view title)
 {
     b32 dash = 0;
     b32 any  = 0;
-    for (iz i = 0; i < title.len; i++) {
+    for (iz i = 0; i < std::ssize(title); i++) {
         u8 c = title[i];
         if (!alnum(c)) {
             dash = 1;
             continue;
         }
         if (dash && any) {
-            putbyte(b, '-');
+            *b += '-';
         }
-        putbyte(b, c);
+        *b += c;
         dash = 0;
         any  = 1;
     }
     if (dash && any) {
-        putbyte(b, '-');
+        *b += '-';
     }
 }
 
 // A YAML scalar: plain when safe, otherwise single-quoted.
-static void printyaml(Buf *b, Str s)
+static void printyaml(std::string *b, std::string_view s)
 {
-    b32 quote = !s.len || s[s.len-1]==':' || !(trim(s) == s) ||
-                find(s, ": ")>=0 || find(s, " #")>=0 ||
-                find("-?:,[]{}#&*!|>'\"%@`", takehead(s, 1))>=0;
+    b32 quote = s.empty() || s[std::ssize(s)-1]==':' || !(trim(s) == s) ||
+                s.contains(": ") || s.contains(" #") ||
+                std::string_view("-?:,[]{}#&*!|>'\"%@`").contains(s[0]);
     if (!quote) {
-        print(b, s);
+        *b += s;
         return;
     }
-    putbyte(b, '\'');
-    for (iz i = 0; i < s.len; i++) {
+    *b += '\'';
+    for (iz i = 0; i < std::ssize(s); i++) {
         if (s[i] == '\'') {
-            putbyte(b, '\'');
+            *b += '\'';
         }
-        putbyte(b, s[i]);
+        *b += s[i];
     }
-    putbyte(b, '\'');
+    *b += '\'';
 }
 
-static Str postname(Arena *perm, Str title, i64 now)  // or empty
+static std::string postname(std::string_view title, i64 now)  // or empty
 {
-    Buf name(perm, 64+title.len);
+    std::string name;
     printymd(&name, now);
-    putbyte(&name, '-');
-    iz prefix = name.len;
+    name += '-';
+    iz prefix = std::ssize(name);
     printslug(&name, title);
-    if (name.len == prefix) {
+    if (std::ssize(name) == prefix) {
         return {};
     }
-    print(&name, ".markdown");
-    return finish(&name);
+    name += ".markdown";
+    return name;
 }
 
 // Write the draft into _posts, dated now, and print its path.
-static i32 newpost(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
+static i32 newpost(Os *os, Options *opt, Log *log)
 {
-    Str draft = os_read(os, perm, opt->newpost);
-    if (!draft.data) {
+    std::optional<std::string> draft = os_read(os, opt->newpost);
+    if (!draft) {
         error(log, opt->newpost, 0, "could not read file");
         return 1;
     }
-    Draft d = parsedraft(normalize(draft));
-    if (!d.title.len) {
+    normalize(&*draft);
+    Draft d = parsedraft(*draft);
+    if (d.title.empty()) {
         error(log, opt->newpost, 0, "draft must begin with a \"# Title\" heading");
         return 1;
     }
-    Str name = postname(perm, d.title, opt->now);
-    if (!name.len) {
+    std::string name = postname(d.title, opt->now);
+    if (name.empty()) {
         error(log, opt->newpost, 0, "no usable file name from the title");
         return 1;
     }
 
     // Post URLs are by date, so one post per day
-    Str dir = join(perm, opt->src, "_posts");
-    Str day = takehead(name, 11);  // "YYYY-MM-DD-"
-    for (Dirent *e = os_list(os, &scratch, dir); e; e = e->next) {
-        if (startswith(e->name, day)) {
-            error(log, join(perm, dir, e->name), 0, "a post already has this date");
+    std::string      dir = join(opt->src, "_posts");
+    std::string_view day = std::string_view(name).substr(0, 11);  // "YYYY-MM-DD-"
+    for (Dirent &e : os_list(os, dir)) {
+        if (e.name.starts_with(day)) {
+            error(log, join(dir, e.name), 0, "a post already has this date");
             return 1;
         }
     }
 
-    Str uuid = deriveuuid(perm, name);
-    Str path = join(perm, dir, name);
-    Buf b(&scratch, 1<<12);
-    print(&b, "---\ntitle: ");
+    std::string uuid = deriveuuid(name);
+    std::string path = join(dir, name);
+    std::string b;
+    b += "---\ntitle: ";
     printyaml(&b, d.title);
-    print(&b, "\ndate: ");
+    b += "\ndate: ";
     printiso(&b, opt->now);
-    print(&b, "\ntags: []\nuuid: ");
-    print(&b, uuid);
-    print(&b, "\n---\n\n");
-    print(&b, d.body);
-    putbyte(&b, '\n');
-    Str post = finish(&b);
-    if (!os_write(os, scratch, path, post)) {
+    b += "\ntags: []\nuuid: ";
+    b += uuid;
+    b += "\n---\n\n";
+    b += d.body;
+    b += '\n';
+    if (!os_write(os, path, b)) {
         error(log, path, 0, "could not write file");
         return 1;
     }
-
-    Buf out(&scratch, path.len+1);
-    print(&out, path);
-    putbyte(&out, '\n');
-    os_print(os, 1, finish(&out));
+    os_print(os, 1, path + "\n");
     return 0;
 }

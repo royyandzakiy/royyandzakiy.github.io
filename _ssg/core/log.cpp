@@ -2,35 +2,35 @@
 // This is free and unencumbered software released into the public domain.
 
 struct Log {
-    Buf buf;
+    std::string buf;
     i32 errors   = 0;
     i32 warnings = 0;
 };
 
-static void logmsg(Log *log, Str kind, Str file, iz line, Str msg)
+static void logmsg(Log *log, std::string_view kind, std::string_view file, iz line, std::string_view msg)
 {
-    Buf *b = &log->buf;
-    print(b, "ssg: ");
-    if (file.len) {
-        print(b, file);
+    std::string *b = &log->buf;
+    *b += "ssg: ";
+    if (std::ssize(file)) {
+        *b += file;
         if (line > 0) {
-            putbyte(b, ':');
-            print(b, (i64)line);
+            *b += ':';
+            *b += std::to_string(line);
         }
-        print(b, ": ");
+        *b += ": ";
     }
-    print(b, kind);
-    print(b, msg);
-    putbyte(b, '\n');
+    *b += kind;
+    *b += msg;
+    *b += '\n';
 }
 
-static void warn(Log *log, Str file, iz line, Str msg)
+static void warn(Log *log, std::string_view file, iz line, std::string_view msg)
 {
     log->warnings++;
     logmsg(log, "warning: ", file, line, msg);
 }
 
-static void error(Log *log, Str file, iz line, Str msg)
+static void error(Log *log, std::string_view file, iz line, std::string_view msg)
 {
     log->errors++;
     logmsg(log, "error: ", file, line, msg);

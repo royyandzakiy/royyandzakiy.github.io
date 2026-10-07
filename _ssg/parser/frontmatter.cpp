@@ -1,49 +1,49 @@
 // Front matter: the small YAML subset used by posts and pages
 // This is free and unencumbered software released into the public domain.
 
+// Views point into the parsed source, except the (unescaped) title.
 struct FrontMatter {
-    Str        title;
-    Str        layout;
-    Str        date;
-    Str        uuid;
-    Slice<Str> tags;
-    Str        body;     // content after the front matter
-    iz         bodyline; // line number where body begins
-    b32        ok;
-    Str        err;
-    iz         errline;
+    std::optional<std::string>    title;
+    std::string_view              layout;
+    std::string_view              date;
+    std::string_view              uuid;
+    std::vector<std::string_view> tags;
+    std::string_view              body;      // content after the front matter
+    iz                            bodyline;  // line number where body begins
+    b32                           ok;
+    std::string_view              err;
+    iz                            errline;
 };
 
 // Parse a YAML scalar value: plain, 'single' ('' escapes), "double"
-// (only \" and \\ escapes). Returns a null string on syntax error.
-static Str yamlscalar(Str v, Arena *perm)
+// (only \" and \\ escapes). Returns nothing on syntax error.
+static std::optional<std::string> yamlscalar(std::string_view v)
 {
     v = trim(v);
-    if (!v.len || (v[0] != '\'' && v[0] != '"')) {
-        return v.len ? v : Str{(u8 *)"", 0};
+    if (v.empty() || (v[0] != '\'' && v[0] != '"')) {
+        return std::string(v);
     }
     u8  q = v[0];
-    Buf b(perm, v.len);
-    for (iz i = 1; i < v.len; i++) {
+    std::string b;
+    for (iz i = 1; i < std::ssize(v); i++) {
         u8 c = v[i];
         if (c == q) {
-            if (q=='\'' && i+1<v.len && v[i+1]=='\'') {
-                putbyte(&b, '\'');
+            if (q=='\'' && i+1<std::ssize(v) && v[i+1]=='\'') {
+                b += '\'';
                 i++;
                 continue;
             }
-            if (i != v.len-1) {
+            if (i != std::ssize(v)-1) {
                 return {};  // trailing junk after closing quote
             }
-            Str r = finish(&b);
-            return r.len ? r : Str{(u8 *)"", 0};
+            return b;
         } else if (q=='"' && c=='\\') {
-            if (i+1 >= v.len || (v[i+1] != '"' && v[i+1] != '\\')) {
+            if (i+1 >= std::ssize(v) || (v[i+1] != '"' && v[i+1] != '\\')) {
                 return {};  // unsupported escape
             }
-            putbyte(&b, v[++i]);
+            b += v[++i];
         } else {
-            putbyte(&b, c);
+            b += c;
         }
     }
     return {};  // unterminated
@@ -54,44 +54,44 @@ static b32 tagchar(u8 c)
     return (c>='a' && c<='z') || digit(c);
 }
 
-static FrontMatter parsefrontmatter(Str src, Arena *perm)
+static FrontMatter parsefrontmatter(std::string_view src)
 {
     FrontMatter r = {};
-    if (!startswith(src, "---\n")) {
+    if (!src.starts_with("---\n")) {
         r.err = "missing front matter";
         return r;
     }
-    Str rest = cuthead(src, 4);
+    std::string_view rest = src.substr(4);
     iz  line = 1;
     for (;;) {
         line++;
-        if (!rest.len) {
+        if (rest.empty()) {
             r.err = "unterminated front matter";
             r.errline = line;
             return r;
         }
         Cut c = cut(rest, '\n');
         rest = c.tail;
-        Str ln = trimright(c.head);
+        std::string_view ln = trimright(c.head);
         if (ln == "---" || ln == "...") {
             break;
         }
-        if (!ln.len) {
+        if (ln.empty()) {
             continue;
         }
 
         Cut kv = cut(ln, ':');
-        Str key = kv.head;
-        Str val = trim(kv.tail);
-        if (!kv.ok || !key.len || whitespace(key[0])) {
+        std::string_view key = kv.head;
+        std::string_view val = trim(kv.tail);
+        if (!kv.ok || key.empty() || whitespace(key[0])) {
             r.err = "expected 'key: value'";
             r.errline = line;
             return r;
         }
 
         if (key == "title") {
-            r.title = yamlscalar(val, perm);
-            if (!r.title.data) {
+            r.title = yamlscalar(val);
+            if (!r.title) {
                 r.err = "invalid title string";
                 r.errline = line;
                 return r;
@@ -105,17 +105,17 @@ static FrontMatter parsefrontmatter(Str src, Arena *perm)
         } else if (key == "excerpt_separator") {
             // Ignored: <!--more--> is always the separator
         } else if (key == "tags") {
-            if (val.len<2 || val[0]!='[' || val[val.len-1]!=']') {
+            if (std::ssize(val)<2 || val[0]!='[' || val[std::ssize(val)-1]!=']') {
                 r.err = "tags must be an inline list: [a, b]";
                 r.errline = line;
                 return r;
             }
-            Str list = trim(takehead(cuthead(val, 1), val.len-2));
-            for (Cut t = {{}, list, list.len>0}; t.ok;) {
+            std::string_view list = trim((val.substr(1)).substr(0, std::ssize(val)-2));
+            for (Cut t = {{}, list, std::ssize(list)>0}; t.ok;) {
                 t = cut(t.tail, ',');
-                Str tag = trim(t.head);
-                b32 valid = tag.len > 0;
-                for (iz i = 0; i < tag.len; i++) {
+                std::string_view tag = trim(t.head);
+                b32 valid = std::ssize(tag) > 0;
+                for (iz i = 0; i < std::ssize(tag); i++) {
                     valid &= tagchar(tag[i]);
                 }
                 if (!valid) {
@@ -123,7 +123,7 @@ static FrontMatter parsefrontmatter(Str src, Arena *perm)
                     r.errline = line;
                     return r;
                 }
-                r.tags = push(perm, r.tags, tag);
+                r.tags.push_back(tag);
             }
         } else {
             r.err = "unknown front matter key";
@@ -136,7 +136,7 @@ static FrontMatter parsefrontmatter(Str src, Arena *perm)
     // part of the body.
     for (;;) {
         Cut c = cut(rest, '\n');
-        if (!c.ok || trim(c.head).len) {
+        if (!c.ok || std::ssize(trim(c.head))) {
             break;
         }
         rest = c.tail;
