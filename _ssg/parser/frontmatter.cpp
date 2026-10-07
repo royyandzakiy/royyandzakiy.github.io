@@ -6,7 +6,7 @@ struct FrontMatter {
     std::string_view        layout;
     std::string_view        date;
     std::string_view        uuid;
-    Slice<std::string_view> tags;
+    std::vector<std::string_view> tags;
     std::string_view        body;     // content after the front matter
     iz         bodyline; // line number where body begins
     b32        ok;
@@ -123,7 +123,7 @@ static FrontMatter parsefrontmatter(std::string_view src, Arena *perm)
                     r.errline = line;
                     return r;
                 }
-                r.tags = push(perm, r.tags, tag);
+                r.tags.push_back(tag);
             }
         } else {
             r.err = "unknown front matter key";

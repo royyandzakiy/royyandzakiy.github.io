@@ -70,7 +70,7 @@ static void postheader(Buf *b, Post *p)
 static void posttags(Buf *b, Post *p)
 {
     print(b, "  <ul class=\"tags\">\n");
-    for (iz i = 0; i < p->tags.len; i++) {
+    for (iz i = 0; i < std::ssize(p->tags); i++) {
         print(b, "    <li><a href=\"/tags/");
         printattr(b, p->tags[i]);
         print(b, "/\">");
@@ -114,7 +114,7 @@ R"(
 static void homepage(Buf *b, Site *site, iz limit)
 {
     layouthead(b, site_title);
-    for (iz i = 0; i < site->posts.len && i < limit; i++) {
+    for (iz i = 0; i < std::ssize(site->posts) && i < limit; i++) {
         Post *p = site->posts[i];
         print(b, "<article class=\"many\">\n");
         postheader(b, p);
@@ -149,9 +149,9 @@ static void archivepage(Buf *b, Site *site)
     layouthead(b, "Archives");
     print(b, "<article class=\"index\">\n  <h2>Archives</h2>\n  <p>\n"
              "    There are <span class=\"post-count\">");
-    print(b, (i64)site->posts.len);
+    print(b, (i64)std::ssize(site->posts));
     print(b, "</span> articles.\n  </p>\n  <ul class=\"post-list\">\n");
-    for (iz i = 0; i < site->posts.len; i++) {
+    for (iz i = 0; i < std::ssize(site->posts); i++) {
         postitem(b, site->posts[i]);
     }
     print(b, "  </ul>\n</article>\n");
@@ -164,7 +164,7 @@ static void homelist(Buf *b, Site *site)
     layouthead(b, site_title);
     print(b, "<article class=\"index\">\n  <h2>Posts</h2>\n"
              "  <ul class=\"post-list\">\n");
-    for (iz i = 0; i < site->posts.len; i++) {
+    for (iz i = 0; i < std::ssize(site->posts); i++) {
         postitem(b, site->posts[i]);
     }
     print(b, "  </ul>\n</article>\n");
@@ -175,7 +175,7 @@ static void tagindexpage(Buf *b, Site *site)
 {
     layouthead(b, "Tags");
     print(b, "<article class=\"tag\">\n  <h2>Tags</h2>\n  <ul class=\"post-list\">\n");
-    for (iz i = 0; i < site->tags.len; i++) {
+    for (iz i = 0; i < std::ssize(site->tags); i++) {
         std::string_view name = site->tags[i]->name;
         print(b, "    <li>\n      <a href=\"/tags/");
         printattr(b, name);
@@ -197,7 +197,7 @@ static void tagpage(Buf *b, Tag *tag)
     print(b, "/feed/\"></a>\n    Articles tagged \"");
     printhtml(b, tag->name);
     print(b, "\"\n  </h2>\n  <ul class=\"post-list\">\n");
-    for (iz i = 0; i < tag->posts.len; i++) {
+    for (iz i = 0; i < std::ssize(tag->posts); i++) {
         postitem(b, tag->posts[i]);
     }
     print(b, "  </ul>\n</article>\n");
@@ -232,7 +232,7 @@ static void atomentry(Buf *b, Post *p)
     print(b, "</id>\n    <updated>");
     printiso(b, p->time);
     print(b, "</updated>\n    ");
-    for (iz i = 0; i < p->tags.len; i++) {
+    for (iz i = 0; i < std::ssize(p->tags); i++) {
         print(b, "<category term=\"");
         printattr(b, p->tags[i]);
         print(b, "\"/>");
@@ -265,7 +265,7 @@ static void atomfeed(Buf *b, Site *site)
     print(b, feed_uuid);
     print(b, "</id>\n\n");
     atomauthor(b, site_url, "/");
-    for (iz i = 0; i < site->posts.len && i < 8; i++) {
+    for (iz i = 0; i < std::ssize(site->posts) && i < 8; i++) {
         atomentry(b, site->posts[i]);
     }
     print(b, "\n</feed>\n");
@@ -292,7 +292,7 @@ static void tagfeed(Buf *b, Site *site, Tag *tag)
     print(b, tag->uuid);
     print(b, "</id>\n\n");
     atomauthor(b, site_url, "");
-    for (iz i = 0; i < tag->posts.len; i++) {
+    for (iz i = 0; i < std::ssize(tag->posts); i++) {
         atomentry(b, tag->posts[i]);
     }
     print(b, "\n</feed>\n");
@@ -316,7 +316,7 @@ static void rssfeed(Buf *b, Site *site)
     print(b, "</pubDate>\n    <lastBuildDate>");
     printrfc822(b, site->now);
     print(b, "</lastBuildDate>\n\n");
-    for (iz i = 0; i < site->posts.len && i < 8; i++) {
+    for (iz i = 0; i < std::ssize(site->posts) && i < 8; i++) {
         Post *p = site->posts[i];
         print(b, "    <item>\n      <title>");
         printhtml(b, p->title);

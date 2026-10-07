@@ -63,11 +63,11 @@ static void test_site(Test *t)
         "uuid: 3c5b2b52-5e2f-4d57-8f3b-5b7b5a8f5e1d\n---\n\nBody\n", &a);
     expect(t, "fm.ok",    fm.ok ? std::string_view("ok") : fm.err, "ok");
     expect(t, "fm.title", fm.title, "My take on \"where's all the code\"");
-    expect(t, "fm.tags",  fm.tags.len==2 ? fm.tags[1] : std::string_view{}, "cpp");
+    expect(t, "fm.tags",  std::ssize(fm.tags)==2 ? fm.tags[1] : std::string_view{}, "cpp");
     expect(t, "fm.body",  fm.body, "Body\n");
     fm = parsefrontmatter("---\ntitle: \"A \\\"quoted\\\" title\"\ntags: []\n---\nx", &a);
     expect(t, "fm.dq",    fm.title, "A \"quoted\" title");
-    expect(t, "fm.empty", fm.tags.len ? std::string_view("tags") : std::string_view("none"), "none");
+    expect(t, "fm.empty", std::ssize(fm.tags) ? std::string_view("tags") : std::string_view("none"), "none");
     fm = parsefrontmatter("---\ntitle: x\nbogus: y\n---\n", &a);
     expect(t, "fm.bad",   fm.ok ? std::string_view("ok") : std::string_view("err"), "err");
 

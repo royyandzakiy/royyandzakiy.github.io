@@ -347,32 +347,28 @@ static void test_highlight(Test *t)
 
     // Word tables must be sorted for bisection
     {
-        Slice<HlWords> tables = {};
-        Arena a = perm;
+        std::vector<HlWords> tables;
         for (iz i = 0; i < std::ssize(hltags); i++) {
             HlLang l = hllang(hltags[i]);
-            tables = push(&a, tables, l.keywords);
-            tables = push(&a, tables, l.types);
-            tables = push(&a, tables, l.defs);
-            tables = push(&a, tables, l.tdefs);
-            tables = push(&a, tables, l.prefixes);
+            tables.push_back(l.keywords);
+            tables.push_back(l.types);
+            tables.push_back(l.defs);
+            tables.push_back(l.tdefs);
+            tables.push_back(l.prefixes);
         }
         HlWords special[] = {
-            HLWORDS(valuekeywords), HLWORDS(lispheads), HLWORDS(lispdefs),
-            HLWORDS(watdefs), HLWORDS(wattypes), HLWORDS(nasmdirectives),
-            HLWORDS(nasmsizes), HLWORDS(asmprefixes), HLWORDS(x86regs),
-            HLWORDS(a64regs), HLWORDS(shkeywords), HLWORDS(makedirectives),
-            HLWORDS(batkeywords), HLWORDS(yamlkeywords), HLWORDS(basicrem),
+            HlWords(valuekeywords), HlWords(lispheads), HlWords(lispdefs),
+            HlWords(watdefs), HlWords(wattypes), HlWords(nasmdirectives),
+            HlWords(nasmsizes), HlWords(asmprefixes), HlWords(x86regs),
+            HlWords(a64regs), HlWords(shkeywords), HlWords(makedirectives),
+            HlWords(batkeywords), HlWords(yamlkeywords), HlWords(basicrem),
         };
-        for (iz i = 0; i < std::ssize(special); i++) {
-            tables = push(&a, tables, special[i]);
-        }
+        tables.insert(tables.end(), std::begin(special), std::end(special));
         std::string_view bad = {};
-        for (iz i = 0; i < tables.len; i++) {
-            HlWords w = tables[i];
-            for (iz j = 1; j < w.len; j++) {
-                if (w.data[j-1] >= w.data[j]) bad = w.data[j];
-            }
+        for (HlWords w : tables) {
+            // strictly increasing: no out-of-order or duplicate word
+            auto it = std::ranges::adjacent_find(w, std::ranges::greater_equal{});
+            if (it != w.end()) bad = it[1];
         }
         expect(t, "hl.sorted", bad, "");
     }
