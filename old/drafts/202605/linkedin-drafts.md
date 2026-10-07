@@ -6,19 +6,17 @@ Here are your enhanced LinkedIn snippets, keeping your original text intact and 
 
 I believe that grooming the build process is just as important as implementing the business logic. I have met lots of legacy codebases that are just unusable and very confusing to just get to run. Grooming includes refactoring build systems and foldering structures of legacy codebases. This way, us as developers can really just focus and immerse ourselves with the logic, and not falling behind linker issue this, or component not found that.
 
-For instance, in my cpp-project-template, I make sure the folder structure itself tells you where things belong without guessing. The `include/` folder is your public API surface, `src/` is implementation details, `cmake/` holds reusable modules like sanitizer configs, and `test/` sits right at the top level so testing is never an afterthought. This kind of grooming means when someone clones the repo, their eyes go straight to the logic, not hunting down where some header got buried.
+For instance, in my cpp-project-template, I make sure the folder structure itself tells you where things belong. The `include/` folder is the public API, `src/` is implementation details, `cmake/` holds reusable modules like sanitizer configs, and `test/` sits right at the top level. Using this, one can have peace in mind regarding building, and focus on the business logic.
 
 ```
 cpp-project-template/
-├── cmake/               # Build logic modules, out of your way
-├── include/             # Public headers: "here's what you can use"
-├── src/                 # Implementation: "here's how it works"
-├── test/                # Tests live alongside, not forgotten
-├── CMakePresets.json    # Build configurations you don't rewrite
-└── vcpkg.json           # Dependencies you don't manually hunt
+├── cmake/               # Build logic modules
+├── include/             # Public headers
+├── src/                 # Implementation
+├── test/                # Tests
+├── CMakePresets.json    # Build configurations
+└── vcpkg.json           # Dependencies
 ```
-
-When the structure respects you like this, you stop fighting the project and start writing the actual feature.
 
 ---
 

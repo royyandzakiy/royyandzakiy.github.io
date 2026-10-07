@@ -1,0 +1,12 @@
+@media screen and (prefers-color-scheme: dark) {
+    :root {
+        --bg: #111214;
+        --fg: #e6e6e6;
+        --muted: #9ca3af;
+        --accent: #8b9cff;
+        --accent-visited: #c4a1ff;
+        --surface: #1c1d21;
+        --border: #2a2c31;
+        --header-bg: rgba(17, 18, 20, 0.8);
+    }
+}

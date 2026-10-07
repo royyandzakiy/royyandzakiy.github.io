@@ -1,0 +1,31 @@
+/* Syntax highlighting, for the token classes emitted by _ssg/highlight.cpp:
+ * c comment, k keyword, t type, s string, m number, p preprocessor or
+ * directive, v variable or register, f definition or label, and diff
+ * lines gi (inserted), gd (deleted), gh (header). */
+
+.highlight .c  { color: #6e6a60; font-style: italic; }
+.highlight .k  { color: #7a2f8e; }
+.highlight .t  { color: #256a36; }
+.highlight .s  { color: #a33c26; }
+.highlight .m  { color: #0b6b75; }
+.highlight .p  { color: #8a5a00; }
+.highlight .v  { color: #2b5797; }
+.highlight .f  { color: #1a3e8c; font-weight: bold; }
+.highlight .gi { color: #236b2a; }
+.highlight .gd { color: #a8302a; }
+.highlight .gh { font-weight: bold; }
+
+@media (prefers-color-scheme: dark) {
+    .highlight     { color: #d0d0d0; }
+    .highlight .c  { color: #8f8b82; }
+    .highlight .k  { color: #cfa3e3; }
+    .highlight .t  { color: #98cf9c; }
+    .highlight .s  { color: #e59f86; }
+    .highlight .m  { color: #78cbd3; }
+    .highlight .p  { color: #dcb866; }
+    .highlight .v  { color: #94bbe8; }
+    .highlight .f  { color: #b9cdfa; }
+    .highlight .gi { color: #8fcf8a; }
+    .highlight .gd { color: #ef8f86; }
+    .highlight .gh { color: #ffffff; }
+}
