@@ -5,8 +5,8 @@
 // This is free and unencumbered software released into the public domain.
 #include <stdlib.h>
 #include <unistd.h>
-#include "../base.cpp"
-#include "../highlight.cpp"
+#include "core/base.cpp"
+#include "parser/highlight.cpp"
 
 static b32 writeall(i32 fd, Str s)
 {

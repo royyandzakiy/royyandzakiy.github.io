@@ -3,7 +3,7 @@
 // This is free and unencumbered software released into the public domain.
 #include <stdio.h>
 #include <stdlib.h>
-#include "ssg.cpp"
+#include "engine/ssg.cpp"
 
 struct Os {};
 static Str     os_read(Os *, Arena *, Str) { return {}; }
@@ -49,11 +49,11 @@ static b32 expect(Test *t, Str name, Str got, Str want)
     return 0;
 }
 
-#include "test/site_test.cpp"
-#include "test/newpost_test.cpp"
-#include "test/markdown_test.cpp"
-#include "test/highlight_test.cpp"
-#include "test/wide_test.cpp"
+#include "site_test.cpp"
+#include "newpost_test.cpp"
+#include "markdown_test.cpp"
+#include "highlight_test.cpp"
+#include "wide_test.cpp"
 
 int main()
 {

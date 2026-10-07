@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
-#include "ssg.cpp"
+#include "engine/ssg.cpp"
 
 struct Os {};
 

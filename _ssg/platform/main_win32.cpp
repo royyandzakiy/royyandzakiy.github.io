@@ -5,8 +5,8 @@
 // extended-length (\\?\) before use, so MAX_PATH never applies.
 //
 // This is free and unencumbered software released into the public domain.
-#include "ssg.cpp"
-#include "wide.cpp"
+#include "engine/ssg.cpp"
+#include "platform/wide.cpp"
 
 enum : i32 {
     CREATE_ALWAYS                 = 2,
