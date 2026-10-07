@@ -85,6 +85,7 @@ static i32 build(Os *os, Options *opt, Log *log, Arena *perm, Arena scratch)
     for (iz i = 0; i < std::ssize(site.posts); i++) {
         Post *p = site.posts[i];
         EMIT(outpath(perm, p->url), postpage(&b, p));
+        EMIT(outpath(perm, p->oldurl), redirectpage(&b, p));
     }
     for (iz i = 0; i < std::ssize(site.tags); i++) {
         Tag *t   = site.tags[i];

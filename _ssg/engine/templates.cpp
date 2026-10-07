@@ -338,6 +338,23 @@ static void rssfeed(Buf *b, Site *site)
     print(b, "\n  </channel>\n</rss>\n");
 }
 
+// A stub at a post's old permalink that forwards to its current URL.
+static void redirectpage(Buf *b, Post *p)
+{
+    print(b, "<!DOCTYPE html>\n<meta charset=\"utf-8\">\n<title>");
+    printhtml(b, p->title);
+    print(b, "</title>\n<link rel=\"canonical\" href=\"");
+    print(b, site_url);
+    printattr(b, p->url);
+    print(b, "\"/>\n<meta http-equiv=\"refresh\" content=\"0; url=");
+    printattr(b, p->url);
+    print(b, "\"/>\n<p>Moved to <a href=\"");
+    printattr(b, p->url);
+    print(b, "\">");
+    printhtml(b, p->title);
+    print(b, "</a>.</p>\n");
+}
+
 static void aboutpage(Buf *b, Page *p)
 {
     layouthead(b, p->title);

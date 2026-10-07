@@ -45,7 +45,8 @@ Add `_posts/YYYY-MM-DD-slug.markdown`:
 
 Or write a draft whose first line is `# Title` and run
 `_ssg/build/ssg -n draft.md` to file it into `_posts/` with today's date.
-Post URLs are `/YYYY-MM-DD/slug/`, from the file name.
+Post URLs are `/blog/YYYY-MM/slug/`, from the file name; the old
+`/YYYY-MM-DD/slug/` addresses get pages that redirect there.
 
 Tag pages and feeds are generated from the posts' front matter. Other
 files are published as-is, except those starting with `_` or `.`.
