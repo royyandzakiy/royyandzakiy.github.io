@@ -36,7 +36,7 @@ static void render(Ctx *c, Site *site)
 // Concatenate the stylesheet parts, formerly done with Liquid includes.
 static std::string stylesheet(Ctx *c)
 {
-    static std::string_view parts[] = {"main.css", "print.css", "syntax.css", "dark.css"};
+    static std::string_view parts[] = {"main.css", "print.css", "syntax.css"};
     std::string b;
     for (std::string_view part : parts) {
         std::string rel = join("css", part);
@@ -62,6 +62,7 @@ static i32 build(Os *os, Options *opt, Log *log)
     site.now = opt->now;
     loadposts(&c, &site);
     walk(&c, &site, {}, relativeout(opt));
+    site.nowtext = os_read(os, srcpath(&c, "now.txt")).value_or("");  // optional
     if (log->errors) {
         return 1;
     }
@@ -93,6 +94,7 @@ static i32 build(Os *os, Options *opt, Log *log)
     }
     EMIT("index/index.html", archivepage(&b, &site));
     EMIT("tags/index.html",  tagindexpage(&b, &site));
+    EMIT("404.html",         notfoundpage(&b));
     EMIT("feed/index.xml",   atomfeed(&b, &site));
     EMIT("blog/index.rss",   rssfeed(&b, &site));
     emit(&c, "css/full.css", stylesheet(&c));

@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blog UI Wireframes</title>
+<style>
+/* Page chrome */
+body{margin:0;background:#eceae4;color:#222;font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:22px;margin:0 0 4px}
+.lede{color:#555;margin:0 0 28px}
+section.v{margin:0 0 40px}
+section.v h2{font-size:17px;margin:0 0 2px}
+section.v p.note{margin:0 0 10px;color:#555;font-size:14px}
+.tags{font-size:12px;color:#666;margin-bottom:10px}
+.tags b{background:#fff;border:1px solid #ccc;border-radius:3px;padding:1px 6px;margin-right:4px;font-weight:500}
+.row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.cap{font-size:11px;color:#777;margin-top:4px}
+
+/* Frames: drawn at real px size, then scaled. Proportions stay true. */
+.frame{overflow:hidden;border:1px solid #bbb;border-radius:6px;background:#fff;box-shadow:0 1px 3px #0002}
+.frame.d{width:640px;height:400px}
+.frame.m{width:195px;height:422px}
+.inner{transform:scale(.5);transform-origin:0 0;overflow:hidden;container:f/inline-size}
+.d .inner{width:1280px;height:800px}
+.m .inner{width:390px;height:844px}
+@media (max-width:700px){
+  .frame.d{width:320px;height:200px}.d .inner{transform:scale(.25)}
+}
+
+/* Shared wireframe bits */
+.ph{background:#d9d9d9;border-radius:4px}
+.ln{height:10px;background:#d6d6d6;border-radius:3px;margin:8px 0}
+.mono{font-family:ui-monospace,Consolas,monospace}
+
+/* 1. Terminal */
+.term{background:#0e1116;color:#c9d1d9;height:100%;padding:40px 64px;font:16px/1.7 ui-monospace,Consolas,monospace;box-sizing:border-box}
+.term .p{color:#7ee787}.term .c{color:#8b949e}.term a{color:#79c0ff;text-decoration:none}
+.term nav{margin-bottom:28px;color:#8b949e}
+.term .cur{display:inline-block;width:10px;height:18px;background:#c9d1d9;vertical-align:-3px}
+@container f (max-width:600px){.term{padding:24px 18px;font-size:13px}.term .hide{display:none}}
+
+/* 2. Datasheet */
+.ds{background:#fbfaf6;height:100%;padding:36px 56px;box-sizing:border-box;font:14px/1.45 Arial,sans-serif;color:#111}
+.ds .top{display:flex;justify-content:space-between;border-bottom:3px solid #111;padding-bottom:10px}
+.ds .pn{font:700 34px Arial}.ds .sub{font-size:15px}
+.ds .cols{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:20px}
+.ds h4{margin:0 0 6px;font-size:13px;letter-spacing:.06em;border-bottom:1px solid #111}
+.ds ul{margin:0;padding-left:18px}
+.ds .chip{position:relative;margin:14px auto;width:170px;height:170px;border:2px solid #111;display:flex;align-items:center;justify-content:center;font:700 13px Arial}
+.ds .pins{display:grid;grid-template-columns:repeat(2,1fr);font:12px ui-monospace,monospace;gap:2px 20px}
+.ds table{width:100%;border-collapse:collapse;font-size:13px}.ds td,.ds th{border:1px solid #999;padding:3px 6px;text-align:left}
+@container f (max-width:600px){.ds{padding:20px 16px}.ds .cols{grid-template-columns:1fr}.ds .pn{font-size:24px}.ds .chip{display:none}}
+
+/* 3. Plain text (current site, tightened) */
+.pt{padding:56px 0;height:100%;box-sizing:border-box;font:18px/1.6 Georgia,serif;color:#222}
+.pt .col{max-width:640px;margin:0 auto;padding:0 20px}
+.pt h3{font:600 26px system-ui;margin:0}.pt .sm{color:#666;font:15px system-ui}
+.pt .yr{font:600 14px system-ui;color:#999;margin:26px 0 6px}
+.pt .it{display:flex;gap:18px}.pt .it span{color:#999;font:14px ui-monospace,monospace;padding-top:4px;min-width:52px}
+@container f (max-width:600px){.pt{padding:28px 0;font-size:16px}}
+
+/* 4. Bento */
+.bn{background:#f4f4f2;height:100%;padding:32px 56px;box-sizing:border-box;font:15px system-ui}
+.bn .g{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:14px}
+.bn .c{background:#fff;border:1px solid #e2e2e2;border-radius:14px;padding:16px;overflow:hidden}
+.bn .c b{display:block;font-size:12px;color:#888;font-weight:500;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.bn .w2{grid-column:span 2}.bn .h2{grid-row:span 2}
+.bn .big{font:700 30px system-ui;line-height:1.15}
+@container f (max-width:600px){.bn{padding:16px}.bn .g{grid-template-columns:1fr 1fr;grid-auto-rows:120px;gap:10px}.bn .big{font-size:22px}}
+
+/* 5. Digital garden / topic map */
+.gd{height:100%;padding:36px 56px;box-sizing:border-box;font:15px system-ui;background:#fcfcf8}
+.gd .g{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:22px}
+.gd .t{border:1px dashed #a8b89a;border-radius:12px;padding:14px 16px;background:#f3f7ee}
+.gd .t h5{margin:0 0 8px;font-size:17px}
+.gd .n{font-size:14px;margin:4px 0}.gd .n i{font-style:normal;color:#6a8f4e;margin-right:6px}
+@container f (max-width:600px){.gd{padding:18px}.gd .g{grid-template-columns:1fr}}
+
+/* 6. Oscilloscope */
+.sc{height:100%;box-sizing:border-box;padding:36px 56px;background:#06120c;color:#9effc2;font:15px ui-monospace,Consolas,monospace;
+  background-image:linear-gradient(#ffffff10 1px,transparent 1px),linear-gradient(90deg,#ffffff10 1px,transparent 1px);background-size:64px 64px}
+.sc .hd{display:flex;justify-content:space-between;color:#e8ff7a}
+.sc svg{width:100%;height:190px;margin:16px 0}
+.sc .ch{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.sc .ch div{border-top:2px solid currentColor;padding-top:6px}
+.sc .c1{color:#e8ff7a}.sc .c2{color:#5ee4ff}.sc .c3{color:#ff8ad8}
+@container f (max-width:600px){.sc{padding:18px}.sc .ch{grid-template-columns:1fr}.sc svg{height:120px}}
+
+/* 7. Project-first portfolio */
+.pf{height:100%;box-sizing:border-box;padding:36px 64px;font:16px system-ui;background:#fff}
+.pf .hero{display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:center}
+.pf .hero h3{font:800 46px/1.05 system-ui;margin:0 0 12px}
+.pf .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:34px}
+.pf .spec{font:12px ui-monospace,monospace;color:#666;margin-top:6px}
+@container f (max-width:600px){.pf{padding:20px}.pf .hero{grid-template-columns:1fr;gap:16px}.pf .hero h3{font-size:30px}.pf .cards{grid-template-columns:1fr}}
+
+/* 8. Editorial */
+.ed{height:100%;box-sizing:border-box;padding:28px 64px;font:17px/1.5 Georgia,serif;background:#fffdf8;color:#1b1b1b}
+.ed .mast{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #1b1b1b;padding-bottom:10px}
+.ed .mast b{font:700 30px Georgia}
+.ed .g{display:grid;grid-template-columns:2fr 1fr;gap:40px;margin-top:24px}
+.ed .feat h3{font:700 40px/1.1 Georgia;margin:10px 0}
+.ed .side h6{font:600 12px system-ui;letter-spacing:.08em;margin:0 0 8px;color:#888}
+.ed .side p{margin:0 0 12px;font-size:15px}
+@container f (max-width:600px){.ed{padding:18px}.ed .g{grid-template-columns:1fr}.ed .feat h3{font-size:26px}}
+
+/* 9. Boot log */
+.bl{background:#000;color:#bdbdbd;height:100%;box-sizing:border-box;padding:28px 40px;font:15px/1.55 ui-monospace,Consolas,monospace}
+.bl .t{color:#6f6f6f}.bl .ok{color:#3ddc84}.bl a{color:#ffd166}
+@container f (max-width:600px){.bl{padding:16px 12px;font-size:12px}}
+
+/* 10. PCB */
+.pcb{height:100%;box-sizing:border-box;padding:40px 56px;background:#0f4d2c;color:#f2f2e9;font:15px ui-monospace,Consolas,monospace;position:relative}
+.pcb .sk{border:2px solid #f2f2e9;border-radius:6px;padding:12px 14px;background:#0c4226}
+.pcb .g{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:56px;margin-top:28px;position:relative}
+.pcb .pad{display:inline-block;width:12px;height:12px;border-radius:50%;background:#d8b45a;margin-right:8px;vertical-align:-1px}
+.pcb .tr{position:absolute;height:3px;background:#c99a3c}
+.pcb .ref{color:#d8e8c8;font-size:12px}
+@container f (max-width:600px){.pcb{padding:18px}.pcb .g{grid-template-columns:1fr;gap:16px}.pcb .tr{display:none}}
+
+/* 11. Lab notebook */
+.nb{height:100%;box-sizing:border-box;padding:40px 72px 40px 110px;background:#fffef6;color:#1d2a4a;font:17px/32px Georgia,serif;
+  background-image:linear-gradient(90deg,transparent 88px,#e8a3a3 88px,#e8a3a3 90px,transparent 90px),linear-gradient(#cfe0f3 1px,transparent 1px);background-size:100% 100%,100% 32px}
+.nb h3{font:italic 700 30px Georgia;margin:0}.nb .d{color:#b5443c;font:14px ui-monospace,monospace}
+.nb .e{margin-top:8px}
+@container f (max-width:600px){.nb{padding:20px 16px 20px 44px;background-image:linear-gradient(90deg,transparent 32px,#e8a3a3 32px,#e8a3a3 34px,transparent 34px),linear-gradient(#cfe0f3 1px,transparent 1px)}.nb h3{font-size:22px}}
+
+/* 12. Swiss */
+.sw{height:100%;box-sizing:border-box;padding:40px 56px;background:#fff;color:#000;font:16px Helvetica,Arial,sans-serif;display:grid;grid-template-columns:repeat(12,1fr);column-gap:20px;align-content:start}
+.sw .nm{grid-column:1/13;font:800 120px/0.9 Helvetica,Arial,sans-serif;letter-spacing:-.04em}
+.sw .rd{color:#e30613}
+.sw .l{grid-column:1/5;margin-top:40px;font-size:15px}
+.sw .r{grid-column:6/13;margin-top:40px}
+.sw .r div{display:grid;grid-template-columns:90px 1fr;border-top:2px solid #000;padding:8px 0;font-weight:600}
+@container f (max-width:600px){.sw{padding:18px;grid-template-columns:1fr}.sw .nm{font-size:56px;grid-column:1}.sw .l,.sw .r{grid-column:1;margin-top:18px}}
+
+/* 13. Timeline */
+.tl{height:100%;box-sizing:border-box;padding:40px 0;background:#fafafa;font:16px system-ui}
+.tl .col{max-width:720px;margin:0 auto;padding:0 20px}
+.tl .it{position:relative;padding:0 0 18px 34px;border-left:2px solid #ddd;margin-left:8px}
+.tl .it:before{content:'';position:absolute;left:-7px;top:4px;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #888}
+.tl .k{display:inline-block;font:600 11px system-ui;padding:1px 7px;border-radius:9px;margin-right:6px;text-transform:uppercase}
+.tl .p{background:#dbeafe}.tl .w{background:#fde68a}.tl .tk{background:#dcfce7}.tl .j{background:#fbcfe8}
+.tl .dt{color:#999;font-size:13px}
+
+/* 14. Docs / wiki */
+.dc{height:100%;display:grid;grid-template-columns:270px 1fr;font:15px system-ui;background:#fff}
+.dc .sb{background:#f6f7f9;border-right:1px solid #e3e5e8;padding:20px 18px;font-size:14px}
+.dc .sb .s{border:1px solid #ccc;border-radius:6px;padding:7px 10px;color:#999;background:#fff;margin-bottom:16px}
+.dc .sb b{display:block;margin:14px 0 4px;font-size:12px;color:#666;text-transform:uppercase}
+.dc .sb div{padding:3px 8px}.dc .sb .on{background:#e4ecff;border-radius:4px;color:#1f4fd1}
+.dc .mn{padding:28px 56px}.dc .bc{color:#888;font-size:13px}
+.dc h3{font-size:32px;margin:6px 0 14px}
+.dc pre{background:#f3f4f6;border-radius:6px;padding:12px;font-size:13px;overflow-x:auto}
+@container f (max-width:600px){.dc{grid-template-columns:minmax(0,1fr)}.dc .sb{display:none}.dc .mn{padding:18px}}
+
+/* 15. Memory map */
+.mm{height:100%;box-sizing:border-box;padding:40px 64px;background:#fff;font:15px ui-monospace,Consolas,monospace;display:grid;grid-template-columns:1fr 1.2fr;gap:48px}
+.mm .blk{display:grid;grid-template-columns:110px 1fr;align-items:stretch}
+.mm .a{color:#888;font-size:12px;padding-top:2px}
+.mm .r{border:2px solid #222;border-top:0;padding:10px 12px}
+.mm .r.f{border-top:2px solid #222}
+.mm h3{font:700 28px system-ui;margin:0 0 6px}
+@container f (max-width:600px){.mm{padding:18px;grid-template-columns:1fr;gap:18px}.mm .blk{grid-template-columns:70px 1fr}}
+
+/* 16. LCD */
+.lcd{height:100%;box-sizing:border-box;padding:40px 0;background:#f2f0ea;font:16px system-ui}
+.lcd .col{max-width:720px;margin:0 auto;padding:0 20px}
+.lcd .scr{background:#9bbc0f;border:14px solid #2b2b2b;border-radius:10px;padding:14px 18px;font:28px/1.2 ui-monospace,Consolas,monospace;color:#0f380f;letter-spacing:.12em;white-space:pre}
+.lcd .li{display:flex;justify-content:space-between;border-bottom:1px dashed #bbb;padding:10px 0}
+@container f (max-width:600px){.lcd .scr{font-size:14px;border-width:8px;padding:10px}}
+
+/* 17. Split screen */
+.sp{height:100%;display:grid;grid-template-columns:5fr 7fr;background:#0b1a2e;color:#cbd5e1;font:16px system-ui}
+.sp .l{padding:72px 48px 0 96px}.sp .l h3{font:800 46px system-ui;color:#e2e8f0;margin:0}
+.sp .l nav div{margin:8px 0;color:#64748b}.sp .l nav .on{color:#e2e8f0}.sp .l nav .on:before{content:'\2014\2014  '}
+.sp .r{padding:72px 96px 0 24px}
+.sp .c{padding:16px;border-radius:8px;margin-bottom:10px}.sp .c.h{background:#1e293b80}
+.sp .c b{color:#e2e8f0}.sp .pill{display:inline-block;font-size:12px;color:#5eead4;background:#134e4a80;border-radius:10px;padding:2px 9px;margin:6px 4px 0 0}
+@container f (max-width:600px){.sp{grid-template-columns:1fr}.sp .l{padding:28px 20px 0}.sp .l h3{font-size:30px}.sp .l nav{display:none}.sp .r{padding:12px 12px}}
+
+/* 18. Man page */
+.mp{height:100%;box-sizing:border-box;padding:36px 64px;background:#fff;color:#111;font:16px/1.5 ui-monospace,Consolas,monospace}
+.mp .hd{display:flex;justify-content:space-between}
+.mp h5{margin:16px 0 2px;font-size:16px}.mp p{margin:0 0 0 56px}.mp i{text-decoration:underline;font-style:normal}
+@container f (max-width:600px){.mp{padding:16px;font-size:12px}.mp p{margin-left:20px}}
+
+/* 19. Application notes */
+.an{height:100%;box-sizing:border-box;padding:40px 0;color:#2a2620;background:#f4efe1 radial-gradient(ellipse at center,#f8f4e8 55%,#ebe3cd 100%);font:17px/1.6 Georgia,serif}
+.an .col{max-width:720px;margin:0 auto;padding:0 20px}
+.an .mast{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #2a2620;padding-bottom:8px;font-family:Helvetica,Arial,sans-serif}
+.an .mast b{font-size:20px}.an .mast span{font-size:14px;color:#555}
+.an .kind{font:700 12px Helvetica,Arial,sans-serif;letter-spacing:.12em;color:#2c4a78}
+.an .no{font:600 14px ui-monospace,Consolas,monospace;color:#2c4a78}
+.an .row{display:grid;grid-template-columns:110px 1fr 110px;gap:12px;padding:9px 0;border-bottom:1px solid #ddd2b8;align-items:baseline}
+.an .row .dt{font:13px ui-monospace,monospace;color:#888;text-align:right}
+.an .tg{font:12px Helvetica,Arial,sans-serif;color:#777}
+.an .doc{border:1px solid #2a2620;margin-top:18px;font-family:Helvetica,Arial,sans-serif}
+.an .doc .t{display:grid;grid-template-columns:1fr 150px;border-bottom:1px solid #2a2620}
+.an .doc .t>div{padding:12px 14px}.an .doc .t>div+div{border-left:1px solid #2a2620;font-size:13px;line-height:1.5}
+.an .doc h3{font:700 28px/1.15 Helvetica,Arial,sans-serif;margin:4px 0 0}
+.an .doc .ap{padding:8px 14px;font-size:13px;background:#ece4cf}
+.an .abs{font-style:italic;color:#444;margin:16px 0}
+.an pre{background:#ece5d2;border-left:3px solid #2c4a78;padding:10px 12px;font-size:13px;overflow-x:auto}
+.an table{width:100%;border-collapse:collapse;font:13px Helvetica,Arial,sans-serif;margin-top:8px}
+.an td,.an th{border:1px solid #b8ab8c;padding:4px 8px;text-align:left}.an th{background:#ece4cf}
+.an h6{font:700 12px Helvetica,Arial,sans-serif;letter-spacing:.1em;margin:22px 0 0}
+.an td{overflow-wrap:anywhere}
+.an .abt{display:grid;grid-template-columns:1fr 1fr;gap:28px;font:14px/1.5 Helvetica,Arial,sans-serif}
+@container f (max-width:600px){.an .abt{grid-template-columns:1fr;gap:0}.an{padding:18px 0;font-size:16px}.an .row{grid-template-columns:1fr;gap:0}.an .row .dt{text-align:left}.an .doc .t{grid-template-columns:1fr}.an .doc .t>div+div{border-left:0;border-top:1px solid #2a2620}.an .doc h3{font-size:22px}}
+
+/* 20. Light terminal */
+.tx{height:100%;box-sizing:border-box;background:#fafaf7;color:#24292f;font:16px/1.65 ui-monospace,"Cascadia Code",Consolas,monospace}
+.tx .bar{border-bottom:1px solid #e4e4dc;background:#f3f3ee}
+.tx .bar .col{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;padding-top:10px;padding-bottom:10px}
+.tx .col{max-width:82ch;margin:0 auto;padding:0 24px}
+.tx .p{color:#1a7f37}.tx .d{color:#0550ae}.tx .c{color:#6e7781}.tx .y{color:#953800}
+.tx u{color:#0550ae;text-underline-offset:3px}
+.tx .nav u{margin-left:14px}
+.tx .cmd{margin-top:22px}
+.tx .ls>div{display:grid;grid-template-columns:11ch 7ch 5ch 11ch 1fr;column-gap:1.5ch}
+.tx .tk>div{display:grid;grid-template-columns:3ch 6ch 22ch 1fr;column-gap:1.5ch}
+.tx pre{margin:6px 0;white-space:pre;overflow-x:auto;font:inherit}
+.tx pre.box{border:1px solid #e1e1d8;background:#f1f1ea;padding:10px 12px;border-radius:4px}
+.tx .fm{color:#6e7781}
+.tx h3{font:700 22px/1.3 ui-monospace,Consolas,monospace;margin:8px 0}
+.tx .cur{display:inline-block;width:9px;height:17px;background:#24292f;vertical-align:-3px}
+.tx .nf{display:grid;grid-template-columns:auto 1fr;gap:3ch;align-items:start}
+.tx .nf b{color:#1a7f37;font-weight:600}
+@container f (max-width:600px){.tx{font-size:13.5px}.tx .col{padding:0 14px}.tx .pm{display:none}
+  .tx .ls>div{grid-template-columns:11ch 1fr}.tx .tk>div{grid-template-columns:2ch 5ch 1fr}.tx .tk .ev{display:none}
+  .tx .nav u{margin:0 10px 0 0}.tx .cm{display:none}.tx .nf{grid-template-columns:1fr}.tx .nf pre{display:none}}
+
+/* Page ideas */
+table.pages{width:100%;border-collapse:collapse;background:#fff;font-size:14px}
+table.pages td,table.pages th{border-top:1px solid #ddd;padding:7px 10px;text-align:left;vertical-align:top}
+table.pages th{background:#f5f5f2}
+</style>
+
+<div class="wrap">
+<h1>Blog UI wireframes</h1>
+<p class="lede">Nineteen different feels (the recommended one first) for royyandzakiy.com. Each one is drawn at real size (a 1280&times;800 desktop and a 390&times;844 phone) and scaled down, so the proportions are true. They all work with no JavaScript, system fonts and one CSS file.</p>
+
+<!-- Each variant: a <template> rendered into a desktop and a phone frame by the script below. -->
+
+<div style="background:#fff;border:2px solid #1a7f37;border-radius:8px;padding:14px 18px 2px;margin-bottom:40px">
+<h2 style="font-size:19px;margin:0 0 4px;color:#1a7f37">20. Light terminal (expanded)</h2>
+<p class="note" style="margin:0 0 18px">The terminal vibe from #1 on a light, paper-white background. Every page is "the output of a command", but the links are real links and nothing pretends to be interactive. The content column is 82 characters wide, like a terminal. Monospace everywhere, system fonts only. The file sizes in the listing are your posts' real sizes.</p>
+
+<section class="v" data-t="t20a">
+<h2>20a. Home: <span class="mono">whoami</span>, <span class="mono">ls -l notes/</span>, <span class="mono">cat now.txt</span></h2>
+<p class="note">The top bar doubles as the prompt and the menu. On phones, the permissions and size columns drop out, leaving date and name.</p>
+</section>
+<template id="t20a"><div class="tx">
+<div class="bar"><div class="col"><span><span class="p">royyan@rd</span>:<span class="d">~</span>$</span><span class="nav"><u>notes</u><u>projects</u><u>talks</u><u>about</u></span></div></div>
+<div class="col">
+<div class="cmd"><span class="p">$</span> whoami</div>
+<div>Royyan Dzakiy &mdash; embedded software engineer.</div>
+<div class="c"># Zephyr, modern C++, ESP-IDF, and the build &amp; test tooling around them.</div>
+<div class="cmd"><span class="p">$</span> ls -l --sort=time notes/ | head</div>
+<div class="ls">
+<div><span class="pm c">-rw-r--r--</span><span class="pm c">royyan</span><span class="pm c">1.8K</span><span class="y">2026-04-06</span><u>lefticus-cmake-project-template</u></div>
+<div><span class="pm c">-rw-r--r--</span><span class="pm c">royyan</span><span class="pm c">1.9K</span><span class="y">2026-04-06</span><u>app-event-manager-nrf-connect</u></div>
+<div><span class="pm c">-rw-r--r--</span><span class="pm c">royyan</span><span class="pm c">2.5K</span><span class="y">2026-01-12</span><u>zephyr-cpp-vs-c-size</u></div>
+<div><span class="pm c">-rw-r--r--</span><span class="pm c">royyan</span><span class="pm c">823</span><span class="y">2025-12-29</span><u>latest-clang-compile</u></div>
+<div><span class="pm c">-rw-r--r--</span><span class="pm c">royyan</span><span class="pm c">317</span><span class="y">2025-12-24</span><u>esp-rust-helloworld</u></div>
+<div><span class="pm c">-rw-r--r--</span><span class="pm c">royyan</span><span class="pm c">4.8K</span><span class="y">2025-12-23</span><u>zephyr-sensors-concept</u></div>
+<div><span class="pm c">-rw-r--r--</span><span class="pm c">royyan</span><span class="pm c">3.2K</span><span class="y">2025-12-22</span><u>zephyr-statemachine-variant</u></div>
+</div>
+<div class="c">... 14 more &rarr; <u>ls notes/</u></div>
+<div class="cmd"><span class="p">$</span> cat now.txt</div>
+<div>Learning Embedded Linux (Yocto, kernel modules). Rewriting this site's generator in std C++.</div>
+<div class="cmd"><span class="p">$</span> <span class="cur"></span></div>
+</div></div></template>
+
+<section class="v" data-t="t20b">
+<h2>20b. A post: <span class="mono">cat notes/&hellip;md</span></h2>
+<p class="note">The front matter shows as a grey block, the title as a Markdown heading, code in a light box. Prev/next at the bottom as a command. Still a comfortable 82-column read.</p>
+</section>
+<template id="t20b"><div class="tx">
+<div class="bar"><div class="col"><span><span class="p">royyan@rd</span>:<span class="d">~/notes</span>$</span><span class="nav"><u>notes</u><u>projects</u><u>talks</u><u>about</u></span></div></div>
+<div class="col">
+<div class="cmd"><span class="p">$</span> cat app-event-manager-nrf-connect.md</div>
+<pre class="fm">---
+date: 2026-04-06
+tags: [<u>zephyr</u>, <u>embedded</u>]
+---</pre>
+<h3># Zephyr App Event Manager</h3>
+<div class="ln" style="width:95%"></div><div class="ln" style="width:88%"></div><div class="ln" style="width:72%"></div>
+<pre class="box">APP_EVENT_SUBSCRIBE(my_module, button_event);</pre>
+<div class="ln" style="width:92%"></div><div class="ln" style="width:80%"></div><div class="ln" style="width:55%"></div>
+<div class="cmd"><span class="p">$</span> ls notes/ | grep -C1 app-event</div>
+<div>&larr; <u>zephyr-cpp-vs-c-size</u> &nbsp;&nbsp; <u>lefticus-cmake-project-template</u> &rarr;</div>
+</div></div></template>
+
+<section class="v" data-t="t20c">
+<h2>20c. Projects: <span class="mono">tree projects/</span></h2>
+<p class="note">Your repos as a directory tree with <span class="mono">#</span> comments. Each name links to GitHub. On phones the comments drop out so the tree fits.</p>
+</section>
+<template id="t20c"><div class="tx">
+<div class="bar"><div class="col"><span><span class="p">royyan@rd</span>:<span class="d">~/projects</span>$</span><span class="nav"><u>notes</u><u>projects</u><u>talks</u><u>about</u></span></div></div>
+<div class="col">
+<div class="cmd"><span class="p">$</span> tree projects/</div>
+<pre><span class="d">projects/</span>
+├── <span class="d">embedded/</span>
+│   ├── <u>balancer-robot-workspace</u>  <span class="c cm"># Zephyr + west: firmware, Qt app, docs</span>
+│   ├── <u>multisensor-station</u>       <span class="c cm"># modular sensor drivers and pipeline</span>
+│   └── <u>zephyr-modern-cpp</u>         <span class="c cm"># concepts, std::variant state machines</span>
+├── <span class="d">tooling/</span>
+│   ├── <u>cpp-project-template</u>      <span class="c cm"># CMake presets, vcpkg, sanitizers, CI</span>
+│   └── <u>gmock-sfinae-concepts</u>     <span class="c cm"># mocking hardware with SFINAE/concepts</span>
+└── <span class="d">desktop/</span>
+    ├── <u>qt-qml-project</u>            <span class="c cm"># Qt 6 MVVM app: SQLite, serial ports</span>
+    └── <u>drogon-todo-project</u>       <span class="c cm"># C++23 REST API, coroutines</span>
+
+<span class="c">3 directories, 7 projects</span></pre>
+<div class="cmd"><span class="p">$</span> <span class="cur"></span></div>
+</div></div></template>
+
+<section class="v" data-t="t20d">
+<h2>20d. Talks: <span class="mono">column -t talks.csv</span></h2>
+<p class="note">A star column, year, event, title. Starred talks first. On phones the event column drops out.</p>
+</section>
+<template id="t20d"><div class="tx">
+<div class="bar"><div class="col"><span><span class="p">royyan@rd</span>:<span class="d">~/talks</span>$</span><span class="nav"><u>notes</u><u>projects</u><u>talks</u><u>about</u></span></div></div>
+<div class="col">
+<div class="cmd"><span class="p">$</span> column -t talks.csv | sort -r</div>
+<div class="tk">
+<div class="c"><span></span><span>YEAR</span><span class="ev">EVENT</span><span>TITLE</span></div>
+<div><span class="y">*</span><span>2026</span><span class="ev">Arkavidia, ITB</span><u>Beyond the Compiler</u></div>
+<div><span class="y">*</span><span>&mdash;</span><span class="ev">Synapsis</span><u>Embedded RTOS: Mastering the Heart&hellip;</u></div>
+<div><span class="y">*</span><span>&mdash;</span><span class="ev">eFishery</span><u>Change Management: R&amp;D Study Case</u></div>
+<div><span class="y">*</span><span>&mdash;</span><span class="ev"></span><u>Organize like a Startup!</u></div>
+<div><span></span><span>2023</span><span class="ev">GAB 2023 SG</span><u>Journey to Aquaculture Intelligence</u></div>
+<div><span></span><span>&mdash;</span><span class="ev">IPB, KOM1305</span><u>Teknologi Budidaya Berbasis AIoT</u></div>
+<div><span></span><span>&mdash;</span><span class="ev"></span><u>IoT for Dummies</u></div>
+</div>
+<div class="c" style="margin-top:10px"># * = recommended. Links open the slides.</div>
+<div class="cmd"><span class="p">$</span> <span class="cur"></span></div>
+</div></div></template>
+
+<section class="v" data-t="t20e">
+<h2>20e. Uses: <span class="mono">neofetch</span></h2>
+<p class="note">Your toolchain as a neofetch screen: a little ASCII chip on the left, <span class="mono">key: value</span> lines on the right. Instantly recognisable, and honest about being software tools. The chip hides on phones.</p>
+</section>
+<template id="t20e"><div class="tx">
+<div class="bar"><div class="col"><span><span class="p">royyan@rd</span>:<span class="d">~</span>$</span><span class="nav"><u>notes</u><u>projects</u><u>talks</u><u>about</u></span></div></div>
+<div class="col">
+<div class="cmd"><span class="p">$</span> neofetch</div>
+<div class="nf"><pre class="p">   ┌┬┬┬┬┬┬┬┐
+ ──┤        ├──
+ ──┤  RD-01 ├──
+ ──┤        ├──
+ ──┤        ├──
+   └┴┴┴┴┴┴┴┘</pre>
+<div><b>royyan</b>@<b>rd</b><br><span class="c">-------------</span><br>
+<b>Role</b>: Embedded software engineer<br>
+<b>Lang</b>: C, C++17 / C++23<br>
+<b>Compilers</b>: clang, gcc<br>
+<b>Build</b>: CMake presets, west, vcpkg<br>
+<b>RTOS/SDK</b>: Zephyr, FreeRTOS, ESP-IDF<br>
+<b>Targets</b>: Nordic, Espressif, STM32<br>
+<b>Quality</b>: clang-tidy, ASan/UBSan, GoogleTest<br>
+<b>Env</b>: Docker, GitHub Actions<br>
+<b>Editor</b>: VS Code<br>
+<b>Assistant</b>: Claude</div></div>
+<div class="cmd"><span class="p">$</span> <span class="cur"></span></div>
+</div></div></template>
+
+<section class="v" data-t="t20f">
+<h2>20f. About: <span class="mono">man royyan</span></h2>
+<p class="note">The man page from #18, in this light style. SEE ALSO links out to LinkedIn and GitHub for the real CV.</p>
+</section>
+<template id="t20f"><div class="tx">
+<div class="bar"><div class="col"><span><span class="p">royyan@rd</span>:<span class="d">~</span>$</span><span class="nav"><u>notes</u><u>projects</u><u>talks</u><u>about</u></span></div></div>
+<div class="col">
+<div class="cmd"><span class="p">$</span> man royyan</div>
+<div style="display:flex;justify-content:space-between;margin-top:8px"><b>ROYYAN(1)</b><span class="pm c">Embedded Engineer's Manual</span><b>ROYYAN(1)</b></div>
+<div class="cmd"><b>NAME</b></div><div style="padding-left:6ch">royyan &mdash; embedded software engineer: firmware, systems, tooling</div>
+<div class="cmd"><b>SYNOPSIS</b></div><div style="padding-left:6ch"><b>royyan</b> [--zephyr] [--freertos] [--esp-idf] [--std=c++23] <u>problem</u></div>
+<div class="cmd"><b>DESCRIPTION</b></div><div style="padding-left:6ch">Builds embedded systems that behave predictably, from firmware to the desktop tools, test rigs and build infrastructure that support them.</div>
+<div class="cmd"><b>SEE ALSO</b></div><div style="padding-left:6ch"><u>linkedin</u>(1), <u>github</u>(1), <u>projects</u>(7), <u>talks</u>(7)</div>
+<div class="cmd"><b>BUGS</b></div><div style="padding-left:6ch">Still learning Embedded Linux. Patches welcome.</div>
+</div></div></template>
+
+<section class="v" data-t="t20g">
+<h2>20g. 404: <span class="mono">No such file or directory</span></h2>
+<p class="note">The error a shell gives you, plus a way back. A static page can't know the URL you typed, so it shows a generic path; one line of JavaScript could fill in the real one.</p>
+</section>
+<template id="t20g"><div class="tx">
+<div class="bar"><div class="col"><span><span class="p">royyan@rd</span>:<span class="d">~</span>$</span><span class="nav"><u>notes</u><u>projects</u><u>talks</u><u>about</u></span></div></div>
+<div class="col">
+<div class="cmd"><span class="p">$</span> cd <span class="y">this/page</span></div>
+<div>bash: cd: this/page: <b>No such file or directory</b></div>
+<div class="cmd"><span class="p">$</span> ls</div>
+<div><u>notes/</u> &nbsp; <u>projects/</u> &nbsp; <u>talks/</u> &nbsp; <u>about</u></div>
+<div class="c" style="margin-top:8px"># It may have moved. Old links like /2025-12-17/concepts still redirect.</div>
+<div class="cmd"><span class="p">$</span> <span class="cur"></span></div>
+</div></div></template>
+</div>
+
+<div style="background:#fff;border:2px solid #1e3a8a;border-radius:8px;padding:14px 18px 2px;margin-bottom:40px">
+<h2 style="font-size:19px;margin:0 0 4px;color:#1e3a8a">19. Application notes (recommended)</h2>
+<p class="note" style="margin:0 0 18px">Plain, fast reading layout (#3), but every post is framed like a vendor <em>application note</em>: a doc number, a revision, an "Applies to" line, and a revision history. The About page gets the full datasheet treatment (#2). Classic technical-doc look, memorable to embedded readers, and the posts stay the point.</p>
+
+<section class="v" data-t="t19a">
+<h2>19a. Home: the list of notes</h2>
+<p class="note">Still just a post list. Numbers are year-month plus a count within that month (AN-2604-1 is the first note of April 2026), worked out by ssg from the file name, so nobody numbers posts by hand.</p>
+</section>
+<template id="t19a"><div class="an"><div class="col">
+<div class="mast"><b>Royyan Dzakiy</b><span>Notes &middot; Tags &middot; About &middot; Feed</span></div>
+<div class="kind" style="margin:22px 0 6px">APPLICATION NOTES</div>
+<div class="row"><span class="no">AN-2604-2</span><span>Lefticus &ndash; C++ Project Template <span class="tg">&middot; cpp</span></span><span class="dt">2026-04-06</span></div>
+<div class="row"><span class="no">AN-2604-1</span><span>Zephyr App Event Manager <span class="tg">&middot; zephyr, embedded</span></span><span class="dt">2026-04-06</span></div>
+<div class="row"><span class="no">AN-2601-1</span><span>Zephyr Modern C++ &ndash; State Machine Size Comparison <span class="tg">&middot; zephyr, cpp</span></span><span class="dt">2026-01-12</span></div>
+<div class="row"><span class="no">AN-2512-9</span><span>Compiling latest Clang++ <span class="tg">&middot; cpp</span></span><span class="dt">2025-12-29</span></div>
+<div class="row"><span class="no">AN-2512-8</span><span>ESP Rust Hello World! <span class="tg">&middot; rust</span></span><span class="dt">2025-12-24</span></div>
+<div class="row"><span class="no">AN-2512-7</span><span>Zephyr Modern C++ &ndash; Sensors Concept <span class="tg">&middot; cpp</span></span><span class="dt">2025-12-23</span></div>
+<div class="row"><span class="no">AN-2512-6</span><span>Statemachines using std::variant/std::visit <span class="tg">&middot; cpp</span></span><span class="dt">2025-12-22</span></div>
+<div class="row"><span class="no">AN-2512-5</span><span>Perfect Forwarding the &ldquo;Hello World!&rdquo; <span class="tg">&middot; cpp</span></span><span class="dt">2025-12-20</span></div>
+</div></div></template>
+
+<section class="v" data-t="t19b">
+<h2>19b. A post</h2>
+<p class="note">A small document header box, an "Applies to" line (one new front-matter key), an abstract, then the normal post. Revision history at the end; ssg could fill it in from the file's git history.</p>
+</section>
+<template id="t19b"><div class="an"><div class="col">
+<div class="mast"><b>Royyan Dzakiy</b><span>Notes &middot; Tags &middot; About</span></div>
+<div class="doc">
+<div class="t"><div><div class="kind">APPLICATION NOTE &middot; <span class="no">AN-2604-1</span></div><h3>Zephyr App Event Manager</h3></div><div>Rev 1.0<br>2026-04-06<br>zephyr, embedded</div></div>
+<div class="ap"><b>Applies to:</b> nRF Connect SDK 3.0.2, Zephyr RTOS</div>
+</div>
+<p class="abs">How modules in a Zephyr application talk to each other through events, and how the App Event Manager coordinates it.</p>
+<div class="ln" style="width:95%"></div><div class="ln" style="width:90%"></div><div class="ln" style="width:75%"></div>
+<pre>APP_EVENT_SUBSCRIBE(my_module, button_event);</pre>
+<div class="ln" style="width:92%"></div><div class="ln" style="width:60%"></div>
+<h6>REVISION HISTORY</h6>
+<table><tr><th>Rev</th><th>Date</th><th>Change</th></tr><tr><td>1.0</td><td>2026-04-06</td><td>Initial release</td></tr></table>
+</div></div></template>
+
+<section class="v" data-t="t19c">
+<h2>19c. About: the datasheet</h2>
+<p class="note">The one page where the joke goes all the way: your profile as a part datasheet. It links out to LinkedIn for the real CV.</p>
+</section>
+<template id="t19c"><div class="an"><div class="col" style="max-width:860px">
+<div class="mast"><b>Royyan Dzakiy</b><span>Notes &middot; Tags &middot; About</span></div>
+<div class="doc">
+<div class="t"><div><div class="kind">DATASHEET &middot; <span class="no">RD-01</span></div><h3>Embedded Software Engineer</h3><div style="font-size:14px;color:#555;margin-top:4px">Firmware, systems &amp; tooling</div></div><div>Rev 6.0<br>2026<br><u>LinkedIn</u> &middot; <u>GitHub</u></div></div>
+</div>
+<div class="abt">
+<div><h6>1 &nbsp;FEATURES</h6><ul style="padding-left:18px;margin:6px 0"><li>RTOS firmware: Zephyr, FreeRTOS, ESP-IDF</li><li>Modern C++ (17/23) on small targets</li><li>Event-driven, state-machine design</li><li>Reproducible builds: CMake, Docker, CI</li></ul>
+<h6>2 &nbsp;TYPICAL APPLICATIONS</h6><div style="margin-top:6px">Medical &amp; industrial devices, BLE/Wi-Fi products, test rigs and desktop tooling</div></div>
+<div><h6>3 &nbsp;PIN CONFIGURATION</h6><div style="margin:10px auto;width:130px;height:110px;border:2px solid #1a1a1a;display:flex;align-items:center;justify-content:center;font-weight:700">RD-01</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;font:12px ui-monospace,monospace;gap:2px 16px"><span>1 ZEPHYR</span><span>5 CMAKE</span><span>2 FREERTOS</span><span>6 GTEST</span><span>3 ESP-IDF</span><span>7 DOCKER</span><span>4 NRF52/53</span><span>8 QT/QML</span></div></div>
+</div></div></div></template>
+
+<section class="v" data-t="t19d">
+<h2>19d. Projects: "Reference designs"</h2>
+<p class="note">Vendors call example projects <em>reference designs</em>. One table, grouped like your GitHub README, each row linking to the repo. It's short on purpose; LinkedIn carries the rest.</p>
+</section>
+<template id="t19d"><div class="an"><div class="col" style="max-width:860px">
+<div class="mast"><b>Royyan Dzakiy</b><span>Notes &middot; Projects &middot; Talks &middot; About</span></div>
+<div class="kind" style="margin:22px 0 4px">REFERENCE DESIGNS</div>
+<h6>EMBEDDED &amp; RTOS</h6>
+<table><tr><th style="width:34%">Design</th><th>What it shows</th><th style="width:20%">Platform</th></tr>
+<tr><td><u>balancer-robot-workspace</u></td><td>Multi-repo firmware, desktop app and docs in one pinned west workspace</td><td>Zephyr, west</td></tr>
+<tr><td><u>multisensor-station</u></td><td>Modular sensor drivers, data pipeline and app logic, cleanly separated</td><td>RTOS firmware</td></tr>
+<tr><td><u>zephyr-modern-cpp</u></td><td>Concepts and std::variant state machines on small targets</td><td>Zephyr, ESP-IDF</td></tr></table>
+<h6>TOOLING &amp; TESTING</h6>
+<table><tr><th style="width:34%">Design</th><th>What it shows</th><th style="width:20%">Platform</th></tr>
+<tr><td><u>cpp-project-template</u></td><td>CMake presets, vcpkg, clang-tidy, sanitizers, CI</td><td>Host C++</td></tr>
+<tr><td><u>gmock-sfinae-concepts-calculator</u></td><td>Mocking hardware with SFINAE and concepts</td><td>GoogleTest</td></tr></table>
+<h6>DESKTOP &amp; SERVER C++</h6>
+<table><tr><th style="width:34%">Design</th><th>What it shows</th><th style="width:20%">Platform</th></tr>
+<tr><td><u>qt-qml-project</u></td><td>MVVM desktop app: SQLite, CSV export, serial ports</td><td>Qt 6 / QML</td></tr>
+<tr><td><u>drogon-todo-project</u></td><td>C++23 REST API with JWT, coroutines, layered design</td><td>Drogon</td></tr></table>
+</div></div></template>
+
+<section class="v" data-t="t19e">
+<h2>19e. Uses: "Recommended operating conditions"</h2>
+<p class="note">Your toolchain, not a hardware bench, written as the datasheet table of the same name. Parameter, value, and a short note on why. Fill in the real values; these come from your repos.</p>
+</section>
+<template id="t19e"><div class="an"><div class="col" style="max-width:860px">
+<div class="mast"><b>Royyan Dzakiy</b><span>Notes &middot; Projects &middot; Talks &middot; About</span></div>
+<div class="kind" style="margin:22px 0 4px">RECOMMENDED OPERATING CONDITIONS</div>
+<table><tr><th style="width:24%">Parameter</th><th style="width:38%">Value</th><th>Notes</th></tr>
+<tr><td>Language</td><td>C, C++17 / C++23</td><td>Modern C++ where the target allows it</td></tr>
+<tr><td>Compilers</td><td>clang, gcc</td><td>Built from source when I need the latest</td></tr>
+<tr><td>Build</td><td>CMake presets, west, vcpkg</td><td>One command from clone to binary</td></tr>
+<tr><td>RTOS / SDK</td><td>Zephyr, FreeRTOS, ESP-IDF</td><td>Nordic, Espressif, STM32</td></tr>
+<tr><td>Quality</td><td>clang-tidy, ASan / UBSan, GoogleTest</td><td>Mocks for anything that touches hardware</td></tr>
+<tr><td>Environment</td><td>Docker, GitHub Actions</td><td>Reproducible builds, CI on every push</td></tr>
+<tr><td>Editor</td><td>VS Code</td><td>&nbsp;</td></tr>
+<tr><td>Assistants</td><td>Claude</td><td>Test scaffolding, review, debugging</td></tr>
+</table>
+<h6>ABSOLUTE MAXIMUM RATINGS</h6>
+<div style="font:14px Helvetica,Arial,sans-serif;margin-top:6px">Exceeding these may cause permanent damage: <i>unpinned dependencies, untested HAL code, CMake with globbing.</i></div>
+</div></div></template>
+
+<section class="v" data-t="t19f">
+<h2>19f. Talks: "Presentations"</h2>
+<p class="note">Talks with event, year and a slides link, starred ones first. Leave the year blank where you don't remember it rather than guessing.</p>
+</section>
+<template id="t19f"><div class="an"><div class="col" style="max-width:860px">
+<div class="mast"><b>Royyan Dzakiy</b><span>Notes &middot; Projects &middot; Talks &middot; About</span></div>
+<div class="kind" style="margin:22px 0 4px">PRESENTATIONS</div>
+<h6>TECHNICAL</h6>
+<table><tr><th>Title</th><th style="width:30%">Event</th><th style="width:10%">Year</th><th style="width:10%">Slides</th></tr>
+<tr><td>&#9733; Beyond the Compiler</td><td>Arkavidia, ITB</td><td>2026</td><td><u>open</u></td></tr>
+<tr><td>&#9733; Embedded RTOS: Mastering the Heart of Embedded Systems</td><td>Synapsis</td><td></td><td><u>open</u></td></tr>
+<tr><td>Journey to Aquaculture Intelligence</td><td>GAB 2023 SG</td><td>2023</td><td><u>open</u></td></tr>
+<tr><td>Teknologi Budidaya Berbasis AIoT</td><td>IPB, KOM1305</td><td></td><td><u>open</u></td></tr>
+<tr><td>IoT for Dummies</td><td></td><td></td><td><u>open</u></td></tr></table>
+<h6>LEADERSHIP &amp; MANAGEMENT</h6>
+<table><tr><th>Title</th><th style="width:30%">Event</th><th style="width:10%">Year</th><th style="width:10%">Slides</th></tr>
+<tr><td>&#9733; Organize like a Startup!</td><td></td><td></td><td><u>open</u></td></tr>
+<tr><td>&#9733; Change Management: eFishery R&amp;D</td><td></td><td></td><td><u>open</u></td></tr></table>
+</div></div></template>
+</div>
+
+<section class="v" data-t="t1">
+<h2>1. Terminal</h2>
+<p class="note">The home page is a shell session: <span class="mono">whoami</span>, <span class="mono">ls posts</span>, <span class="mono">cat now.txt</span>. It's instantly "embedded/systems person". Real links, not a fake interactive terminal.</p>
+<div class="tags"><b>very light</b><b>dark</b><b>strong identity</b></div>
+</section>
+<template id="t1"><div class="term">
+<nav>[<a>posts</a>] [<a>projects</a>] [<a>now</a>] [<a>uses</a>] [<a>about</a>]</nav>
+<div><span class="p">royyan@rd:~$</span> whoami</div>
+<div>Royyan Dzakiy &mdash; embedded software engineer</div>
+<div class="c">Zephyr &middot; modern C++ &middot; ESP-IDF &middot; build &amp; test tooling</div><br>
+<div><span class="p">royyan@rd:~$</span> ls -t posts/ | head -5</div>
+<div><span class="c">2026-04</span>  <a>lefticus-cmake-project-template</a></div>
+<div><span class="c">2026-04</span>  <a>app-event-manager-nrf-connect</a></div>
+<div><span class="c">2026-01</span>  <a>zephyr-cpp-vs-c-size</a></div>
+<div class="hide"><span class="c">2025-12</span>  <a>latest-clang-compile</a></div>
+<div class="hide"><span class="c">2025-12</span>  <a>esp-rust-helloworld</a></div><br>
+<div><span class="p">royyan@rd:~$</span> cat now.txt</div>
+<div>Learning Embedded Linux (Yocto, kernel modules). Rewriting this site's generator in std C++.</div><br>
+<div><span class="p">royyan@rd:~$</span> <span class="cur"></span></div>
+</div></template>
+
+<section class="v" data-t="t2">
+<h2>2. Datasheet</h2>
+<p class="note">The home page styled like an MCU datasheet. "Features" is your skills, "pin configuration" is your stack, "revision history" is your latest posts. Nerdy and memorable, and it prints well.</p>
+<div class="tags"><b>light</b><b>playful</b><b>very you</b></div>
+</section>
+<template id="t2"><div class="ds">
+<div class="top"><div><div class="pn">RD-01</div><div class="sub">Embedded Software Engineer &mdash; Firmware, Systems &amp; Tooling</div></div><div style="text-align:right;font-size:13px">Datasheet<br>Rev 6.0 &middot; 2026</div></div>
+<div class="cols">
+<div><h4>1&nbsp; FEATURES</h4><ul><li>RTOS firmware: Zephyr, FreeRTOS, ESP-IDF</li><li>Modern C++ (17/23) on constrained targets</li><li>Event-driven, state-machine architecture</li><li>Reproducible builds: CMake, Docker, CI</li><li>Hardware-in-the-loop testing</li></ul>
+<h4 style="margin-top:16px">2&nbsp; REVISION HISTORY (POSTS)</h4>
+<table><tr><th>Date</th><th>Change</th></tr><tr><td>2026-04</td><td>Lefticus C++ project template</td></tr><tr><td>2026-04</td><td>Zephyr App Event Manager</td></tr><tr><td>2026-01</td><td>State machine size: C++ vs C</td></tr></table></div>
+<div><h4>3&nbsp; PIN CONFIGURATION</h4><div class="chip">RD-01<br>QFN-32</div>
+<div class="pins"><span>1 &nbsp;ZEPHYR</span><span>9 &nbsp;CMAKE</span><span>2 &nbsp;FREERTOS</span><span>10 GTEST</span><span>3 &nbsp;ESP-IDF</span><span>11 DOCKER</span><span>4 &nbsp;NRF52/53</span><span>12 QT/QML</span></div></div>
+</div></div></template>
+
+<section class="v" data-t="t3">
+<h2>3. Plain text (what you have now, tightened)</h2>
+<p class="note">One narrow column, posts grouped by year, a serif body for reading. In the style of Dan Luu or Julia Evans. The fastest and most timeless option, and the closest to the current site.</p>
+<div class="tags"><b>fastest</b><b>reading-first</b><b>low effort</b></div>
+</section>
+<template id="t3"><div class="pt"><div class="col">
+<h3>Royyan Dzakiy</h3><div class="sm">Embedded software engineer. Zephyr, modern C++, tooling. &middot; <u>about</u> &middot; <u>projects</u> &middot; <u>now</u> &middot; <u>feed</u></div>
+<div class="yr">2026</div>
+<div class="it"><span>Apr 06</span>Lefticus &ndash; C++ Project Template</div>
+<div class="it"><span>Apr 06</span>Zephyr App Event Manager</div>
+<div class="it"><span>Jan 12</span>Zephyr Modern C++ &ndash; State Machine Size Comparison</div>
+<div class="yr">2025</div>
+<div class="it"><span>Dec 29</span>Compiling latest Clang++</div>
+<div class="it"><span>Dec 24</span>ESP Rust Hello World!</div>
+<div class="it"><span>Dec 23</span>Zephyr Modern C++ &ndash; Sensors Concept</div>
+<div class="it"><span>Dec 22</span>Statemachines using std::variant/std::visit</div>
+<div class="it"><span>Dec 17</span>Concepts in C++</div>
+</div></div></template>
+
+<section class="v" data-t="t4">
+<h2>4. Bento grid</h2>
+<p class="note">The home page is a dashboard of cards: intro, now, latest posts, featured project, talks, the board on your desk. Modern and scannable, and it gives non-blog things a home.</p>
+<div class="tags"><b>modern</b><b>portfolio + blog</b><b>more design work</b></div>
+</section>
+<template id="t4"><div class="bn"><div class="g">
+<div class="c w2 h2"><b>Hi</b><div class="big">Royyan Dzakiy builds firmware that behaves predictably.</div><div class="ln" style="width:80%;margin-top:18px"></div><div class="ln" style="width:60%"></div></div>
+<div class="c"><b>Now</b>Learning Embedded Linux &amp; Yocto</div>
+<div class="c ph" style="border:0"></div>
+<div class="c w2"><b>Latest posts</b>Lefticus C++ template<br>Zephyr App Event Manager<br>State machine size: C++ vs C</div>
+<div class="c"><b>Project</b>balancer-robot (Zephyr, west)</div>
+<div class="c"><b>Talks</b>Embedded RTOS &middot; Beyond the Compiler</div>
+<div class="c w2"><b>Stack</b>Zephyr &middot; FreeRTOS &middot; ESP-IDF &middot; C++23 &middot; CMake &middot; Docker</div>
+</div></div></template>
+
+<section class="v" data-t="t5">
+<h2>5. Digital garden (topic map)</h2>
+<p class="note">Organised by topic, not by date: Zephyr, C++, build systems, ESP. Notes are marked seedling or evergreen and get revised over time. Great if you write series like "Zephyr Modern C++".</p>
+<div class="tags"><b>knowledge base</b><b>evergreen</b><b>needs curation</b></div>
+</section>
+<template id="t5"><div class="gd">
+<div style="display:flex;justify-content:space-between"><b style="font-size:22px">Royyan's notes</b><span style="color:#777">topics &middot; all notes &middot; now &middot; about</span></div>
+<div class="g">
+<div class="t"><h5>Zephyr RTOS</h5><div class="n"><i>&#9679;</i>App Event Manager</div><div class="n"><i>&#9679;</i>State machines with std::variant</div><div class="n"><i>&#9675;</i>Sensors as concepts</div></div>
+<div class="t"><h5>Modern C++</h5><div class="n"><i>&#9679;</i>Concepts</div><div class="n"><i>&#9679;</i>Type traits &amp; SFINAE</div><div class="n"><i>&#9675;</i>C++20 modules</div><div class="n"><i>&#9675;</i>Perfect forwarding</div></div>
+<div class="t"><h5>Build &amp; tooling</h5><div class="n"><i>&#9679;</i>Clean CMake for libraries</div><div class="n"><i>&#9675;</i>Compiling latest Clang</div><div class="n"><i>&#9675;</i>Lefticus project template</div></div>
+<div class="t"><h5>ESP-IDF</h5><div class="n"><i>&#9679;</i>Build system</div><div class="n"><i>&#9675;</i>Test frameworks</div><div class="n"><i>&#9675;</i>Rust hello world</div></div>
+<div class="t"><h5>Learning</h5><div class="n"><i>&#9675;</i>Two types of reading</div><div class="n"><i>&#9675;</i>Mindmapping (GRINDE)</div><div class="n"><i>&#9675;</i>Note taking</div></div>
+<div class="t" style="background:none"><h5 style="color:#999">&#9679; evergreen &nbsp;&#9675; seedling</h5></div>
+</div></div></template>
+
+<section class="v" data-t="t6">
+<h2>6. Oscilloscope</h2>
+<p class="note">A dark scope screen with a grid. Your career is drawn as a signal trace (eFishery &rarr; LMesh), and posts are split into "channels" by topic. Bold, but the trace is one small inline SVG, so it stays fast.</p>
+<div class="tags"><b>dark</b><b>bold</b><b>hardware vibe</b></div>
+</section>
+<template id="t6"><div class="sc">
+<div class="hd"><span>ROYYAN DZAKIY &middot; EMBEDDED SW ENG</span><span>CH1 ZEPHYR &nbsp;CH2 C++ &nbsp;CH3 TOOLING &nbsp;&middot; RUN</span></div>
+<svg viewBox="0 0 1000 190" preserveAspectRatio="none"><polyline fill="none" stroke="#e8ff7a" stroke-width="3" points="0,150 140,150 140,60 300,60 300,150 380,150 380,40 620,40 620,120 700,120 700,25 1000,25"/>
+<g fill="#9effc2" font-size="16" font-family="monospace"><text x="150" y="50">studies &middot; IoT</text><text x="390" y="30">eFishery</text><text x="710" y="15">LMesh &middot; now</text></g></svg>
+<div class="ch"><div class="c1">CH1 &middot; Zephyr<br>App Event Manager<br>Sensors concept</div><div class="c2">CH2 &middot; C++<br>Concepts<br>Type traits &amp; SFINAE</div><div class="c3">CH3 &middot; Tooling<br>Clean CMake<br>Latest Clang</div></div>
+</div></template>
+
+<section class="v" data-t="t7">
+<h2>7. Project-first portfolio</h2>
+<p class="note">A hero line plus a photo of real hardware, then project cards with a spec line (MCU, RTOS, a measured result). Writing comes after. Best for job hunting: recruiters see the work in 5 seconds.</p>
+<div class="tags"><b>hiring</b><b>photos</b><b>needs real hardware shots</b></div>
+</section>
+<template id="t7"><div class="pf">
+<div class="hero"><div><h3>Firmware that behaves predictably.</h3><div style="color:#555">Embedded software engineer at LMesh. Zephyr, modern C++, and the tooling around them.</div><div style="margin-top:16px"><u>Projects</u> &nbsp; <u>Writing</u> &nbsp; <u>Talks</u> &nbsp; <u>CV</u></div></div>
+<div class="ph" style="height:260px"></div></div>
+<div class="cards">
+<div><div class="ph" style="height:140px"></div><b>Balancer robot</b><div class="spec">Zephyr &middot; west workspace &middot; Qt app</div></div>
+<div><div class="ph" style="height:140px"></div><b>Multisensor station</b><div class="spec">sensor pipeline &middot; modular drivers</div></div>
+<div><div class="ph" style="height:140px"></div><b>zephyr-modern-cpp</b><div class="spec">std::variant FSM &middot; size vs C</div></div>
+</div></div></template>
+
+<section class="v" data-t="t8">
+<h2>8. Editorial</h2>
+<p class="note">Magazine style: a featured essay with a big serif headline, and a sidebar with now, series and talks. It suits longer write-ups (the RTOS session, architecture posts).</p>
+<div class="tags"><b>reading-first</b><b>classy</b><b>light</b></div>
+</section>
+<template id="t8"><div class="ed">
+<div class="mast"><b>Royyan Dzakiy</b><span style="font:14px system-ui">Writing &middot; Projects &middot; Talks &middot; About</span></div>
+<div class="g"><div class="feat"><div style="font:600 12px system-ui;color:#888;letter-spacing:.08em">FEATURED &middot; ZEPHYR MODERN C++</div>
+<h3>Zephyr Modern C++: State Machine Size Comparison</h3><div class="ln"></div><div class="ln"></div><div class="ln" style="width:70%"></div>
+<div class="ph" style="height:180px;margin-top:16px"></div></div>
+<div class="side"><h6>NOW</h6><p>Learning Embedded Linux &amp; Yocto.</p><h6>SERIES</h6><p>Zephyr Modern C++ (3)<br>ESP-IDF (2)<br>C++ templates (3)</p><h6>RECENT</h6><p>Lefticus C++ template<br>App Event Manager<br>Compiling latest Clang</p></div></div>
+</div></template>
+
+<section class="v" data-t="t9">
+<h2>9. Boot log</h2>
+<p class="note">The home page is a firmware boot over UART: timestamps, <span class="mono">[ OK ]</span> lines, and each "driver" that loads is a section of the site. Pure text, so it's tiny.</p>
+<div class="tags"><b>dark</b><b>very light</b><b>embedded joke</b></div>
+</section>
+<template id="t9"><div class="bl">
+<div><span class="t">[0.000000]</span> Booting RD-01 (royyandzakiy.com) rev 2026.10</div>
+<div><span class="t">[0.000412]</span> cpu0: embedded software engineer @ LMesh</div>
+<div><span class="t">[0.001030]</span> rtos: zephyr, freertos, esp-idf ... <span class="ok">[ OK ]</span></div>
+<div><span class="t">[0.001877]</span> lang: c, c++23 ... <span class="ok">[ OK ]</span></div>
+<div><span class="t">[0.002210]</span> mounting /posts (21 entries) ... <span class="ok">[ OK ]</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &rarr; <a>Lefticus &ndash; C++ Project Template</a></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &rarr; <a>Zephyr App Event Manager</a></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &rarr; <a>State machine size: C++ vs C</a></div>
+<div><span class="t">[0.002954]</span> loading /projects, /talks, /now ... <span class="ok">[ OK ]</span></div>
+<div><span class="t">[0.003101]</span> learning: embedded-linux (yocto) ... <span style="color:#ffd166">[WAIT]</span></div>
+<div><span class="t">[0.003300]</span> login: <a>about</a> &middot; <a>github</a> &middot; <a>feed</a></div>
+</div></template>
+
+<section class="v" data-t="t10">
+<h2>10. PCB</h2>
+<p class="note">Green soldermask, white silkscreen boxes for each section, gold traces between them. Each section has a reference designator: U1 is About, J1 is Posts, J2 is Projects.</p>
+<div class="tags"><b>bold</b><b>hardware vibe</b><b>pure CSS</b></div>
+</section>
+<template id="t10"><div class="pcb">
+<div style="display:flex;justify-content:space-between"><b style="font-size:22px">ROYYAN DZAKIY</b><span class="ref">REV A &middot; 2026 &middot; royyandzakiy.com</span></div>
+<div class="g">
+<div class="tr" style="left:30%;right:62%;top:60px"></div><div class="tr" style="left:62%;right:30%;top:60px"></div>
+<div class="sk"><div class="ref">U1</div><b>ABOUT</b><br>Embedded SW engineer.<br>Zephyr &middot; C++ &middot; tooling</div>
+<div class="sk"><div class="ref">J1 &middot; POSTS</div><div><span class="pad"></span>Lefticus C++ template</div><div><span class="pad"></span>Zephyr App Event Manager</div><div><span class="pad"></span>State machine size</div><div><span class="pad"></span>Compiling latest Clang</div></div>
+<div class="sk"><div class="ref">J2</div><b>PROJECTS</b><br>balancer-robot<br>multisensor-station</div>
+</div></div></template>
+
+<section class="v" data-t="t11">
+<h2>11. Lab notebook</h2>
+<p class="note">Ruled paper with a red margin line. Posts are dated entries, like a hardware lab notebook: hypothesis, setup, result. Warm and personal. It uses system serif fonts, so nothing to download.</p>
+<div class="tags"><b>warm</b><b>personal</b><b>light</b></div>
+</section>
+<template id="t11"><div class="nb">
+<h3>Royyan's lab notebook</h3>
+<div class="e"><span class="d">2026-04-06</span> &nbsp;Tried Lefticus' C++ project template &mdash; notes.</div>
+<div class="e"><span class="d">2026-04-06</span> &nbsp;Zephyr App Event Manager: how modules talk.</div>
+<div class="e"><span class="d">2026-01-12</span> &nbsp;Measured: state machine size, C++ variant vs C switch.</div>
+<div class="e"><span class="d">2025-12-29</span> &nbsp;Compiling the latest Clang++ from source.</div>
+<div class="e"><span class="d">2025-12-24</span> &nbsp;ESP Rust: hello world on an ESP32.</div>
+<div class="e"><span class="d">2025-12-23</span> &nbsp;Sensors as C++ concepts, on Zephyr.</div>
+</div></template>
+
+<section class="v" data-t="t12">
+<h2>12. Swiss typography</h2>
+<p class="note">A huge name, a strict 12-column grid, black and white with one red accent. Posts in a ruled table. No images at all; the type is the design.</p>
+<div class="tags"><b>striking</b><b>no images</b><b>fast</b></div>
+</section>
+<template id="t12"><div class="sw">
+<div class="nm">Royyan<br>Dzakiy<span class="rd">.</span></div>
+<div class="l">Embedded software engineer. Firmware, systems and tooling: Zephyr, modern C++, ESP-IDF.<br><br><span class="rd">&rarr;</span> Projects<br><span class="rd">&rarr;</span> Talks<br><span class="rd">&rarr;</span> About</div>
+<div class="r"><div><span>04.26</span>Lefticus C++ Project Template</div><div><span>04.26</span>Zephyr App Event Manager</div><div><span>01.26</span>State Machine Size Comparison</div><div><span>12.25</span>Compiling latest Clang++</div></div>
+</div></template>
+
+<section class="v" data-t="t13">
+<h2>13. Timeline / changelog</h2>
+<p class="note">One stream mixing everything: posts, TILs, talks, job changes, each with a coloured label. The site reads like your changelog. Good if you'll post short things often.</p>
+<div class="tags"><b>activity feed</b><b>mixed content</b><b>light</b></div>
+</section>
+<template id="t13"><div class="tl"><div class="col">
+<h3 style="margin:0 0 20px;font-size:26px">Royyan Dzakiy <span style="font-weight:400;color:#888;font-size:16px">&mdash; changelog</span></h3>
+<div class="it"><span class="k p">post</span>Lefticus &ndash; C++ Project Template <span class="dt">&middot; Apr 2026</span></div>
+<div class="it"><span class="k p">post</span>Zephyr App Event Manager <span class="dt">&middot; Apr 2026</span></div>
+<div class="it"><span class="k tk">talk</span>Beyond the Compiler &middot; Arkavidia <span class="dt">&middot; 2026</span></div>
+<div class="it"><span class="k w">til</span>west manifest pins a whole workspace <span class="dt">&middot; Mar 2026</span></div>
+<div class="it"><span class="k p">post</span>State Machine Size Comparison <span class="dt">&middot; Jan 2026</span></div>
+<div class="it"><span class="k j">work</span>Embedded engineer at LMesh <span class="dt">&middot; ongoing</span></div>
+</div></div></template>
+
+<section class="v" data-t="t14">
+<h2>14. Docs / wiki</h2>
+<p class="note">Looks like Zephyr or Doxygen docs: a sidebar tree, a search box, breadcrumbs. Posts become chapters. Familiar to every firmware dev and great for series. The search box is optional; it would need a small script or a link to a site search.</p>
+<div class="tags"><b>familiar</b><b>series-friendly</b><b>structured</b></div>
+</section>
+<template id="t14"><div class="dc">
+<div class="sb"><div class="s">Search&hellip;</div><b>Zephyr Modern C++</b><div>1. Sensors concept</div><div class="on">2. State machines (variant)</div><div>3. Size comparison</div><b>Build &amp; tooling</b><div>Clean CMake</div><div>Latest Clang</div><b>ESP-IDF</b><div>Build system</div><div>Test frameworks</div></div>
+<div class="mn"><div class="bc">Docs / Zephyr Modern C++ / 2</div><h3>State machines using std::variant</h3><div class="ln" style="width:90%"></div><div class="ln" style="width:95%"></div><div class="ln" style="width:70%"></div>
+<pre>using State = std::variant&lt;Idle, Running, Fault&gt;;</pre><div class="ln" style="width:85%"></div><div class="ln" style="width:60%"></div></div>
+</div></template>
+
+<section class="v" data-t="t15">
+<h2>15. Memory map</h2>
+<p class="note">The site laid out like a linker memory map: address ranges with stacked regions, where <span class="mono">.text</span> is posts, <span class="mono">.data</span> is projects and <span class="mono">.bss</span> is now. Your intro sits next to it.</p>
+<div class="tags"><b>nerdy</b><b>diagram as nav</b><b>light</b></div>
+</section>
+<template id="t15"><div class="mm">
+<div><h3>Royyan Dzakiy</h3><div style="font-family:system-ui;color:#555">Embedded software engineer. Zephyr, modern C++, ESP-IDF, and the build and test tooling around them.</div>
+<div style="margin-top:24px;font-family:system-ui">Latest in .text:<br>&middot; Lefticus C++ template<br>&middot; Zephyr App Event Manager<br>&middot; State machine size</div></div>
+<div>
+<div class="blk"><span class="a">0x2000_0000</span><div class="r f"><b>.bss</b> &mdash; /now (zero-initialised daily)</div></div>
+<div class="blk"><span class="a">0x0802_0000</span><div class="r"><b>.data</b> &mdash; /projects, /talks</div></div>
+<div class="blk"><span class="a">0x0800_4000</span><div class="r" style="height:120px"><b>.text</b> &mdash; /posts (21)</div></div>
+<div class="blk"><span class="a">0x0800_0000</span><div class="r"><b>.isr_vector</b> &mdash; /about</div></div>
+</div></div></template>
+
+<section class="v" data-t="t16">
+<h2>16. Character LCD</h2>
+<p class="note">A 16&times;2 character LCD (HD44780 style) as the header, showing your name and a rotating line. Everything below is a calm, plain post list. One playful element, the rest is simple.</p>
+<div class="tags"><b>one fun detail</b><b>calm</b><b>fast</b></div>
+</section>
+<template id="t16"><div class="lcd"><div class="col">
+<div class="scr">ROYYAN DZAKIY
+FW &#183; ZEPHYR &#183; C++</div>
+<div style="margin:22px 0 8px;color:#666">Posts &middot; Projects &middot; Talks &middot; About</div>
+<div class="li"><span>Lefticus &ndash; C++ Project Template</span><span style="color:#999">Apr 2026</span></div>
+<div class="li"><span>Zephyr App Event Manager</span><span style="color:#999">Apr 2026</span></div>
+<div class="li"><span>State Machine Size Comparison</span><span style="color:#999">Jan 2026</span></div>
+<div class="li"><span>Compiling latest Clang++</span><span style="color:#999">Dec 2025</span></div>
+</div></div></template>
+
+<section class="v" data-t="t17">
+<h2>17. Split screen</h2>
+<p class="note">Your identity and nav stay fixed on the left; posts and projects scroll on the right, with tech "pills". The popular modern dev-portfolio layout (Brittany Chiang style). Polished and recruiter-friendly.</p>
+<div class="tags"><b>dark</b><b>modern</b><b>portfolio</b></div>
+</section>
+<template id="t17"><div class="sp">
+<div class="l"><h3>Royyan Dzakiy</h3><div style="font-size:19px;color:#e2e8f0;margin:8px 0 14px">Embedded Software Engineer</div><div>Firmware that behaves predictably, and the tooling around it.</div>
+<nav style="margin-top:44px"><div class="on">ABOUT</div><div>EXPERIENCE</div><div>PROJECTS</div><div>WRITING</div></nav></div>
+<div class="r"><div class="c h"><b>Balancer robot workspace</b><div>Zephyr firmware, desktop app and docs in one west workspace.</div><span class="pill">Zephyr</span><span class="pill">west</span><span class="pill">Qt</span></div>
+<div class="c"><b>zephyr-modern-cpp</b><div>Concepts and std::variant state machines on Zephyr and ESP-IDF.</div><span class="pill">C++23</span><span class="pill">Zephyr</span></div>
+<div class="c"><b>cpp-project-template</b><div>CMake presets, vcpkg, sanitizers, CI.</div><span class="pill">CMake</span><span class="pill">CI</span></div></div>
+</div></template>
+
+<section class="v" data-t="t18">
+<h2>18. Man page</h2>
+<p class="note">The home page as <span class="mono">man royyan</span>: NAME, SYNOPSIS, DESCRIPTION, SEE ALSO, BUGS. Underlined words are links. Instantly recognisable to C people, and very light.</p>
+<div class="tags"><b>very light</b><b>C-native</b><b>witty</b></div>
+</section>
+<template id="t18"><div class="mp">
+<div class="hd"><b>ROYYAN(1)</b><span>Embedded Engineer's Manual</span><b>ROYYAN(1)</b></div>
+<h5>NAME</h5><p>royyan &mdash; embedded software engineer: firmware, systems, tooling</p>
+<h5>SYNOPSIS</h5><p><b>royyan</b> [--zephyr] [--freertos] [--esp-idf] [--cpp=23] <i>problem</i></p>
+<h5>DESCRIPTION</h5><p>Builds firmware that behaves predictably, plus the build, test and desktop tools that support it.</p>
+<h5>POSTS</h5><p><i>lefticus-cmake-project-template</i>(7), <i>app-event-manager</i>(7), <i>zephyr-cpp-vs-c-size</i>(7)</p>
+<h5>SEE ALSO</h5><p><i>projects</i>(1), <i>talks</i>(1), <i>now</i>(5), <i>github</i>(1)</p>
+<h5>BUGS</h5><p>Still learning Embedded Linux. Patches welcome.</p>
+</div></template>
+
+<h2 style="font-size:18px;margin-top:48px">Pages people actually add</h2>
+<table class="pages">
+<tr><th>Page</th><th>What goes on it</th><th>Why for you</th></tr>
+<tr><td>/now</td><td>What you're focused on this month. A short paragraph, dated.</td><td>Embedded Linux learning, the C++ rewrite of this site. Cheap to keep fresh.</td></tr>
+<tr><td>/projects</td><td>Each project: photo, one-liner, MCU/RTOS/toolchain, a measured result, repo link.</td><td>Your GitHub README already has the list. This is the page recruiters look for.</td></tr>
+<tr><td>/talks</td><td>Talks and workshops, with slides links.</td><td>You have a long list (RTOS, Beyond the Compiler, ESP32). Strong credibility signal.</td></tr>
+<tr><td>/uses</td><td>Tools: editor, toolchain, and for you the bench: scope, logic analyzer, dev boards.</td><td>Embedded /uses pages are rare and interesting. Listable at uses.tech.</td></tr>
+<tr><td>/til</td><td>Tiny notes (3&ndash;10 lines): a Kconfig gotcha, a west trick.</td><td>Keeps the site alive between long posts.</td></tr>
+<tr><td>/colophon</td><td>How the site is built: your C++ ssg, page weight, build time.</td><td>Shows off the "blazing fast" goal and the generator itself.</td></tr>
+<tr><td>/cv</td><td>One-page HTML CV plus a PDF.</td><td>Direct link for applications.</td></tr>
+<tr><td>/bookshelf, /links</td><td>Books, talks and blogs you recommend (blogroll).</td><td>Light to maintain; says what shaped you.</td></tr>
+<tr><td>/errata</td><td>Corrections to past posts, like a datasheet errata sheet.</td><td>Fits the datasheet theme; signals rigor.</td></tr>
+</table>
+</div>
+
+<script>
+// Render each template into a desktop and a phone frame.
+document.querySelectorAll('section.v').forEach(s => {
+  const t = document.getElementById(s.dataset.t);
+  const row = document.createElement('div');
+  row.className = 'row';
+  for (const [cls, cap] of [['d', 'desktop 1280×800'], ['m', 'phone 390×844']]) {
+    const box = document.createElement('div');
+    box.innerHTML = `<div class="frame ${cls}"><div class="inner"></div></div><div class="cap">${cap}</div>`;
+    box.querySelector('.inner').append(t.content.cloneNode(true));
+    row.append(box);
+  }
+  s.append(row);
+});
+</script>
+</html>

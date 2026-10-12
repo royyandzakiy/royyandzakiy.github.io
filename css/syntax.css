@@ -14,18 +14,3 @@
 .highlight .gi { color: #236b2a; }
 .highlight .gd { color: #a8302a; }
 .highlight .gh { font-weight: bold; }
-
-@media (prefers-color-scheme: dark) {
-    .highlight     { color: #d0d0d0; }
-    .highlight .c  { color: #8f8b82; }
-    .highlight .k  { color: #cfa3e3; }
-    .highlight .t  { color: #98cf9c; }
-    .highlight .s  { color: #e59f86; }
-    .highlight .m  { color: #78cbd3; }
-    .highlight .p  { color: #dcb866; }
-    .highlight .v  { color: #94bbe8; }
-    .highlight .f  { color: #b9cdfa; }
-    .highlight .gi { color: #8fcf8a; }
-    .highlight .gd { color: #ef8f86; }
-    .highlight .gh { color: #ffffff; }
-}

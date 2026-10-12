@@ -3,14 +3,23 @@
         margin: 1in 1.5in 1in 1.5in;
     }
 
-    header, footer, .tags {
+    header, footer, .cmd, .pn, pre.fm {
         display: none !important;
     }
 
     body {
         color: black;
         background: white;
-        font-size: 12pt;
+        font: 11pt/1.5 Georgia, serif;
+    }
+
+    .col {
+        max-width: none;
+        padding: 0;
+    }
+
+    article.post h1::before, article.post h2::before, article.post h3::before {
+        content: none;
     }
 
     main {

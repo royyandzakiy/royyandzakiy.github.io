@@ -50,3 +50,26 @@ Post URLs are `/blog/YYYY-MM/slug/`, from the file name; the old
 
 Tag pages and feeds are generated from the posts' front matter. Other
 files are published as-is, except those starting with `_` or `.`.
+
+## Pages
+
+The site looks like a light terminal: every page is the output of a shell
+command, shown as `$ command` under a prompt bar that doubles as the menu.
+
+    index.html       generated: whoami, the latest notes, then now.txt
+    now.txt          one paragraph on what I'm doing now; edit freely
+    index/           generated: every note (ls -l notes/)
+    tags/            generated: tag pages and feeds
+    404.html         generated: "No such file or directory"
+    about/index.md   man royyan
+    projects/        tree projects/
+    talks/           column -t talks.csv
+    uses/            neofetch
+
+A Markdown page sets its command in the front matter; without one it
+shows `cat` of its own file:
+
+    ---
+    title: About
+    command: man royyan
+    ---

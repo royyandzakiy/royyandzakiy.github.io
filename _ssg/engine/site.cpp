@@ -268,6 +268,7 @@ struct Page {
     std::string      out;    // e.g. about/index.html
     std::string      text;   // the whole file
     std::string      title;
+    std::string_view command;  // shown as "$ command" above the page
     std::string_view body;
     iz               bodyline;
     std::string      html;
@@ -278,6 +279,7 @@ struct Site {
     std::vector<std::unique_ptr<Tag>>  tags;     // sorted by name
     std::vector<std::unique_ptr<Page>> pages;
     std::vector<std::string>           statics;  // relative paths
+    std::string                        nowtext;  // now.txt, shown on the home page
     i64                                now;
 };
 
@@ -513,6 +515,7 @@ static void walk(Ctx *c, Site *site, std::string_view rel, std::string_view outd
                 p->out      = child.substr(0, child.size()-3) + ".html";
                 p->src      = std::move(child);
                 p->title    = fm.title.value_or("");
+                p->command  = fm.command;
                 p->body     = fm.body;
                 p->bodyline = fm.bodyline;
                 site->pages.push_back(std::move(p));

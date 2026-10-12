@@ -67,6 +67,8 @@ static void test_site(Test *t)
     fm = parsefrontmatter("---\ntitle: \"A \\\"quoted\\\" title\"\ntags: []\n---\nx");
     expect(t, "fm.dq",    fm.title.value_or("<none>"), "A \"quoted\" title");
     expect(t, "fm.empty", std::ssize(fm.tags) ? std::string_view("tags") : std::string_view("none"), "none");
+    fm = parsefrontmatter("---\ntitle: x\ncommand: man royyan\n---\n");
+    expect(t, "fm.command", fm.command, "man royyan");
     fm = parsefrontmatter("---\ntitle: x\nbogus: y\n---\n");
     expect(t, "fm.bad",   fm.ok ? std::string_view("ok") : std::string_view("err"), "err");
 
