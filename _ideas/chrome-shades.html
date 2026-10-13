@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chrome Shades</title>
+<style>
+body{margin:0;background:#e9e8e2;color:#222;font:15px/1.5 system-ui,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:22px;margin:0 0 4px}.lede{color:#555;margin:0 0 28px}
+section{margin:0 0 44px}section>h2{font-size:18px;margin:0 0 2px}section>p{margin:0 0 10px;color:#555;font-size:14px}
+.frames{display:grid;gap:10px}
+.cap{font-size:11px;color:#777;margin-top:2px}
+.frame{width:794px;height:347px;overflow:hidden;border:1px solid #bbb;border-radius:6px;box-shadow:0 1px 3px #0002}
+.inner{width:1280px;height:560px;transform:scale(.62);transform-origin:0 0;overflow:hidden}
+@media (max-width:840px){.frame{width:397px;height:174px}.inner{transform:scale(.31)}}
+
+/* The site, as it is now (css/main.css), driven by variables */
+.s{--bg:#fafaf7;--bar:#f3f3ee;--fg:#24292f;--muted:#6e7781;--prompt:#1a7f37;--path:#0550ae;--date:#953800;--rule:#e4e4dc;--box:#f1f1ea;
+   --cmd:var(--fg);--cmdp:var(--prompt);--pm:var(--muted);--fm:var(--muted);--link:var(--path);--title:var(--path);--paper:transparent;
+   height:100%;background:var(--bg);color:var(--fg);font:16px/1.65 ui-monospace,"Cascadia Code",Consolas,monospace}
+.s .col{max-width:82ch;margin:0 auto;padding:0 24px}
+.s a{color:var(--link);text-decoration:underline;text-underline-offset:3px}
+.s .bar{background:var(--bar);border-bottom:1px solid var(--rule)}
+.s .bar .col{display:flex;justify-content:space-between;padding-top:10px;padding-bottom:10px}
+.s .bar .pr{color:var(--fg)}.s .bar .pr .u{color:var(--prompt)}.s .bar .pr .d{color:var(--path)}
+.s .bar nav a{margin-left:14px}
+.s .cmd{margin-top:24px;color:var(--cmd)}.s .cmd .p{color:var(--cmdp)}
+.s .out{margin:0}.s .c{color:var(--muted)}
+.s ul.ls{list-style:none;margin:0;padding:0}
+.s ul.ls li{display:grid;grid-template-columns:11ch 7ch 5ch 11ch 1fr;column-gap:1.5ch}
+.s ul.ls .pm{color:var(--pm)}.s ul.ls .sz{text-align:right}.s ul.ls time{color:var(--date)}
+.s ul.ls a{color:var(--title)}
+.s article{background:var(--paper)}
+.s pre.fm{color:var(--fm);margin:6px 0 0;font:inherit}
+.s h1.t{font-size:22px;line-height:1.35;margin:12px 0 16px}.s h1.t::before{content:"# ";color:var(--muted)}
+.s article p{margin:0 0 16px}
+.s pre.code{font:14.5px/1.5 ui-monospace,Consolas,monospace;background:var(--box);border:1px solid var(--rule);border-radius:4px;padding:12px 14px;margin:0 0 16px}
+.s .pnrow{display:flex;justify-content:space-between}
+.s .cur{display:inline-block;width:.6em;height:1.1em;background:var(--fg);vertical-align:-.2em}
+.s footer{color:var(--muted);font-size:14px;padding-top:16px;border-top:1px dashed var(--rule);margin-top:24px}
+.s footer a{margin-left:1ch}
+
+/* B. Quiet chrome: commands, permissions and front matter fade to light grey */
+.vB{--cmd:#a3a8ae;--cmdp:#9cc5a5;--pm:#c3c6c9;--fm:#a3a8ae;--date:#b0662e}
+
+/* C. Ghost: commands at low contrast, ls shows only date + title, front matter on one line */
+.vC{--cmd:#b9bcbf;--cmdp:#b9bcbf;--fm:#b9bcbf}
+.vC ul.ls .pm{display:none}.vC ul.ls li{grid-template-columns:11ch 1fr}
+.vC pre.fm{display:none}.vC .meta{display:block!important}
+
+/* D. Monochrome: no green or orange; titles dark, links dark, chrome all grey */
+.vD{--prompt:#8a8f95;--path:#55595e;--date:#8a8f95;--cmd:#a7abb0;--cmdp:#a7abb0;--pm:#c6c9cc;--fm:#a7abb0;--title:#1f2328;--link:#1f2328}
+.vD ul.ls a{text-decoration:none;font-weight:600}.vD ul.ls a:hover{text-decoration:underline}
+
+/* E. Paper card: the post sits on white with a border; chrome stays on the grey page */
+.vE{--bg:#efefea;--bar:#e7e7e1;--paper:#fff;--cmd:#9da2a8;--cmdp:#9da2a8;--pm:#c0c3c6;--fm:#a3a8ae}
+.vE article,.vE ul.ls{background:#fff;border:1px solid #dcdcd4;border-radius:6px;padding:18px 22px;margin-top:8px}
+.vE ul.ls{padding:12px 22px}
+
+/* F. Small chrome: commands and front matter in a smaller grey type, content full size */
+.vF{--cmd:#9da2a8;--cmdp:#9da2a8;--pm:#c0c3c6;--fm:#a3a8ae}
+.vF .cmd{font-size:13px;margin-top:22px}.vF pre.fm{font-size:13px;line-height:1.5}.vF ul.ls .pm{font-size:13px}
+.vF .pn{border-top:1px dashed var(--rule);margin-top:24px}
+.meta{display:none;color:#a3a8ae;font-size:14px;margin:6px 0 0}
+</style>
+
+<div class="wrap">
+<h1>Quieter terminal chrome</h1>
+<p class="lede">Six options for toning down the "terminal" parts (the <code>$ commands</code>, the <code>-rw-r--r-- royyan 1.5K</code> columns, the front-matter block, prev/next) so the post list and the post itself stand out. Each is drawn at real size (1280&nbsp;px wide) and scaled down. A is today's site.</p>
+
+<template id="home"><div class="s">
+<div class="bar"><div class="col"><span class="pr"><span class="u">royyan@rd</span>:<span class="d">~</span>$</span><nav><a>notes</a><a>projects</a><a>talks</a><a>about</a></nav></div></div>
+<div class="col">
+<div class="cmd"><span class="p">$</span> whoami</div>
+<p class="out">Royyan Dzakiy &mdash; embedded software engineer.<br><span class="c"># Zephyr, modern C++, ESP-IDF, and the build &amp; test tooling around them.</span></p>
+<div class="cmd"><span class="p">$</span> ls -l --sort=time notes/ | head</div>
+<ul class="ls">
+<li><span class="pm">-rw-r--r--</span><span class="pm">royyan</span><span class="pm sz">1.5K</span><time>2026-10-12</time><a>C++23 in a Blog Post: a 198-Byte WebAssembly Q15 Converter</a></li>
+<li><span class="pm">-rw-r--r--</span><span class="pm">royyan</span><span class="pm sz">1.8K</span><time>2026-04-06</time><a>Lefticus - C++ Project Template</a></li>
+<li><span class="pm">-rw-r--r--</span><span class="pm">royyan</span><span class="pm sz">1.9K</span><time>2026-04-06</time><a>Zephyr App Event Manager (app_event_manager)</a></li>
+<li><span class="pm">-rw-r--r--</span><span class="pm">royyan</span><span class="pm sz">2.5K</span><time>2026-01-12</time><a>Zephyr Modern C++ - State Machine Size Comparison</a></li>
+<li><span class="pm">-rw-r--r--</span><span class="pm">royyan</span><span class="pm sz">823</span><time>2025-12-29</time><a>Compiling latest Clang++</a></li>
+<li><span class="pm">-rw-r--r--</span><span class="pm">royyan</span><span class="pm sz">317</span><time>2025-12-24</time><a>ESP Rust Hello World!</a></li>
+<li><span class="pm">-rw-r--r--</span><span class="pm">royyan</span><span class="pm sz">4.8K</span><time>2025-12-23</time><a>Zephyr Modern C++ - Sensors Concept</a></li>
+</ul>
+<p class="out c">... 15 more &rarr; <a>ls notes/</a></p>
+<div class="cmd"><span class="p">$</span> cat now.txt</div>
+<p class="out">Learning Embedded Linux: Yocto images and kernel modules.</p>
+</div></div></template>
+
+<template id="post"><div class="s">
+<div class="bar"><div class="col"><span class="pr"><span class="u">royyan@rd</span>:<span class="d">~/notes</span>$</span><nav><a>notes</a><a>projects</a><a>talks</a><a>about</a></nav></div></div>
+<div class="col">
+<div class="cmd"><span class="p">$</span> cat cpp23-wasm-q15.md</div>
+<article>
+<pre class="fm">---
+date: 2026-10-12
+tags: [<a>cpp</a>, <a>wasm</a>]
+---</pre>
+<div class="meta">2026-10-12 &middot; cpp, wasm</div>
+<h1 class="t">C++23 in a Blog Post: a 198-Byte WebAssembly Q15 Converter</h1>
+<p>Type a number between -1 and 1. The conversion below runs C++23 compiled to WebAssembly, right in this page.</p>
+<pre class="code">Q15:   9830  (0x2666)
+back:  0.29998779296875</pre>
+<p>No Emscripten, no runtime, no imports: stock LLVM ships the wasm32 backend and <code>wasm-ld</code>.</p>
+</article>
+<nav class="pn"><div class="cmd"><span class="p">$</span> ls notes/ | grep -C1 cpp23-wasm-q15</div>
+<div class="pnrow"><a>&larr; Lefticus - C++ Project Template</a></div></nav>
+<div class="cmd"><span class="p">$</span> <span class="cur"></span></div>
+<footer><span class="c"># Public domain unless noted.</span> <a>feed</a> <a>tags</a> <a>uses</a> <a>github</a></footer>
+</div></div></template>
+
+<section data-v=""><h2>A. Current</h2><p>For reference: commands in full black with a green <code>$</code>, permissions in mid grey, dates orange, titles blue.</p></section>
+<section data-v="vB"><h2>B. Quiet chrome</h2><p>Same layout; commands, the <code>$</code>, permission columns and front matter fade to light grey. Titles keep their blue, dates go a softer orange. The smallest change.</p></section>
+<section data-v="vC"><h2>C. Ghost</h2><p>Commands at very low contrast. The list shows only date + title (no permissions, owner, size). The front-matter block becomes one quiet line: date &middot; tags. The most content-first.</p></section>
+<section data-v="vD"><h2>D. Monochrome</h2><p>No green or orange anywhere. Titles in dark bold with no underline until hover; everything else grey. Calm and very readable; less "terminal colour", same terminal shape.</p></section>
+<section data-v="vE"><h2>E. Paper card</h2><p>The list and the post sit on a white card with a border, while the commands and footer stay on the grey page. Makes "this is the content" vs "this is the frame" obvious at a glance.</p></section>
+<section data-v="vF"><h2>F. Small chrome</h2><p>Commands, permission columns and front matter in smaller grey type; content stays full size. A dashed line separates the post from prev/next.</p></section>
+</div>
+
+<script>
+// Render each variant: home + post, both at real size.
+for (const s of document.querySelectorAll('section[data-v]')) {
+  const box = document.createElement('div'); box.className = 'frames';
+  for (const [id, cap] of [['home', 'home page'], ['post', 'a post']]) {
+    const d = document.createElement('div');
+    d.innerHTML = `<div class="frame"><div class="inner"></div></div><div class="cap">${cap}</div>`;
+    const c = document.getElementById(id).content.cloneNode(true);
+    if (s.dataset.v) c.firstElementChild.classList.add(s.dataset.v);
+    d.querySelector('.inner').append(c);
+    box.append(d);
+  }
+  s.append(box);
+}
+</script>
+</html>

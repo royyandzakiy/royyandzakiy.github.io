@@ -8,8 +8,12 @@
     --muted: #6e7781;
     --prompt: #1a7f37;
     --path: #0550ae;
-    --date: #953800;
+    --date: #b0662e;
     --rule: #e4e4dc;
+    --chrome: #a3a8ae;      /* commands and front matter: quiet */
+    --chrome-p: #9cc5a5;    /* the "$" of a command */
+    --faint: #c3c6c9;       /* ls permission columns */
+    --small: 13px;          /* type size of all of the above */
     --box: #f1f1ea;
     --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
     color-scheme: light;
@@ -84,7 +88,13 @@ main {
 }
 
 .cmd {
-    margin-top: 24px;
+    margin-top: 22px;
+    color: var(--chrome);
+    font-size: var(--small);
+}
+
+.cmd .p {
+    color: var(--chrome-p);
 }
 
 .out {
@@ -120,10 +130,12 @@ ul.ls li {
     display: grid;
     grid-template-columns: 11ch 7ch 5ch 11ch 1fr;
     column-gap: 1.5ch;
+    align-items: baseline;
 }
 
 ul.ls .pm {
-    color: var(--muted);
+    color: var(--faint);
+    font-size: var(--small);
 }
 
 ul.ls .sz {
@@ -142,12 +154,13 @@ article.post, article.page {
 }
 
 article pre.fm {
-    color: var(--muted);
+    color: var(--chrome);
     background: none;
     border: 0;
     padding: 0;
     margin: 6px 0 0;
-    font-size: inherit;
+    font-size: var(--small);
+    line-height: 1.5;
 }
 
 article.post h1 {
@@ -264,6 +277,11 @@ article .video-container iframe {
 }
 
 /* Previous / next */
+
+.pn {
+    border-top: 1px dashed var(--rule);
+    margin-top: 24px;
+}
 
 .pnrow {
     display: flex;
