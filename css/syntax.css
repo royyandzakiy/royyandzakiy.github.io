@@ -14,3 +14,29 @@
 .highlight .gi { color: #236b2a; }
 .highlight .gd { color: #a8302a; }
 .highlight .gh { font-weight: bold; }
+
+@media screen and (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .highlight .c  { color: #8f8b82; }
+    :root:not([data-theme="light"]) .highlight .k  { color: #cfa3e3; }
+    :root:not([data-theme="light"]) .highlight .t  { color: #98cf9c; }
+    :root:not([data-theme="light"]) .highlight .s  { color: #e59f86; }
+    :root:not([data-theme="light"]) .highlight .m  { color: #78cbd3; }
+    :root:not([data-theme="light"]) .highlight .p  { color: #dcb866; }
+    :root:not([data-theme="light"]) .highlight .v  { color: #94bbe8; }
+    :root:not([data-theme="light"]) .highlight .f  { color: #b9cdfa; }
+    :root:not([data-theme="light"]) .highlight .gi { color: #8fcf8a; }
+    :root:not([data-theme="light"]) .highlight .gd { color: #ef8f86; }
+}
+
+@media screen {
+    :root[data-theme="dark"] .highlight .c  { color: #8f8b82; }
+    :root[data-theme="dark"] .highlight .k  { color: #cfa3e3; }
+    :root[data-theme="dark"] .highlight .t  { color: #98cf9c; }
+    :root[data-theme="dark"] .highlight .s  { color: #e59f86; }
+    :root[data-theme="dark"] .highlight .m  { color: #78cbd3; }
+    :root[data-theme="dark"] .highlight .p  { color: #dcb866; }
+    :root[data-theme="dark"] .highlight .v  { color: #94bbe8; }
+    :root[data-theme="dark"] .highlight .f  { color: #b9cdfa; }
+    :root[data-theme="dark"] .highlight .gi { color: #8fcf8a; }
+    :root[data-theme="dark"] .highlight .gd { color: #ef8f86; }
+}

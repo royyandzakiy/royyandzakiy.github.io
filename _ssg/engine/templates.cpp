@@ -20,21 +20,42 @@ static void layouthead(std::string *b, std::string_view cwd,
     printhtml(b, title);
     printhtml(b, title2);
     *b += "</title>\n"
-R"(<meta charset="utf-8">
+R"html(<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <link rel="alternate" type="application/atom+xml" href="/feed/" title="Atom Feed"/>
 <link rel="stylesheet" href="/css/full.css"/>
+<script>try { var t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t } catch (e) {}</script>
 
 <header class="bar"><div class="col">
-  <a class="prompt" href="/"><span class="p">royyan@rd</span>:<span class="d">)";
+  <a class="prompt" href="/"><span class="p">royyan@rd</span>:<span class="d">)html";
     printhtml(b, cwd);
     *b +=
-R"(</span>$</a>
-  <nav><a href="/">notes</a> <a href="/projects/">projects</a> <a href="/talks/">talks</a> <a href="/about/">about</a></nav>
+R"html(</span>$</a>
+  <nav><a href="/">notes</a> <a href="/projects/">projects</a> <a href="/talks/">talks</a> <a href="/about/">about</a><span class="setting" hidden><span class="sep">|</span><button class="theme" type="button"></button></span></nav>
 </div></header>
+<script>
+(function () {
+    var root = document.documentElement, btn = document.querySelector(".theme");
+    function dark() {
+        return root.dataset.theme ? root.dataset.theme == "dark"
+                                  : matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    function label() {
+        btn.textContent = dark() ? "light" : "dark";
+        btn.setAttribute("aria-label", "Switch to " + btn.textContent + " mode");
+    }
+    btn.onclick = function () {
+        root.dataset.theme = dark() ? "light" : "dark";
+        try { localStorage.setItem("theme", root.dataset.theme) } catch (e) {}
+        label();
+    };
+    label();
+    btn.parentNode.hidden = false;
+})();
+</script>
 
 <main class="col">
-)";
+)html";
 }
 
 static void layouttail(std::string *b)
@@ -47,8 +68,8 @@ R"(
 <footer class="col">
   <span class="c"># Public domain unless noted.</span>
   <a href="/feed/">feed</a> <a href="/tags/">tags</a> <a href="/uses/">uses</a>
-  <a href="https://github.com/royyandzakiy">github</a>
-  <a href="https://www.linkedin.com/in/royyandzakiy/">linkedin</a>
+  <a href="https://github.com/royyandzakiy" target="_blank" rel="noopener">github</a>
+  <a href="https://www.linkedin.com/in/royyandzakiy/" target="_blank" rel="noopener">linkedin</a>
 </footer>
 </html>
 )";

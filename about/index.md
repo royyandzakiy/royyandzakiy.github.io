@@ -15,7 +15,7 @@ command: man royyan
 <h2>FILES</h2>
 <p><a href="/">notes/</a> the blog &middot; <a href="/projects/">projects/</a> &middot; <a href="/talks/">talks/</a> &middot; <a href="/uses/">uses</a> &middot; <a href="/now.txt">now.txt</a></p>
 <h2>SEE ALSO</h2>
-<p><a href="https://www.linkedin.com/in/royyandzakiy/">linkedin</a>(1), <a href="https://github.com/royyandzakiy">github</a>(1), <a href="/feed/">feed</a>(5)</p>
+<p><a href="https://www.linkedin.com/in/royyandzakiy/" target="_blank" rel="noopener">linkedin</a>(1), <a href="https://github.com/royyandzakiy" target="_blank" rel="noopener">github</a>(1), <a href="/feed/">feed</a>(5)</p>
 <h2>BUGS</h2>
 <p>Working on Workshop for Zephyr Automated Testing. Check it out!</p>
 </div>

@@ -16,7 +16,44 @@
     --small: 16px;          /* type size of all of the above */
     --box: #f1f1ea;
     --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-    color-scheme: light;
+    color-scheme: light dark;
+}
+
+/* Dark mode: soft charcoal, not black. It follows the system setting
+   unless the button in the bar chose light or dark (data-theme on <html>).
+   Screen only, so printing stays black on white. */
+@media screen and (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #1c1e22;
+        --bar: #23262b;
+        --fg: #d6d8dc;
+        --muted: #8b929a;
+        --prompt: #f0857d;
+        --path: #79b8ff;
+        --date: #e0a36a;
+        --rule: #33373d;
+        --chrome: #6b7179;
+        --chrome-p: #6f9a7a;
+        --faint: #4d535a;
+        --box: #24272c;
+    }
+}
+
+@media screen {
+    :root[data-theme="dark"] {
+        --bg: #1c1e22;
+        --bar: #23262b;
+        --fg: #d6d8dc;
+        --muted: #8b929a;
+        --prompt: #f0857d;
+        --path: #79b8ff;
+        --date: #e0a36a;
+        --rule: #33373d;
+        --chrome: #6b7179;
+        --chrome-p: #6f9a7a;
+        --faint: #4d535a;
+        --box: #24272c;
+    }
 }
 
 .print-only {
@@ -77,8 +114,31 @@ a:hover {
     text-decoration: none;
 }
 
-.bar nav a {
+.bar nav a, .bar nav .theme {
     margin-left: 14px;
+}
+
+/* The light/dark switch: set apart from the pages by a faint bar, and
+   quieter than them, since it is a setting rather than a place to go */
+.bar nav .sep {
+    color: var(--faint);
+    margin-left: 14px;
+}
+
+.bar nav .theme {
+    font: inherit;
+    color: var(--muted);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: none;
+    text-underline-offset: 3px;
+}
+
+.bar nav .theme:hover {
+    color: var(--path);
+    text-decoration: underline;
 }
 
 /* Commands and their output */
@@ -378,7 +438,11 @@ footer a {
         padding: 0 14px;
     }
 
-    .bar nav a {
+    .bar nav a, .bar nav .theme {
+        margin: 0 10px 0 0;
+    }
+
+    .bar nav .sep {
         margin: 0 10px 0 0;
     }
 
