@@ -27,10 +27,83 @@ HTML, tag pages, and Atom/RSS feeds. GitHub Actions builds and tests it,
 generates the site, and deploys it to GitHub Pages on every push to
 `main` ([`pages.yml`](.github/workflows/pages.yml)).
 
+```mermaid
+flowchart LR
+    push["git push main"] --> actions["GitHub Actions<br/>pages.yml"]
+    actions --> build["build ssg,<br/>run unit tests,<br/>ssg -o _site"]
+    build --> deploy["deploy to<br/>GitHub Pages"]
+    deploy --> live(["royyandzakiy.com"])
+```
+
+### What one ssg build does
+
+ssg reads the whole source tree, renders it, and writes `_site/` from
+scratch. `ssg -w` repeats this whenever a source file changes.
+
+```mermaid
+flowchart LR
+    subgraph src["source tree"]
+        posts["_posts/*.md"]
+        pages["about/ projects/<br/>talks/ uses/"]
+        now["now.txt"]
+        css["css/*.css"]
+        statics["assets/, CNAME,<br/>favicon, ..."]
+    end
+
+    subgraph ssg["ssg"]
+        load["loadposts<br/>front matter, URLs,<br/>sort, tags"]
+        walk["walk<br/>find pages and<br/>static files"]
+        render["render<br/>Markdown +<br/>syntax highlighting"]
+        tpl["templates<br/>terminal layout"]
+    end
+
+    subgraph out["_site/"]
+        html["notes, tag pages,<br/>pages, home, 404"]
+        redir["redirects from<br/>old Jekyll URLs"]
+        feeds["Atom + RSS feeds"]
+        full["css/full.css"]
+        copied["static files,<br/>copied as-is"]
+    end
+
+    posts --> load --> render
+    pages --> walk --> render
+    statics --> walk
+    render --> tpl
+    now --> tpl
+    tpl --> html
+    tpl --> redir
+    tpl --> feeds
+    css -->|joined| full
+    walk --> copied
+```
+
 ssg started as the generator Chris Wellons wrote for
 [nullprogram.com](https://nullprogram.com/), released into the public
 domain. This fork moved it to standard C++23 types and a folder layout,
-and added the terminal design:
+and added the terminal design.
+
+It is a unity build: each executable is one translation unit. The entry
+point includes `engine/ssg.cpp`, which includes everything else, so the
+layers below only depend downward. All file and clock access goes through
+a small `os_*` interface: implemented for real in the program, and
+stubbed out in the unit tests.
+
+```mermaid
+flowchart TD
+    main["platform/main.cpp<br/>os_* with std::filesystem,<br/>fstream, chrono"]
+    tests["test/main_test.cpp<br/>unit tests + stubbed os_*"]
+    driver["engine/ssg.cpp<br/>build driver, watch mode, CLI"]
+    engine["engine/<br/>site.cpp, templates.cpp, newpost.cpp"]
+    parser["parser/<br/>frontmatter, markdown, highlight"]
+    core["core/<br/>base, os interface, log"]
+
+    main -->|includes| driver
+    tests -->|includes| driver
+    driver --> engine
+    engine --> parser
+    parser --> core
+    engine --> core
+```
 
     _ssg/core/       base types, strings, the os_* interface, logging
     _ssg/parser/     front matter, Markdown, syntax highlighting
