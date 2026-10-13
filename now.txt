@@ -1,2 +1,2 @@
-Learning Embedded Linux: Yocto images and kernel modules. Rewriting this
+Working on Workshop for Zephyr Automated Testing. Check it out! Rewriting this
 site's generator in standard C++.

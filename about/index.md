@@ -17,5 +17,5 @@ command: man royyan
 <h2>SEE ALSO</h2>
 <p><a href="https://www.linkedin.com/in/royyandzakiy/">linkedin</a>(1), <a href="https://github.com/royyandzakiy">github</a>(1), <a href="/feed/">feed</a>(5)</p>
 <h2>BUGS</h2>
-<p>Still learning Embedded Linux (Yocto, kernel modules). Patches welcome.</p>
+<p>Working on Workshop for Zephyr Automated Testing. Check it out!</p>
 </div>

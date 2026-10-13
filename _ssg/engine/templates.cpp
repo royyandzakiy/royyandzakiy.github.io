@@ -82,10 +82,10 @@ static void printsize(std::string *b, iz n)
     }
 }
 
-// One "ls -l" row. Permissions, owner and size hide on narrow screens.
+// One "ls -l" row. Permissions and size hide on narrow screens.
 static void lsrow(std::string *b, Post *p)
 {
-    *b += "  <li><span class=\"pm\">-rw-r--r--</span><span class=\"pm\">royyan</span><span class=\"pm sz\">";
+    *b += "  <li><span class=\"pm\">-rw-r--r--</span><span class=\"pm sz\">";
     printsize(b, std::ssize(p->text));
     *b += "</span><time datetime=\"";
     printymd(b, p->time);

@@ -6,14 +6,14 @@
     --bar: #f3f3ee;
     --fg: #24292f;
     --muted: #6e7781;
-    --prompt: #1a7f37;
+    --prompt: #7f1a1a;
     --path: #0550ae;
     --date: #b0662e;
     --rule: #e4e4dc;
     --chrome: #a3a8ae;      /* commands and front matter: quiet */
     --chrome-p: #9cc5a5;    /* the "$" of a command */
     --faint: #c3c6c9;       /* ls permission columns */
-    --small: 13px;          /* type size of all of the above */
+    --small: 16px;          /* type size of all of the above */
     --box: #f1f1ea;
     --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
     color-scheme: light;
@@ -128,7 +128,7 @@ ul.ls, ul.tagls {
 
 ul.ls li {
     display: grid;
-    grid-template-columns: 11ch 7ch 5ch 11ch 1fr;
+    grid-template-columns: 11ch 5ch 11ch 1fr;
     column-gap: 1.5ch;
     align-items: baseline;
 }
@@ -144,6 +144,14 @@ ul.ls .sz {
 
 ul.ls time {
     color: var(--date);
+}
+
+ul.ls a {
+    text-decoration: none;
+}
+
+ul.ls a:hover {
+    text-decoration: underline;
 }
 
 /* Posts */

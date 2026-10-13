@@ -47,7 +47,7 @@ command: tree projects/
 │   └── <a href="https://github.com/royyandzakiy/royyandzakiy.github.io">royyandzakiy.github.io</a>            <span class="c cm"># this site and its C++ generator</span>
 ├── <span class="d">templates/</span>
 │   ├── <a href="https://github.com/royyandzakiy/cpp-project-template">cpp-project-template</a>              <span class="c cm"># CMake, vcpkg, tests, CI</span>
-│   ├── <a href="https://github.com/royyandzakiy/cpp-project-template-min">cpp-project-template-min</a>        <span class="c cm"># a more minimalistic template</span>
+│   ├── <a href="https://github.com/royyandzakiy/cpp-project-template-min">cpp-project-template-min</a>         <span class="c cm"># a more minimalistic template</span>
 │   ├── <a href="https://github.com/royyandzakiy/windows-cpp-template">windows-cpp-template</a>              <span class="c cm"># C++23 on Windows: vcpkg, WinRT</span>
 │   ├── <a href="https://github.com/royyandzakiy/windows-lib-cpp-template">windows-lib-cpp-template</a>          <span class="c cm"># static/dynamic libs on Windows</span>
 │   ├── <a href="https://github.com/royyandzakiy/cmake-dll-example">cmake-dll-example</a>                 <span class="c cm"># building and using a Windows DLL</span>
