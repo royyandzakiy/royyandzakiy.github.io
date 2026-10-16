@@ -6,7 +6,7 @@ command: tree projects/
 <pre class="tree"><span class="d">projects/</span>
 ├── <span class="d">zephyr/</span>
 │   ├── <a href="https://github.com/royyandzakiy/zephyr-modern-cpp" target="_blank" rel="noopener">zephyr-modern-cpp</a>                 <span class="c cm"># starter: C++17/20/23 on Zephyr</span>
-│   ├── <a href="https://github.com/royyandzakiy/zephyr-cpp-template" target="_blank" rel="noopener">zephyr-cpp-template</a>               <span class="c cm"># nRF Connect SDK C++ app template</span>
+│   ├── <a href="https://github.com/royyandzakiy/zephyr-project-template" target="_blank" rel="noopener">zephyr-project-template</a>               <span class="c cm"># nRF Connect SDK C++ app template</span>
 │   ├── <a href="https://github.com/royyandzakiy/zephyr-devcontainer" target="_blank" rel="noopener">zephyr-devcontainer</a>               <span class="c cm"># devcontainer + CI images on GHCR</span>
 │   ├── <a href="https://github.com/royyandzakiy/zephyr-testing-workshop" target="_blank" rel="noopener">zephyr-testing-workshop</a>           <span class="c cm"># ztest, FFF, GoogleTest, Twister</span>
 │   ├── <a href="https://github.com/royyandzakiy/zephyr-pytest" target="_blank" rel="noopener">zephyr-pytest</a>                     <span class="c cm"># pytest + Twister, native_sim, nRF53</span>
